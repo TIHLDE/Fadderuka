@@ -3,12 +3,13 @@ import { ThemeProvider } from "~/components/ui/theme-provider";
 import { Toaster } from "~/components/ui/toaster";
 
 import "./globals.css";
-import { cn } from "../lib/utils";
+import { cn } from "~/lib/utils";
 import { TRPCReactProvider } from "@/trpc/react";
 import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
 import { Inter } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import React from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 

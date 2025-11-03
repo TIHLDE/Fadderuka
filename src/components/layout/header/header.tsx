@@ -4,7 +4,7 @@ import HeaderButtonsWrapper from "./header-buttons-wrapper";
 import HeaderSkeleton from "./header-skeleton";
 import HeaderWrapper from "./header-wrapper";
 import Link from "next/link";
-import { Suspense } from "react";
+import React, { Suspense } from "react";
 
 type HeaderProps = React.HTMLProps<HTMLHeadElement>;
 
