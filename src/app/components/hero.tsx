@@ -31,7 +31,7 @@ export default function Hero() {
         <div className="mt-8 grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
           <div className="space-y-4">
             <h1 className="text-4xl font-semibold tracking-tight text-transparent sm:text-5xl md:text-6xl">
-              <span className="bg-gradient-to-r from-sky-200 via-sky-100 to-blue-200 bg-clip-text">
+              <span className="bg-gradient-to-r from-sky-300 to-blue-400 bg-clip-text">
                 Fadderuka
               </span>
             </h1>

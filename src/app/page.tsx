@@ -29,7 +29,7 @@ export default async function Home() {
     >
       <Hero />
 
-      <div className="mx-auto w-full max-w-page px-4 pb-16 md:px-6">
+      <div className="max-w-page mx-auto w-full px-4 pb-16 md:px-6">
         <div className="my-10 h-px w-full bg-white/10" />
 
         <div className="flex items-center justify-between">
@@ -44,11 +44,11 @@ export default async function Home() {
           </Link>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
           {upcomingActivities.map((activity) => (
             <div
               key={activity.title}
-              className="rounded-2xl border border-[#2a3347] bg-[#111827] p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] transition hover:border-[#3a4663]"
+              className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#101728] via-[#0f1628] to-[#0b1222] !p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),0_0_0_1px_rgba(15,23,42,0.6)] transition hover:border-white/20 hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_0_0_1px_rgba(30,41,59,0.8)]"
             >
               <h3 className="text-base font-semibold text-slate-100">
                 {activity.title}

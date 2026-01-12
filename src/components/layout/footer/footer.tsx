@@ -3,14 +3,14 @@ import { Facebook, Instagram, MessageCircle } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-[#0a1022]">
-      <div className="mx-auto grid w-full max-w-page gap-10 px-4 py-10 md:grid-cols-[1.2fr_1fr_1fr] md:px-6">
+    <footer className="border-t border-white/10 bg-[#0a1022] mt-8">
+      <div className="mx-auto grid w-full max-w-page gap-10 px-4 py-10 mt-8 md:grid-cols-[1.2fr_1fr_1fr] md:px-6">
         <div className="space-y-4">
           <Logo />
           <div className="flex gap-3 text-slate-400">
-            <Facebook className="h-4 w-4" />
-            <Instagram className="h-4 w-4" />
-            <MessageCircle className="h-4 w-4" />
+            <Facebook className="h-6 w-6" />
+            <Instagram className="h-6 w-6" />
+            <MessageCircle className="h-6 w-6" />
           </div>
         </div>
 
