@@ -26,14 +26,17 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={cn(inter.className, "flex min-h-screen flex-col")}
+        className={cn(
+          inter.className,
+          "flex min-h-screen flex-col bg-[#0b1221] text-slate-100",
+        )}
         suppressHydrationWarning
       >
           <SessionProvider>
             <TRPCReactProvider>
               <ThemeProvider
                 attribute="class"
-                defaultTheme="system"
+                defaultTheme="dark"
                 enableSystem
                 disableTransitionOnChange
               >

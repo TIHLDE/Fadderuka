@@ -1,6 +1,7 @@
 import type { LinkProps } from "next/link";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { cn } from "~/lib/utils";
 
 export default async function HeaderLink({
   href,
@@ -10,7 +11,10 @@ export default async function HeaderLink({
 }: LinkProps & { children?: ReactNode; className?: string }) {
   return (
     <Link
-      className="hover:bg-primary/5 hover:text-primary rounded-md p-2 text-sm font-medium text-zinc-500 transition-colors duration-150 dark:text-zinc-300"
+      className={cn(
+        "hover:bg-primary/5 hover:text-primary rounded-md p-2 text-sm font-medium text-zinc-500 transition-colors duration-150 dark:text-zinc-300",
+        className,
+      )}
       href={href}
       {...props}
     >
