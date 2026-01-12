@@ -24,6 +24,8 @@ const quickActions = [
   },
 ];
 
+const currentYear = new Date().getFullYear();
+
 export default function Hero() {
   return (
     <section className="relative w-full pt-6">
@@ -53,7 +55,7 @@ export default function Hero() {
 
           <div className="flex flex-col items-end gap-6">
             <span className="text-5xl font-semibold tracking-tight text-white/10 sm:text-6xl md:text-7xl">
-              2025
+              {currentYear}
             </span>
             <div className="grid w-full max-w-sm grid-cols-2 gap-3">
               {quickActions.map((action) => {
