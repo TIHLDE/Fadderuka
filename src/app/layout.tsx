@@ -4,12 +4,11 @@ import { Toaster } from "~/components/ui/toaster";
 
 import "./globals.css";
 import { cn } from "~/lib/utils";
-import { TRPCReactProvider } from "@/trpc/react";
 import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
 import { Inter } from "next/font/google";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
 import React from "react";
+import { TRPCReactProvider } from "~/trpc/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,7 +29,6 @@ export default async function RootLayout({
         className={cn(inter.className, "flex min-h-screen flex-col")}
         suppressHydrationWarning
       >
-        <NuqsAdapter>
           <SessionProvider>
             <TRPCReactProvider>
               <ThemeProvider
@@ -45,7 +43,6 @@ export default async function RootLayout({
               </ThemeProvider>
             </TRPCReactProvider>
           </SessionProvider>
-        </NuqsAdapter>
       </body>
     </html>
   );

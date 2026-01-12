@@ -1,7 +1,7 @@
 import HeaderLink from "~/components/ui/header-link";
 import Logo from "~/components/ui/logo";
 import { UserArea } from "../user-area";
-import { auth } from "~/auth";
+import { auth } from "~/server/auth";
 import { cn } from "~/lib/utils";
 import React from "react";
 
