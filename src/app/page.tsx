@@ -7,13 +7,13 @@ const upcomingActivities = [
     title: "Inndrikkning",
     meta: "Mandag 7. August, 2024 - Sted: Klubben",
     description: "Inndrikkning med de nye medlemmene",
-    href: "#",
+    href: "/aktiviteter",
   },
   {
     title: "Jalla vors",
     meta: "Tirsdag 8. August, 2024 - Sted: Klubben",
     description: "Alle skal på jalla",
-    href: "#",
+    href: "/aktiviteter",
   },
 ];
 
@@ -37,7 +37,7 @@ export default async function Home() {
             Neste aktiviteter
           </h2>
           <Link
-            href="#"
+            href="/aktiviteter"
             className="text-sm font-medium text-slate-400 transition hover:text-slate-200"
           >
             {"Se alle ->"}

@@ -9,7 +9,7 @@ const quickActions = [
   },
   {
     title: "Aktiviteter",
-    href: "#",
+    href: "/aktiviteter",
     icon: CalendarDays,
   },
   {
