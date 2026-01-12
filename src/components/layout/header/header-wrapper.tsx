@@ -28,9 +28,9 @@ export default function HeaderWrapper({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 flex min-h-[72px] w-full items-center px-6 transition-all duration-300",
+        "sticky top-0 z-50 flex min-h-[72px] w-full items-center !px-6 transition-all duration-300",
         isScrolled
-          ? "border-b border-white/10 bg-[#0b1221]/80 backdrop-blur-sm"
+          ? "border-b border-border/60 bg-[color:var(--header-bg)] backdrop-blur-sm"
           : "bg-transparent",
         className,
       )}

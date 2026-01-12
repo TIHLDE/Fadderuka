@@ -21,25 +21,24 @@ const upcomingActivities = [
 export default async function Home() {
   return (
     <main
-      className="relative min-h-screen w-full overflow-hidden"
+      className="relative flex w-full flex-1 flex-col overflow-hidden"
       style={{
-        backgroundColor: "#0b1020",
-        backgroundImage:
-          "radial-gradient(700px 420px at 20% 0%, rgba(59,130,246,0.18), transparent 60%), radial-gradient(700px 420px at 80% 20%, rgba(14,116,144,0.22), transparent 60%)",
+        backgroundColor: "var(--page-bg)",
+        backgroundImage: "var(--page-bg-image)",
       }}
     >
       <Hero />
 
       <div className="max-w-page mx-auto w-full px-4 pb-16 md:px-6">
-        <div className="my-10 h-px w-full bg-white/10" />
+        <div className="my-10 h-px w-full bg-border/60" />
 
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-100">
+          <h2 className="text-lg font-semibold text-foreground">
             Neste aktiviteter
           </h2>
           <Link
             href="/aktiviteter"
-            className="text-sm font-medium text-slate-400 transition hover:text-slate-200"
+            className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
           >
             {"Se alle ->"}
           </Link>
@@ -52,7 +51,9 @@ export default async function Home() {
         </div>
       </div>
 
-      <Footer />
+      <div className="mt-auto">
+        <Footer />
+      </div>
     </main>
   );
 }

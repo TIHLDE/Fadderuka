@@ -68,28 +68,28 @@ export const UserArea = ({
           <button
             type="button"
             aria-label="Profil"
-            className="rounded-md p-2 transition hover:bg-white/5 hover:text-slate-100"
+            className="rounded-md p-2 transition hover:bg-muted/50 hover:text-foreground"
           >
-            <UserRound className="h-4 w-4 text-slate-200" />
+            <UserRound className="h-4 w-4 text-foreground" />
           </button>
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="w-72 rounded-2xl border border-white/10 bg-[#0f172a]/95 p-5 text-slate-100 shadow-xl backdrop-blur"
+          className="w-72 rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--panel-bg)] p-5 text-foreground shadow-xl backdrop-blur"
         >
           <div className="flex w-full flex-col gap-4">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border border-white/10 bg-white/5">
+              <Avatar className="h-10 w-10 border border-border/60 bg-muted/40">
                 <AvatarImage src={image} alt={"profilbilde"} />
-                <AvatarFallback className="bg-white/5">
-                  <UserRound className="h-5 w-5 text-slate-200" />
+                <AvatarFallback className="bg-muted/40">
+                  <UserRound className="h-5 w-5 text-foreground" />
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm font-semibold">
                   {isAuthenticated ? `Hei, ${name}` : "Ikke logget inn"}
                 </p>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   {isAuthenticated
                     ? "Velkommen tilbake!"
                     : "Logg inn for å fortsette"}
@@ -101,7 +101,7 @@ export const UserArea = ({
               <div className="flex flex-col gap-2">
                 <Button
                   variant="outline"
-                  className="w-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
+                  className="w-full border-border/60 bg-muted/40 text-foreground hover:bg-muted/60"
                   onClick={goToMyPage}
                 >
                   Min side
@@ -109,7 +109,7 @@ export const UserArea = ({
                 {admin ? (
                   <Button
                     variant="outline"
-                    className="w-full border-white/10 bg-white/5 text-slate-100 hover:bg-white/10"
+                    className="w-full border-border/60 bg-muted/40 text-foreground hover:bg-muted/60"
                     onClick={goToAdmin}
                   >
                     Admin
@@ -125,7 +125,7 @@ export const UserArea = ({
               </div>
             ) : (
               <Button
-                className="w-full bg-sky-500/20 text-sky-100 hover:bg-sky-500/30"
+                className="w-full bg-primary/15 text-primary hover:bg-primary/25"
                 onClick={signInButton}
               >
                 Logg inn

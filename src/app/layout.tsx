@@ -28,7 +28,7 @@ export default async function RootLayout({
       <body
         className={cn(
           inter.className,
-          "flex min-h-screen flex-col bg-[#0b1221] text-slate-100",
+          "flex min-h-screen flex-col bg-[color:var(--page-bg)] text-foreground",
         )}
         suppressHydrationWarning
       >
