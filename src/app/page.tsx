@@ -5,7 +5,7 @@ export default async function Home() {
     <div className="relative flex w-full flex-col items-center justify-center overflow-x-clip">
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 top-140 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
+        className="absolute inset-x-0 top-[140px] -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
       >
         <div
           style={{
