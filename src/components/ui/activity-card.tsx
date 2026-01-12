@@ -76,23 +76,23 @@ export default function ActivityCard({
   href = "#",
 }: ActivityCardProps) {
   return (
-    <div className="rounded-2xl border border-white/15 bg-[#0c1426]/80 !p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.04)] backdrop-blur">
+    <div className="rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-strong)] !p-6 shadow-[0_0_0_1px_var(--surface-border)] backdrop-blur">
       <ActivityImage
         title={imageTitle}
         subtitle={imageSubtitle}
         variant={variant}
       />
       <div className="mt-6 space-y-3">
-        <h3 className="text-2xl font-semibold text-white">{title}</h3>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-200">
+        <h3 className="text-2xl font-semibold text-foreground">{title}</h3>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>{date}</span>
-          <span className="h-1.5 w-1.5 rounded-full bg-white/40" />
+          <span className="h-1.5 w-1.5 rounded-full bg-foreground/30" />
           <span>{location}</span>
         </div>
-        <p className="text-sm text-slate-400">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
         <Link
           href={href}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-sky-200 transition hover:text-sky-100"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-primary/80"
         >
           Les mer
           <span aria-hidden="true">→</span>
