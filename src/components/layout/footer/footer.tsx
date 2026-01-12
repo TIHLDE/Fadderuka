@@ -3,7 +3,7 @@ import { Facebook, Instagram, MessageCircle } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="mt-8 border-t border-border/60 bg-[color:var(--footer-bg)]">
+    <footer className="my-8 border-t border-border/60 bg-[color:var(--footer-bg)]">
       <div className="mx-auto mt-8 grid w-full max-w-page gap-10 px-4 py-10 md:grid-cols-[1.2fr_1fr_1fr] md:px-6">
         <div className="space-y-4">
           <Logo />
