@@ -18,11 +18,11 @@ const quickActions = [
     icon: Users,
   },
   {
-    title: "Drikkekleker",
-    href: "#",
+    title: "Drikkeleker",
+    href: "/drikkeleker",
     icon: Beer,
   },
-];
+];1
 
 const currentYear = new Date().getFullYear();
 

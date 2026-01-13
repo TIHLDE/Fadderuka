@@ -1,7 +1,7 @@
 import Hero from "~/app/components/hero";
 import Footer from "~/components/layout/footer/footer";
 import Link from "next/link";
-import ActivityCard from "~/app/components/activity-card";
+import ActivityCard from "~/components/ui/small-activity-card";
 
 const upcomingActivities = [
   {
