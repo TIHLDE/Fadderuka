@@ -14,7 +14,7 @@ const quickActions = [
   },
   {
     title: "Faddergruppe",
-    href: "#",
+    href: "/faddergruppe",
     icon: Users,
   },
   {
