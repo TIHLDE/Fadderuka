@@ -18,8 +18,8 @@ const quickActions = [
     icon: Users,
   },
   {
-    title: "Drikkekleker",
-    href: "#",
+    title: "Drikkeleker",
+    href: "/drikkeleker",
     icon: Beer,
   },
 ];
