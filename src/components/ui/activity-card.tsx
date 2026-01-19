@@ -53,7 +53,7 @@ function ActivityImage({
         {subtitle ? (
           <span
             className={cn(
-              "mt-2 text-xs font-semibold uppercase tracking-[0.2em]",
+              "mt-2 text-xs font-semibold tracking-[0.2em] uppercase",
               isLight ? "text-slate-600" : "text-slate-200",
             )}
           >
@@ -83,16 +83,16 @@ export default function ActivityCard({
         variant={variant}
       />
       <div className="mt-6 space-y-3">
-        <h3 className="text-2xl font-semibold text-foreground">{title}</h3>
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <h3 className="text-foreground text-2xl font-semibold">{title}</h3>
+        <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
           <span>{date}</span>
-          <span className="h-1.5 w-1.5 rounded-full bg-foreground/30" />
+          <span className="bg-foreground/30 h-1.5 w-1.5 rounded-full" />
           <span>{location}</span>
         </div>
-        <p className="text-sm text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground text-sm">{description}</p>
         <Link
           href={href}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-primary/80"
+          className="text-primary hover:text-primary/80 inline-flex items-center gap-2 text-sm font-semibold transition"
         >
           Les mer
           <span aria-hidden="true">→</span>
