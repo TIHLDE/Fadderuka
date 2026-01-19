@@ -1,7 +1,7 @@
 import Footer from "~/components/layout/footer/footer";
-import { Plus, ThumbsDown, ThumbsUp } from "lucide-react";
+import MessagesSection from "./messages-section";
 
-const fosterChildren = [
+const fadderChildren = [
   "Jan Olsen",
   "Per Per",
   "Ola Jansen",
@@ -15,63 +15,11 @@ const fosterChildren = [
   "Per Per",
 ];
 
-const mentors = [
+const Faddere = [
   { name: "Jan Olsen", phone: "+47 941 13 131" },
   { name: "Per Per", phone: "+47 911 48 144" },
   { name: "Ola Jansen", phone: "+47 488 48 488" },
 ];
-
-type Message = {
-  name: string;
-  time: string;
-  body: string;
-  reactions?: {
-    likes: number;
-    dislikes: number;
-  };
-};
-
-const messages: Message[] = [
-  {
-    name: "Jan Olsen",
-    time: "15:44",
-    body: "Møt opp i Faddergata 8a klokken 19:00! Ta med all drikken du har!",
-    reactions: { likes: 5, dislikes: 2 },
-  },
-  {
-    name: "Ola Jansen",
-    time: "2 dager siden",
-    body: "Velkommen til Tihlde og faddergruppe 5! Den beste faddergruppa!",
-  },
-];
-
-function MessageCard({ name, time, body, reactions }: Message) {
-  return (
-    <article className="rounded-xl border border-[#73aac4]/70 bg-[color:var(--surface-soft)] !p-6 shadow-[0_24px_60px_rgba(4,10,23,0.35)] backdrop-blur">
-      <div className="flex flex-wrap items-start justify-between !gap-3">
-        <h3 className="text-lg font-extrabold text-white sm:text-xl">{name}</h3>
-        <span className="text-sm font-medium text-[#8694b4] sm:text-base">
-          {time}
-        </span>
-      </div>
-      <p className="!mt-3 text-base font-medium text-[#8694b4] sm:text-lg">
-        {body}
-      </p>
-      {reactions ? (
-        <div className="!mt-4 flex items-center !gap-6 text-white">
-          <div className="flex items-center !gap-2 text-lg font-medium">
-            <span>{reactions.likes}</span>
-            <ThumbsUp className="h-4 w-4" />
-          </div>
-          <div className="flex items-center !gap-2 text-lg font-medium">
-            <span>{reactions.dislikes}</span>
-            <ThumbsDown className="h-4 w-4" />
-          </div>
-        </div>
-      ) : null}
-    </article>
-  );
-}
 
 export default function FaddergroupPage() {
   return (
@@ -107,7 +55,7 @@ export default function FaddergroupPage() {
               <div className="!space-y-4">
                 <h3 className="text-lg font-semibold text-white">Fadderbarn</h3>
                 <ul className="!space-y-2 text-sm text-[#7f8fb2] sm:text-base">
-                  {fosterChildren.map((child, index) => (
+                  {fadderChildren.map((child, index) => (
                     <li key={`${child}-${index}`}>{child}</li>
                   ))}
                 </ul>
@@ -115,7 +63,7 @@ export default function FaddergroupPage() {
               <div className="!space-y-4">
                 <h3 className="text-lg font-semibold text-white">Faddere</h3>
                 <div className="grid !gap-2 text-sm text-[#7f8fb2] sm:text-base">
-                  {mentors.map((mentor) => (
+                  {Faddere.map((mentor) => (
                     <div
                       key={mentor.phone}
                       className="grid grid-cols-[minmax(0,1fr)_auto] items-center !gap-6"
@@ -129,29 +77,7 @@ export default function FaddergroupPage() {
             </div>
           </section>
 
-          <section className="!space-y-6">
-            <div className="flex flex-wrap items-end justify-between !gap-4">
-              <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-white sm:text-[36px]">
-                Melding fra fadderne
-              </h2>
-              <button
-                className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-[#212d49] !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-[#29385a] sm:text-base"
-                type="button"
-              >
-                <Plus className="h-4 w-4" />
-                Ny melding
-              </button>
-            </div>
-
-            <div className="!space-y-4">
-              {messages.map((message) => (
-                <MessageCard
-                  key={`${message.name}-${message.time}`}
-                  {...message}
-                />
-              ))}
-            </div>
-          </section>
+          <MessagesSection />
         </div>
       </div>
 

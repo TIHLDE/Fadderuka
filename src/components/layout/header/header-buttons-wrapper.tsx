@@ -34,9 +34,15 @@ const HeaderButtonsWrapper = async ({
         </HeaderLink>
         <HeaderLink
           className="text-muted-foreground hover:text-foreground"
-          href="/"
+          href="/aktiviteter"
         >
           Arrangementer
+        </HeaderLink>
+        <HeaderLink
+          className="text-muted-foreground hover:text-foreground"
+          href="/faddergruppe"
+        >
+          Min faddergruppe
         </HeaderLink>
       </nav>
 
