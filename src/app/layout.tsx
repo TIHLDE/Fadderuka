@@ -37,7 +37,8 @@ export default async function RootLayout({
               <ThemeProvider
                 attribute="class"
                 defaultTheme="dark"
-                enableSystem
+                enableSystem={false}
+                storageKey="tihlde-theme"
                 disableTransitionOnChange
               >
                 <Header className="hidden lg:flex" />
