@@ -1,7 +1,8 @@
 "use client";
 
 import { Plus, ThumbsDown, ThumbsUp } from "lucide-react";
-import { useState } from "react";
+import type { FormEvent } from "react";
+import { useMemo, useState } from "react";
 
 type Reaction = "like" | "dislike" | null;
 
@@ -82,6 +83,7 @@ const applyReaction = (message: Message, next: Reaction): Message => {
 
 type MessagesSectionProps = {
   initialMessages?: Message[];
+  currentUserName?: string;
   onReact?: (messageId: string, reaction: Reaction) => Promise<void> | void;
 };
 
@@ -138,9 +140,16 @@ function MessageCard({
 
 export default function MessagesSection({
   initialMessages = defaultMessages,
+  currentUserName = "Fadder",
   onReact,
 }: MessagesSectionProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+  const [composerMessage, setComposerMessage] = useState("");
+
+  const composerDisabled = useMemo(() => {
+    return composerMessage.trim().length === 0;
+  }, [composerMessage]);
 
   const handleReact = async (messageId: string, reaction: Reaction) => {
     let finalReaction: Reaction = reaction;
@@ -160,6 +169,39 @@ export default function MessagesSection({
     await onReact?.(messageId, finalReaction);
   };
 
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const body = composerMessage.trim();
+    if (!body) {
+      return;
+    }
+
+    const timestamp = new Date();
+    const time = timestamp.toLocaleTimeString("no-NO", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const newMessage: Message = {
+      id: `${currentUserName.toLowerCase().replace(/\s+/g, "-")}-${timestamp.getTime()}`,
+      name: currentUserName,
+      time,
+      body,
+      reactions: { likes: 0, dislikes: 0 },
+      userReaction: null,
+    };
+
+    setMessages((prev) => [newMessage, ...prev]);
+    setComposerMessage("");
+    setIsComposerOpen(false);
+  };
+
+  const handleOpenComposer = () => setIsComposerOpen(true);
+  const handleCloseComposer = () => {
+    setIsComposerOpen(false);
+    setComposerMessage("");
+  };
+
   return (
     <section className="!space-y-6">
       <div className="flex flex-wrap items-end justify-between !gap-4">
@@ -169,6 +211,7 @@ export default function MessagesSection({
         <button
           className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-[#212d49] !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-[#29385a] sm:text-base"
           type="button"
+          onClick={handleOpenComposer}
         >
           <Plus className="h-4 w-4" />
           Ny melding
@@ -184,6 +227,63 @@ export default function MessagesSection({
           />
         ))}
       </div>
+
+      {isComposerOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center !px-4 !py-12">
+          <button
+            aria-label="Lukk"
+            className="absolute inset-0 bg-black/60"
+            type="button"
+            onClick={handleCloseComposer}
+          />
+          <div className="relative w-full max-w-lg rounded-2xl border border-[#73aac4]/70 bg-[color:var(--surface-strong)] !p-6 text-white shadow-[0_40px_90px_rgba(2,6,23,0.6)] backdrop-blur sm:!p-8">
+            <div className="flex items-start justify-between !gap-4">
+              <div>
+                <h3 className="text-xl font-semibold">Ny melding</h3>
+                <p className="!mt-1 text-sm text-[#8694b4]">
+                  Skriv en beskjed til faddergruppen.
+                </p>
+              </div>
+              <button
+                className="rounded-full border border-[#73aac4]/50 !px-3 !py-1 text-sm text-[#d8e6ff] transition hover:bg-white/10"
+                type="button"
+                onClick={handleCloseComposer}
+              >
+                Lukk
+              </button>
+            </div>
+
+            <form className="!mt-6 !space-y-4" onSubmit={handleSubmit}>
+              <label className="block !space-y-2 text-sm font-medium text-[#d8e6ff]">
+                Melding
+                <textarea
+                  className="min-h-[140px] w-full rounded-xl border border-[#73aac4]/40 bg-[#111a2f] !px-4 !py-3 text-base text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+                  placeholder="Hva vil du si til gruppa?"
+                  value={composerMessage}
+                  onChange={(event) => setComposerMessage(event.target.value)}
+                />
+              </label>
+
+              <div className="flex flex-wrap items-center justify-end !gap-3">
+                <button
+                  className="rounded-xl border border-[#73aac4]/50 !px-4 !py-2 text-sm text-[#d8e6ff] transition hover:bg-white/10"
+                  type="button"
+                  onClick={handleCloseComposer}
+                >
+                  Avbryt
+                </button>
+                <button
+                  className="rounded-xl bg-[#2c3a5d] !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-[#33466f] disabled:cursor-not-allowed disabled:opacity-60"
+                  type="submit"
+                  disabled={composerDisabled}
+                >
+                  Send melding
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
