@@ -15,12 +15,12 @@ const quickActions = [
   },
   {
     title: "Faddergruppe",
-    href: "#",
+    href: "/faddergruppe",
     icon: Users,
   },
   {
-    title: "Drikkekleker",
-    href: "#",
+    title: "Drikkeleker",
+    href: "/drikkeleker",
     icon: Beer,
   },
 ];
