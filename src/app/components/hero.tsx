@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Beer, CalendarDays, Info, Users } from "lucide-react";
+import { Card } from "~/components/ui/card";
 
 const quickActions = [
   {
@@ -61,16 +62,17 @@ export default function Hero() {
               {quickActions.map((action) => {
                 const Icon = action.icon;
                 return (
+                <Card key={action.title} asChild>
                   <Link
-                    key={action.title}
                     href={action.href}
-                    className="group flex items-center gap-3 rounded-xl border border-[color:var(--action-border)] bg-[color:var(--action-bg)] px-4 py-3 text-sm font-semibold text-foreground shadow-[0_0_0_1px_var(--surface-border)] transition hover:border-[color:var(--surface-border-strong)] hover:bg-[color:var(--surface-soft)]"
+                    className="group flex w-full items-center gap-3 rounded-xl border border-[color:var(--action-border)] bg-[color:var(--action-bg)] px-4 py-3 text-sm font-semibold text-foreground shadow-[0_0_0_1px_var(--surface-border)] transition hover:border-[color:var(--surface-border-strong)] hover:bg-[color:var(--surface-strong)]"
                   >
-                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-[color:var(--surface-soft)] text-primary transition group-hover:bg-primary/10">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-[color:var(--surface-soft)] text-foreground transition group-hover:bg-primary/10">
                       <Icon className="h-4 w-4" />
                     </span>
                     {action.title}
                   </Link>
+                </Card>
                 );
               })}
             </div>
