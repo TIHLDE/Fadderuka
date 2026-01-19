@@ -22,7 +22,7 @@ const quickActions = [
     href: "/drikkeleker",
     icon: Beer,
   },
-];1
+];
 
 const currentYear = new Date().getFullYear();
 
