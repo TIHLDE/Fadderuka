@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Card } from "~/components/ui/card";
 
 interface ActivityCardProps {
   title: string;
@@ -14,7 +15,7 @@ export default function ActivityCard({
   href,
 }: ActivityCardProps) {
   return (
-    <div className="rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-soft)] !p-4 shadow-[0_0_0_1px_var(--surface-border)] transition hover:border-[color:var(--surface-border-strong)]">
+    <Card className="rounded-2xl !p-4">
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
       <p className="mt-2 text-xs text-muted-foreground">{meta}</p>
       <p className="mt-3 text-sm text-muted-foreground">{description}</p>
@@ -24,6 +25,6 @@ export default function ActivityCard({
       >
         {"Les mer ->"}
       </Link>
-    </div>
+    </Card>
   );
 }
