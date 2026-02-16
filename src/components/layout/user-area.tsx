@@ -6,13 +6,13 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
 import { UserRound } from "lucide-react";
-import { signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { Button } from "~/components/ui/button";
+import { authClient } from "~/lib/auth-client";
+import { cn } from "~/lib/utils";
 
 interface UserAreaProps extends React.HTMLProps<HTMLDivElement> {
   name?: string;
@@ -34,13 +34,15 @@ export const UserArea = ({
 
   const signOutButton = async () => {
     setOpen(false);
-    await signOut();
+    await authClient.signOut();
     router.refresh();
   };
 
   const signInButton = async () => {
     setOpen(false);
-    await signIn();
+    await authClient.signIn.oauth2({
+      providerId: "vipps",
+    });
   };
 
   const goToAdmin = () => {
@@ -68,28 +70,28 @@ export const UserArea = ({
           <button
             type="button"
             aria-label="Profil"
-            className="rounded-md p-2 transition hover:bg-muted/50 hover:text-foreground"
+            className="hover:bg-muted/50 hover:text-foreground rounded-md p-2 transition"
           >
-            <UserRound className="h-4 w-4 text-foreground" />
+            <UserRound className="text-foreground h-4 w-4" />
           </button>
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="w-72 rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--panel-bg)] p-5 text-foreground shadow-xl backdrop-blur"
+          className="text-foreground w-72 rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--panel-bg)] p-5 shadow-xl backdrop-blur"
         >
           <div className="flex w-full flex-col gap-4">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border border-border/60 bg-muted/40">
+              <Avatar className="border-border/60 bg-muted/40 h-10 w-10 border">
                 <AvatarImage src={image} alt={"profilbilde"} />
                 <AvatarFallback className="bg-muted/40">
-                  <UserRound className="h-5 w-5 text-foreground" />
+                  <UserRound className="text-foreground h-5 w-5" />
                 </AvatarFallback>
               </Avatar>
               <div>
                 <p className="text-sm font-semibold">
                   {isAuthenticated ? `Hei, ${name}` : "Ikke logget inn"}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {isAuthenticated
                     ? "Velkommen tilbake!"
                     : "Logg inn for å fortsette"}
@@ -101,7 +103,7 @@ export const UserArea = ({
               <div className="flex flex-col gap-2">
                 <Button
                   variant="outline"
-                  className="w-full border-border/60 bg-muted/40 text-foreground hover:bg-muted/60"
+                  className="border-border/60 bg-muted/40 text-foreground hover:bg-muted/60 w-full"
                   onClick={goToMyPage}
                 >
                   Min side
@@ -109,7 +111,7 @@ export const UserArea = ({
                 {admin ? (
                   <Button
                     variant="outline"
-                    className="w-full border-border/60 bg-muted/40 text-foreground hover:bg-muted/60"
+                    className="border-border/60 bg-muted/40 text-foreground hover:bg-muted/60 w-full"
                     onClick={goToAdmin}
                   >
                     Admin
@@ -125,7 +127,7 @@ export const UserArea = ({
               </div>
             ) : (
               <Button
-                className="w-full bg-primary/15 text-primary hover:bg-primary/25"
+                className="bg-primary/15 text-primary hover:bg-primary/25 w-full"
                 onClick={signInButton}
               >
                 Logg inn
