@@ -15,6 +15,7 @@ const vippsProvider = oauth2({
     "https://api.vipps.no/access-management-1.0/access/.well-known/openid-configuration",
   scopes: ["openid", "userid", "profile", "groups-edu", "email"],
   async getUserInfo(tokens) {
+    console.log(tokens);
     const response = await fetch(
       "https://api.vipps.no/vipps-userinfo-api/userinfo",
       {
