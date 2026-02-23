@@ -33,9 +33,7 @@ export default async function Home() {
         <div className="my-10 h-px w-full bg-border/60" />
 
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">
-            Neste aktiviteter
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Neste aktiviteter</h2>
           <Link
             href="/aktiviteter"
             className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
@@ -46,7 +44,17 @@ export default async function Home() {
 
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           {upcomingActivities.map((activity) => (
-            <ActivityCard key={activity.title} {...activity} />
+            <Link
+              key={activity.title}
+              href={activity.href}
+              className="group block focus:outline-none"
+              aria-label={`Åpne aktivitet: ${activity.title}`}
+            >
+              <div className="relative">
+                <ActivityCard {...activity} />
+                <span className="absolute inset-0 rounded-xl" />
+              </div>
+            </Link>
           ))}
         </div>
       </div>
