@@ -16,9 +16,6 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
-    VIPPS_CLIENT_ID: z.string(),
-    VIPPS_CLIENT_SECRET: z.string(),
-    VIPPS_SUBSCRIPTION_KEY: z.string(),
   },
 
   /**
@@ -39,9 +36,6 @@ export const env = createEnv({
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
-    VIPPS_CLIENT_ID: process.env.VIPPS_CLIENT_ID,
-    VIPPS_CLIENT_SECRET: process.env.VIPPS_CLIENT_SECRET,
-    VIPPS_SUBSCRIPTION_KEY: process.env.VIPPS_SUBSCRIPTION_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

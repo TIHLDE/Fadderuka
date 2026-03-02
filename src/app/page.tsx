@@ -2,7 +2,6 @@ import Link from "next/link";
 import Hero from "~/app/components/hero";
 import Footer from "~/components/layout/footer/footer";
 import ActivityCard from "~/components/ui/small-activity-card";
-import { VippsButton } from "./components/vipps";
 
 const upcomingActivities = [
   {
@@ -29,7 +28,6 @@ export default async function Home() {
       }}
     >
       <Hero />
-      <VippsButton />
       <div className="max-w-page mx-auto w-full px-4 pb-16 md:px-6">
         <div className="bg-border/60 my-10 h-px w-full" />
 

@@ -38,11 +38,9 @@ export const UserArea = ({
     router.refresh();
   };
 
-  const signInButton = async () => {
+  const signInButton = () => {
     setOpen(false);
-    await authClient.signIn.oauth2({
-      providerId: "vipps",
-    });
+    // TODO: implement non-Vipps sign in
   };
 
   const goToAdmin = () => {
