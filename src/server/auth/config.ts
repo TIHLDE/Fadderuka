@@ -7,6 +7,7 @@ import { env } from "../../env";
 const VIPPS_PROVIDER_ID = "vipps";
 
 export const auth = betterAuth({
+  baseURL: env.BETTER_AUTH_URL,
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
@@ -19,14 +20,17 @@ export const auth = betterAuth({
           clientSecret: env.VIPPS_CLIENT_SECRET,
           redirectURI: `http://localhost:4000/api/auth/callback/${VIPPS_PROVIDER_ID}`,
           discoveryUrl:
-            "https://api.vipps.no/access-management-1.0/access/.well-known/openid-configuration",
+            "https://apitest.vipps.no/access-management-1.0/access/.well-known/openid-configuration",
           scopes: ["openid", "name", "phoneNumber", "email"],
           async getUserInfo(tokens) {
             console.log(tokens);
             const response = await fetch(
-              "https://api.vipps.no/vipps-userinfo-api/userinfo",
+              "https://apitest.vipps.no/vipps-userinfo-api/userinfo",
               {
-                headers: { Authorization: `Bearer ${tokens.accessToken}` },
+                headers: {
+                  Authorization: `Bearer ${tokens.accessToken}`,
+                  "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
+                },
               },
             );
 
