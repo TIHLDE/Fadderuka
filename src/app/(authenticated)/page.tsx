@@ -1,6 +1,6 @@
-import Hero from "~/app/components/hero";
-import Footer from "~/components/layout/footer/footer";
 import Link from "next/link";
+import Hero from "~/app/(authenticated)/components/hero";
+import Footer from "~/components/layout/footer/footer";
 import ActivityCard from "~/components/ui/small-activity-card";
 
 const upcomingActivities = [
@@ -28,15 +28,14 @@ export default async function Home() {
       }}
     >
       <Hero />
-
       <div className="max-w-page mx-auto w-full px-4 pb-16 md:px-6">
-        <div className="my-10 h-px w-full bg-border/60" />
+        <div className="bg-border/60 my-10 h-px w-full" />
 
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Neste aktiviteter</h2>
           <Link
             href="/aktiviteter"
-            className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground text-sm font-medium transition"
           >
             {"Se alle ->"}
           </Link>

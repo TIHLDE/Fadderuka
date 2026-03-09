@@ -1,17 +1,20 @@
+import { Bell } from "lucide-react";
+import { headers } from "next/headers";
+import React from "react";
 import HeaderLink from "~/components/ui/header-link";
 import Logo from "~/components/ui/logo";
-import { UserArea } from "../user-area";
-import { auth } from "~/server/auth";
-import { cn } from "~/lib/utils";
-import { Bell } from "lucide-react";
-import React from "react";
 import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
+import { cn } from "~/lib/utils";
+import { auth } from "~/server/auth/config";
+import { UserArea } from "../user-area";
 
 const HeaderButtonsWrapper = async ({
   className,
   ...props
 }: React.HTMLProps<HTMLDivElement>) => {
-  const session = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
   return (
     <div
@@ -46,24 +49,23 @@ const HeaderButtonsWrapper = async ({
         </HeaderLink>
       </nav>
 
-      <div className="flex items-center gap-3 text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-3">
         <button
           aria-label="Varsler"
-          className="rounded-md p-2 transition hover:bg-muted/50 hover:text-foreground"
+          className="hover:bg-muted/50 hover:text-foreground rounded-md p-2 transition"
           type="button"
         >
           <Bell className="h-4 w-4" />
         </button>
         <ThemeToggle
           aria-label="Bytt tema"
-          className="rounded-md border-transparent bg-transparent p-2 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+          className="text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md border-transparent bg-transparent p-2"
           variant="ghost"
           size="icon"
         />
         <UserArea
-          name={session?.user?.firstName ?? "Gjest"}
-          image={session?.user?.profilePicture ?? ""}
-          admin={session?.user?.role == "ADMIN"}
+          name={session?.user?.name ?? "Gjest"}
+          image={session?.user?.image ?? ""}
           isAuthenticated={!!session?.user}
         />
       </div>

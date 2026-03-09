@@ -2,13 +2,12 @@ import Header from "~/components/layout/header/header";
 import { ThemeProvider } from "~/components/ui/theme-provider";
 import { Toaster } from "~/components/ui/toaster";
 
-import "./globals.css";
-import { cn } from "~/lib/utils";
 import type { Metadata } from "next";
-import { SessionProvider } from "next-auth/react";
 import { Inter } from "next/font/google";
 import React from "react";
+import { cn } from "~/lib/utils";
 import { TRPCReactProvider } from "~/trpc/react";
+import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -28,25 +27,23 @@ export default async function RootLayout({
       <body
         className={cn(
           inter.className,
-          "flex min-h-screen flex-col bg-[color:var(--page-bg)] text-foreground",
+          "text-foreground flex min-h-screen flex-col bg-[color:var(--page-bg)]",
         )}
         suppressHydrationWarning
       >
-          <SessionProvider>
-            <TRPCReactProvider>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="dark"
-                enableSystem={false}
-                storageKey="tihlde-theme"
-                disableTransitionOnChange
-              >
-                <Header className="hidden lg:flex" />
-                {children}
-                <Toaster />
-              </ThemeProvider>
-            </TRPCReactProvider>
-          </SessionProvider>
+        <TRPCReactProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            storageKey="tihlde-theme"
+            disableTransitionOnChange
+          >
+            <Header className="hidden lg:flex" />
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </TRPCReactProvider>
       </body>
     </html>
   );
