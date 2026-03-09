@@ -45,7 +45,17 @@ export default async function Home() {
 
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           {upcomingActivities.map((activity) => (
-            <ActivityCard key={activity.title} {...activity} />
+            <Link
+              key={activity.title}
+              href={activity.href}
+              className="group block focus:outline-none"
+              aria-label={`Åpne aktivitet: ${activity.title}`}
+            >
+              <div className="relative">
+                <ActivityCard {...activity} />
+                <span className="absolute inset-0 rounded-xl" />
+              </div>
+            </Link>
           ))}
         </div>
       </div>
