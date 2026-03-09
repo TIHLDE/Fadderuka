@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Hero from "~/app/components/hero";
+import Hero from "~/app/(authenticated)/components/hero";
 import Footer from "~/components/layout/footer/footer";
 import ActivityCard from "~/components/ui/small-activity-card";
 

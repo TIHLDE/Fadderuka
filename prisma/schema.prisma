@@ -28,6 +28,7 @@ model User {
     email         String    @unique
     emailVerified Boolean   @default(false)
     image         String?
+    isVerified    Boolean   @default(false)
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
     sessions      Session[]
