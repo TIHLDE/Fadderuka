@@ -1,25 +1,26 @@
-import Logo from "~/components/ui/logo";
-
 import HeaderButtonsWrapper from "./header-buttons-wrapper";
 import HeaderSkeleton from "./header-skeleton";
 import HeaderWrapper from "./header-wrapper";
-import Link from "next/link";
+import MobileHeader from "./mobile-header";
 import React, { Suspense } from "react";
 
 type HeaderProps = React.HTMLProps<HTMLHeadElement>;
 
-export default async function Header({ className, ...props }: HeaderProps) {
+export default async function Header({ ...props }: HeaderProps) {
   return (
     <HeaderWrapper {...props}>
+      {/* Desktop */}
       <div className="hidden h-full w-full md:block">
         <Suspense fallback={<HeaderSkeleton />}>
           <HeaderButtonsWrapper />
         </Suspense>
       </div>
-      <div className="flex w-full place-content-center md:hidden">
-        <Link href={"/"}>
-          <Logo />
-        </Link>
+
+      {/* Mobile */}
+      <div className="flex w-full md:hidden">
+        <Suspense fallback={<div />}>
+          <MobileHeader />
+        </Suspense>
       </div>
     </HeaderWrapper>
   );

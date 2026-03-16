@@ -26,7 +26,7 @@ const faddergruppeData = {
 
 export default function FaddergruppeOversiktPage() {
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-[#0f172a] via-[#0f1420] via-[84%] to-[#101013]">
+    <main className="relative min-h-screen w-full overflow-hidden bg-background">
         <div className="m-8">
       {/* Background blur effects */}
       <div className="pointer-events-none absolute -left-40 -top-32 h-[520px] w-[520px] rounded-full bg-sky-400/10 blur-[140px]" />
@@ -47,12 +47,12 @@ export default function FaddergruppeOversiktPage() {
           >
             Faddergruppe {faddergruppeData.number}
           </h1>
-          <p className="text-base text-slate-400 sm:text-lg">
+          <p className="text-base text-muted-foreground sm:text-lg">
               Velkommen til faddergruppe {faddergruppeData.number}! Her finner du en oversikt over alle faddere og fadderbarn i tillegg til informasjon fra fadderne til faddergruppe.
           </p>
         </div>
         
-        <h2 className="mb-8 text-[32px] font-bold leading-[48px] text-white">
+        <h2 className="mb-8 text-[32px] font-bold leading-[48px] text-foreground">
             Medlemmer
         </h2>
         

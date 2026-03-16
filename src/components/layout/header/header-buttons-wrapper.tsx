@@ -3,7 +3,8 @@ import Logo from "~/components/ui/logo";
 import { UserArea } from "../user-area";
 import { auth } from "~/server/auth";
 import { cn } from "~/lib/utils";
-import { Bell, Moon, Sun } from "lucide-react";
+import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
+import { Bell } from "lucide-react";
 import React from "react";
 
 const HeaderButtonsWrapper = async ({
@@ -20,44 +21,33 @@ const HeaderButtonsWrapper = async ({
         className,
       )}
     >
-      <nav className="flex items-center gap-8">
+      {/* Logo – venstre */}
+      <div className="flex flex-1">
         <HeaderLink
           href="/"
-          className="mr-10 p-0 hover:bg-transparent"
+          className="p-0 hover:bg-transparent"
           aria-label="TIHLDE"
         >
           <Logo />
         </HeaderLink>
-        <HeaderLink className="text-slate-200" href="/">
-          Generelt
-        </HeaderLink>
-        <HeaderLink className="text-slate-400 hover:text-slate-200" href="/">
-          Arrangementer
-        </HeaderLink>
+      </div>
+
+      {/* Nav – sentrert */}
+      <nav className="flex items-center gap-6">
+        <HeaderLink href="/">Generelt</HeaderLink>
+        <HeaderLink href="/aktiviteter">Arrangementer</HeaderLink>
       </nav>
 
-      <div className="flex items-center gap-3 text-slate-300">
+      {/* Ikoner – høyre */}
+      <div className="flex flex-1 items-center justify-end gap-3 text-foreground/60 dark:text-foreground/80">
         <button
           aria-label="Varsler"
-          className="rounded-md p-2 transition hover:bg-white/5 hover:text-slate-100"
+          className="rounded-md p-2 transition hover:bg-accent hover:text-foreground"
           type="button"
         >
-          <Bell className="h-4 w-4" />
+          <Bell className="h-[18px] w-[18px]" />
         </button>
-        <button
-          aria-label="Lys modus"
-          className="rounded-md p-2 transition hover:bg-white/5 hover:text-slate-100"
-          type="button"
-        >
-          <Sun className="h-4 w-4" />
-        </button>
-        <button
-          aria-label="Mork modus"
-          className="rounded-md p-2 transition hover:bg-white/5 hover:text-slate-100"
-          type="button"
-        >
-          <Moon className="h-4 w-4" />
-        </button>
+        <ThemeToggle className="rounded-md p-2 transition hover:bg-accent hover:text-foreground" />
         <UserArea
           name={session?.user?.firstName ?? "Gjest"}
           image={session?.user?.profilePicture ?? ""}

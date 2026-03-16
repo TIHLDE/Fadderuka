@@ -24,28 +24,31 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="no" suppressHydrationWarning>
+      <head>
+        {/* Prevent flash of wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('ui-theme');if(t==='dark')document.documentElement.classList.add('dark');})();`,
+          }}
+        />
+      </head>
       <body
         className={cn(
           inter.className,
-          "flex min-h-screen flex-col bg-[#0b1221] text-slate-100",
+          "flex min-h-screen flex-col bg-background text-foreground",
         )}
         suppressHydrationWarning
       >
-          <SessionProvider>
-            <TRPCReactProvider>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="dark"
-                enableSystem
-                disableTransitionOnChange
-              >
-                <Header className="hidden lg:flex" />
-                {children}
-                <Toaster />
-              </ThemeProvider>
-            </TRPCReactProvider>
-          </SessionProvider>
+        <SessionProvider>
+          <TRPCReactProvider>
+            <ThemeProvider>
+              <Header />
+              {children}
+              <Toaster />
+            </ThemeProvider>
+          </TRPCReactProvider>
+        </SessionProvider>
       </body>
     </html>
   );

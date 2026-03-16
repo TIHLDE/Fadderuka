@@ -12,7 +12,7 @@ export default async function HeaderLink({
   return (
     <Link
       className={cn(
-        "hover:bg-primary/5 hover:text-primary rounded-md p-2 text-sm font-medium text-zinc-500 transition-colors duration-150 dark:text-zinc-300",
+        "rounded-md px-3 py-2 text-sm font-medium text-foreground/60 transition-colors duration-150 hover:bg-accent hover:text-foreground dark:text-foreground/70 dark:hover:text-foreground",
         className,
       )}
       href={href}

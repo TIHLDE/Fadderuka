@@ -68,9 +68,9 @@ export const UserArea = ({
           <button
             type="button"
             aria-label="Profil"
-            className="rounded-md p-2 transition hover:bg-white/5 hover:text-slate-100"
+            className="rounded-md p-2 transition hover:bg-accent hover:text-foreground"
           >
-            <UserRound className="h-4 w-4 text-slate-200" />
+            <UserRound className="h-[18px] w-[18px]" />
           </button>
         </PopoverTrigger>
         <PopoverContent
