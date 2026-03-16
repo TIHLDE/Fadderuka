@@ -66,6 +66,7 @@ const HeaderButtonsWrapper = async ({
         <UserArea
           name={session?.user?.name ?? "Gjest"}
           image={session?.user?.image ?? ""}
+          admin={!!session?.user?.isAdmin}
           isAuthenticated={!!session?.user}
         />
       </div>

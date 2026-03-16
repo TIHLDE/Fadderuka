@@ -10,6 +10,11 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
+enum MemberRole {
+    FADDER
+    FADDERBARN
+}
+
 model Post {
     id        Int      @id @default(autoincrement())
     name      String
@@ -29,11 +34,45 @@ model User {
     emailVerified Boolean   @default(false)
     image         String?
     isVerified    Boolean   @default(false)
+    isAdmin       Boolean   @default(false)
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
     sessions      Session[]
     accounts      Account[]
     posts         Post[]
+    memberships   FadderGruppeMember[]
+    groupMessages GroupMessage[]
+}
+
+model FadderGruppe {
+    id        String   @id @default(cuid())
+    name      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    members   FadderGruppeMember[]
+    messages  GroupMessage[]
+}
+
+model FadderGruppeMember {
+    id        String      @id @default(cuid())
+    role      MemberRole
+    createdAt DateTime    @default(now())
+    userId    String
+    user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    gruppeId  String
+    gruppe    FadderGruppe @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, gruppeId])
+}
+
+model GroupMessage {
+    id        String       @id @default(cuid())
+    content   String
+    createdAt DateTime     @default(now())
+    authorId  String
+    author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    gruppeId  String
+    gruppe    FadderGruppe @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
 }
 
 model Session {
