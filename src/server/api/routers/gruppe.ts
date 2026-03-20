@@ -1,0 +1,124 @@
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+} from "~/server/api/trpc";
+
+export const gruppeRouter = createTRPCRouter({
+  /** Get the current user's faddergruppe membership(s) */
+  getMyGruppe: protectedProcedure.query(async ({ ctx }) => {
+    const membership = await ctx.db.fadderGruppeMember.findFirst({
+      where: { userId: ctx.session.user.id },
+      include: {
+        gruppe: {
+          include: {
+            members: {
+              include: {
+                user: { select: { id: true, name: true, email: true } },
+              },
+              orderBy: { role: "asc" },
+            },
+          },
+        },
+      },
+    });
+    return membership;
+  }),
+
+  /** Get messages for a group (user must be a member or admin) */
+  getMessages: protectedProcedure
+    .input(z.object({ gruppeId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      // Check access: must be admin or member of the group
+      const isAdmin = ctx.session.user.isAdmin;
+      if (!isAdmin) {
+        const membership = await ctx.db.fadderGruppeMember.findUnique({
+          where: {
+            userId_gruppeId: {
+              userId: ctx.session.user.id,
+              gruppeId: input.gruppeId,
+            },
+          },
+        });
+        if (!membership) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Du har ikke tilgang til denne gruppen",
+          });
+        }
+      }
+
+      return ctx.db.groupMessage.findMany({
+        where: { gruppeId: input.gruppeId },
+        include: {
+          author: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }),
+
+  /** Post a message to a group (only FADDER role or admin) */
+  postMessage: protectedProcedure
+    .input(
+      z.object({
+        gruppeId: z.string(),
+        content: z.string().min(1).max(2000),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const isAdmin = ctx.session.user.isAdmin;
+
+      if (!isAdmin) {
+        const membership = await ctx.db.fadderGruppeMember.findUnique({
+          where: {
+            userId_gruppeId: {
+              userId: ctx.session.user.id,
+              gruppeId: input.gruppeId,
+            },
+          },
+        });
+        if (!membership) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Du har ikke tilgang til denne gruppen",
+          });
+        }
+        if (membership.role !== "FADDER") {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Kun faddere kan poste meldinger",
+          });
+        }
+      }
+
+      return ctx.db.groupMessage.create({
+        data: {
+          content: input.content,
+          authorId: ctx.session.user.id,
+          gruppeId: input.gruppeId,
+        },
+        include: {
+          author: { select: { id: true, name: true } },
+        },
+      });
+    }),
+
+  /** Delete a message (author or admin only) */
+  deleteMessage: protectedProcedure
+    .input(z.object({ messageId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const message = await ctx.db.groupMessage.findUnique({
+        where: { id: input.messageId },
+      });
+      if (!message) {
+        throw new TRPCError({ code: "NOT_FOUND" });
+      }
+      if (message.authorId !== ctx.session.user.id && !ctx.session.user.isAdmin) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      return ctx.db.groupMessage.delete({
+        where: { id: input.messageId },
+      });
+    }),
+});

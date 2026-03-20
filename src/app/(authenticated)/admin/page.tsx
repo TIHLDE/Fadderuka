@@ -1,0 +1,46 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "~/server/auth/config";
+import Footer from "~/components/layout/footer/footer";
+import { AdminPanel } from "./admin-panel";
+
+export default async function AdminPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+
+  if (!session?.user?.isAdmin) {
+    redirect("/");
+  }
+
+  return (
+    <main
+      className="relative flex min-h-screen w-full flex-1 flex-col overflow-hidden text-white"
+      style={{
+        backgroundColor: "var(--page-bg)",
+        backgroundImage: "var(--page-bg-image), var(--page-gradient)",
+      }}
+    >
+      <div className="pointer-events-none absolute top-[-280px] left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(100,149,230,0.35),transparent_70%)] blur-3xl" />
+
+      <div className="max-w-page relative mx-auto flex w-full flex-1 flex-col !px-4 !pt-24 !pb-16 md:!px-6">
+        <div className="mx-auto flex w-full max-w-[1040px] flex-col !gap-8">
+          <section className="!space-y-3">
+            <h1 className="bg-gradient-to-r from-[#90dfed] to-[#6495e6] bg-clip-text text-4xl leading-[1.15] font-bold text-transparent md:text-5xl">
+              Adminpanel
+            </h1>
+            <p className="max-w-3xl text-base text-[#8694b4] sm:text-lg">
+              Administrer brukere, faddergrupper og medlemskap.
+            </p>
+          </section>
+
+          <AdminPanel />
+        </div>
+      </div>
+
+      <div className="mt-auto w-full">
+        <Footer />
+      </div>
+    </main>
+  );
+}

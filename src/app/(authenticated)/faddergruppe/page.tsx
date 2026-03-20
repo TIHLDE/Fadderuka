@@ -1,27 +1,74 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import Footer from "~/components/layout/footer/footer";
-import MessagesSection from "./messages-section";
+import { auth } from "~/server/auth/config";
+import { db } from "~/server/db";
+import { GroupView } from "./group-view";
 
-const fadderChildren = [
-  "Jan Olsen",
-  "Per Per",
-  "Ola Jansen",
-  "Jan Olsen",
-  "Per Per",
-  "Ola Jansen",
-  "Jan Olsen",
-  "Per Per",
-  "Ola Jansen",
-  "Jan Olsen",
-  "Per Per",
-];
+export default async function FaddergroupPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-const Faddere = [
-  { name: "Jan Olsen", phone: "+47 941 13 131" },
-  { name: "Per Per", phone: "+47 911 48 144" },
-  { name: "Ola Jansen", phone: "+47 488 48 488" },
-];
+  if (!session?.user) {
+    redirect("/registrering");
+  }
 
-export default function FaddergroupPage() {
+  // Admins see the admin panel instead
+  if (session.user.isAdmin) {
+    redirect("/admin");
+  }
+
+  // Find the user's group membership
+  const membership = await db.fadderGruppeMember.findFirst({
+    where: { userId: session.user.id },
+    include: {
+      gruppe: {
+        include: {
+          members: {
+            include: {
+              user: { select: { id: true, name: true } },
+            },
+            orderBy: { role: "asc" },
+          },
+        },
+      },
+    },
+  });
+
+  if (!membership) {
+    return (
+      <main
+        className="relative flex min-h-screen w-full flex-1 flex-col overflow-hidden text-white"
+        style={{
+          backgroundColor: "var(--page-bg)",
+          backgroundImage: "var(--page-bg-image), var(--page-gradient)",
+        }}
+      >
+        <div className="pointer-events-none absolute top-[-280px] left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(100,149,230,0.35),transparent_70%)] blur-3xl" />
+        <div className="max-w-page relative mx-auto flex w-full flex-1 flex-col items-center justify-center !px-4 !pt-24 !pb-16 md:!px-6">
+          <div className="mx-auto max-w-md !space-y-4 text-center">
+            <h1 className="text-3xl font-bold text-white">
+              Ingen faddergruppe
+            </h1>
+            <p className="text-[#8694b4]">
+              Du er ikke tildelt en faddergruppe enda. Kontakt en administrator
+              for a bli lagt til i en gruppe.
+            </p>
+          </div>
+        </div>
+        <div className="mt-auto w-full">
+          <Footer />
+        </div>
+      </main>
+    );
+  }
+
+  const gruppe = membership.gruppe;
+  const faddere = gruppe.members.filter((m) => m.role === "FADDER");
+  const fadderbarn = gruppe.members.filter((m) => m.role === "FADDERBARN");
+  const canPost = membership.role === "FADDER";
+
   return (
     <main
       className="relative flex min-h-screen w-full flex-1 flex-col overflow-hidden text-white"
@@ -38,10 +85,10 @@ export default function FaddergroupPage() {
         <div className="mx-auto flex w-full max-w-[1040px] flex-col !gap-12">
           <section className="!space-y-5">
             <h1 className="bg-gradient-to-r from-[#90dfed] to-[#6495e6] bg-clip-text text-4xl leading-[1.15] font-bold text-transparent md:text-5xl">
-              Faddergruppe 5
+              {gruppe.name}
             </h1>
             <p className="max-w-3xl text-base text-[#8694b4] sm:text-lg">
-              Velkommen til faddergruppe 5! Her finner du en oversikt over alle
+              Velkommen til {gruppe.name}! Her finner du en oversikt over alle
               faddere og fadderbarn i tillegg til informasjon fra fadderne til
               faddergruppa.
             </p>
@@ -55,29 +102,35 @@ export default function FaddergroupPage() {
               <div className="!space-y-4">
                 <h3 className="text-lg font-semibold text-white">Fadderbarn</h3>
                 <ul className="!space-y-2 text-sm text-[#7f8fb2] sm:text-base">
-                  {fadderChildren.map((child, index) => (
-                    <li key={`${child}-${index}`}>{child}</li>
+                  {fadderbarn.map((member) => (
+                    <li key={member.id}>{member.user.name}</li>
                   ))}
+                  {fadderbarn.length === 0 && (
+                    <li className="text-[#5b6a8f]">Ingen fadderbarn enda</li>
+                  )}
                 </ul>
               </div>
               <div className="!space-y-4">
                 <h3 className="text-lg font-semibold text-white">Faddere</h3>
                 <div className="grid !gap-2 text-sm text-[#7f8fb2] sm:text-base">
-                  {Faddere.map((mentor) => (
-                    <div
-                      key={mentor.phone}
-                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center !gap-6"
-                    >
-                      <span>{mentor.name}</span>
-                      <span className="text-right">{mentor.phone}</span>
+                  {faddere.map((member) => (
+                    <div key={member.id}>
+                      <span>{member.user.name}</span>
                     </div>
                   ))}
+                  {faddere.length === 0 && (
+                    <span className="text-[#5b6a8f]">Ingen faddere enda</span>
+                  )}
                 </div>
               </div>
             </div>
           </section>
 
-          <MessagesSection />
+          <GroupView
+            gruppeId={gruppe.id}
+            canPost={canPost}
+            currentUserName={session.user.name}
+          />
         </div>
       </div>
 
