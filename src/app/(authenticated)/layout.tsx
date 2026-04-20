@@ -1,8 +1,10 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import React from "react";
 import { auth } from "~/server/auth/config";
 import VippsPaymentOverlay from "~/components/vipps-payment-overlay";
 
-export default function AuthenticatedLayout({
+export default async function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode;
