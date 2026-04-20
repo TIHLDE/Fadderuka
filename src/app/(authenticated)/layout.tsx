@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import React from "react";
 import { auth } from "~/server/auth/config";
 
-export default async function AuthenticatedLayout({
+/* export default async function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -34,3 +34,4 @@ export default async function AuthenticatedLayout({
 
   return <>{children}</>;
 }
+*/
