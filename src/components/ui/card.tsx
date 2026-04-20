@@ -1,5 +1,5 @@
-import type { HTMLAttributes } from "react";
 import { Slot } from "@radix-ui/react-slot";
+import type { HTMLAttributes } from "react";
 import { cn } from "~/lib/utils";
 
 type CardProps = HTMLAttributes<HTMLElement> & {
@@ -26,8 +26,63 @@ export function Card({ asChild = false, className, ...props }: CardProps) {
         "before:bg-[radial-gradient(600px_160px_at_50%_-40px,var(--card-sheen),transparent_60%)]",
         "before:opacity-70",
 
-        className
+        className,
       )}
+      {...props}
+    />
+  );
+}
+
+export function CardHeader({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("flex flex-col gap-4", className)}
+      {...props}
+    />
+  );
+}
+
+export function CardTitle({
+  className,
+  ...props
+}: HTMLAttributes<HTMLHeadingElement>) {
+  return (
+    <h3
+      className={cn(
+        "text-foreground text-xl leading-none font-semibold tracking-tight",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export function CardDescription({
+  className,
+  ...props
+}: HTMLAttributes<HTMLParagraphElement>) {
+  return (
+    <p className={cn("text-muted-foreground text-sm", className)} {...props} />
+  );
+}
+
+export function CardContent({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn("", className)} {...props} />;
+}
+
+export function CardFooter({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("flex items-center", className)}
       {...props}
     />
   );
