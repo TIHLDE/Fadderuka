@@ -3,16 +3,25 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Card, CardDescription, CardTitle } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { authClient } from "~/lib/auth-client";
 
+type View = "login" | "register";
+
 export default function RegistreringPage() {
+  const [view, setView] = useState<View>("login");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  const switchView = (next: View) => {
+    setError(null);
+    setView(next);
+  };
+
+  const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -21,10 +30,7 @@ export default function RegistreringPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
-    const { error } = await authClient.signIn.email({
-      email,
-      password,
-    });
+    const { error } = await authClient.signIn.email({ email, password });
 
     if (error) {
       setError(error.message ?? "Noe gikk galt ved innlogging.");
@@ -36,7 +42,7 @@ export default function RegistreringPage() {
     router.refresh();
   };
 
-  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleRegister = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -53,11 +59,7 @@ export default function RegistreringPage() {
       return;
     }
 
-    const { error } = await authClient.signUp.email({
-      name,
-      email,
-      password,
-    });
+    const { error } = await authClient.signUp.email({ name, email, password });
 
     if (error) {
       setError(error.message ?? "Noe gikk galt ved registrering.");
@@ -77,145 +79,148 @@ export default function RegistreringPage() {
         backgroundImage: "var(--page-bg-image)",
       }}
     >
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <h1 className="text-foreground text-3xl font-bold tracking-tight">
-            Fadderuka
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Logg inn eller opprett en ny konto
-          </p>
-        </div>
-
-        <Card className="p-6">
-          <Tabs defaultValue="logg-inn" onValueChange={() => setError(null)}>
-            <TabsList className="mb-6 w-full">
-              <TabsTrigger value="logg-inn" className="flex-1">
-                Logg inn
-              </TabsTrigger>
-              <TabsTrigger value="registrer" className="flex-1">
-                Registrer
-              </TabsTrigger>
-            </TabsList>
-
-            {error && (
-              <div className="bg-destructive/10 text-destructive mb-4 rounded-md px-4 py-3 text-sm">
-                {error}
+      <div className="w-full max-w-xl">
+        <Card>
+          {view === "login" ? (
+            <form onSubmit={handleLogin} style={{ padding: "3rem" }}>
+              <div style={{ marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <CardTitle className="text-3xl font-bold">Logg inn</CardTitle>
+                <CardDescription>
+                  Logg inn med ditt TIHLDE brukernavn og passord
+                </CardDescription>
               </div>
-            )}
 
-            <TabsContent value="logg-inn">
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="login-email"
-                    className="text-foreground text-sm font-medium"
-                  >
-                    E-post
-                  </label>
-                  <input
+              {error && (
+                <div className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm" style={{ marginBottom: "1.5rem" }}>
+                  {error}
+                </div>
+              )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2rem" }}>
+                <div className="grid gap-2">
+                  <Label htmlFor="login-email">
+                    E-post <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     id="login-email"
                     name="email"
                     type="email"
                     required
                     placeholder="din@epost.no"
-                    className="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="h-12"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="login-password"
-                    className="text-foreground text-sm font-medium"
-                  >
-                    Passord
-                  </label>
-                  <input
+                <div className="grid gap-2">
+                  <Label htmlFor="login-password">
+                    Passord <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     id="login-password"
                     name="password"
                     type="password"
                     required
                     placeholder="••••••••"
-                    className="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="h-12"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <Button type="submit" className="h-12 w-full text-base" disabled={loading}>
                   {loading ? "Logger inn..." : "Logg inn"}
                 </Button>
-              </form>
-            </TabsContent>
+                <div className="flex w-full justify-between text-sm">
+                  <button type="button" className="text-primary font-medium hover:underline">
+                    Glemt passord?
+                  </button>
+                  <button type="button" onClick={() => switchView("register")} className="text-primary font-medium hover:underline">
+                    Opprett bruker
+                  </button>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleRegister} style={{ padding: "3rem" }}>
+              <div style={{ marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <CardTitle className="text-3xl font-bold">Opprett bruker</CardTitle>
+                <CardDescription>
+                  Fyll inn informasjonen din for å opprette en konto
+                </CardDescription>
+              </div>
 
-            <TabsContent value="registrer">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="register-name"
-                    className="text-foreground text-sm font-medium"
-                  >
-                    Fullt navn
-                  </label>
-                  <input
+              {error && (
+                <div className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm" style={{ marginBottom: "1.5rem" }}>
+                  {error}
+                </div>
+              )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", marginBottom: "2rem" }}>
+                <div className="grid gap-2">
+                  <Label htmlFor="register-name">
+                    Fullt navn <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     id="register-name"
                     name="name"
                     type="text"
                     required
                     placeholder="Ola Nordmann"
-                    className="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="h-12"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="register-email"
-                    className="text-foreground text-sm font-medium"
-                  >
-                    E-post
-                  </label>
-                  <input
+                <div className="grid gap-2">
+                  <Label htmlFor="register-email">
+                    E-post <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     id="register-email"
                     name="email"
                     type="email"
                     required
                     placeholder="din@epost.no"
-                    className="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="h-12"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="register-password"
-                    className="text-foreground text-sm font-medium"
-                  >
-                    Passord
-                  </label>
-                  <input
+                <div className="grid gap-2">
+                  <Label htmlFor="register-password">
+                    Passord <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     id="register-password"
                     name="password"
                     type="password"
                     required
                     placeholder="••••••••"
-                    className="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="h-12"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="register-confirm-password"
-                    className="text-foreground text-sm font-medium"
-                  >
-                    Bekreft passord
-                  </label>
-                  <input
+                <div className="grid gap-2">
+                  <Label htmlFor="register-confirm-password">
+                    Bekreft passord <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
                     id="register-confirm-password"
                     name="confirmPassword"
                     type="password"
                     required
                     placeholder="••••••••"
-                    className="border-input bg-background text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                    className="h-12"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <Button type="submit" className="h-12 w-full text-base" disabled={loading}>
                   {loading ? "Registrerer..." : "Opprett konto"}
                 </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+                <div className="flex w-full justify-center text-sm">
+                  <button type="button" onClick={() => switchView("login")} className="text-primary font-medium hover:underline">
+                    Har du allerede en konto? Logg inn
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
         </Card>
       </div>
     </main>
