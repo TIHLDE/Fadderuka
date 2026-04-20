@@ -21,9 +21,19 @@ export const auth = betterAuth({
         defaultValue: false,
         input: false,
       },
+      hasPaid: {
+        type: "boolean",
+        defaultValue: false,
+        input: false,
+      },
       isAdmin: {
         type: "boolean",
         defaultValue: false,
+        input: false,
+      },
+      phone: {
+        type: "string",
+        required: false,
         input: false,
       },
     },
