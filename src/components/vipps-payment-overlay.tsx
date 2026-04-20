@@ -82,10 +82,10 @@ export default function VippsPaymentOverlay() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-8 shadow-2xl">
+      <div className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-8 shadow-2xl sm:p-10">
         {/* Header */}
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500/10">
+        <div className="mb-8 text-center m-10">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500/10">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -100,8 +100,8 @@ export default function VippsPaymentOverlay() {
               <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-white">Betal for Fadderuka</h2>
-          <p className="mt-2 text-sm text-zinc-400">
+          <h2 className="text-2xl font-bold text-white mt-8">Betal for Fadderuka</h2>
+          <p className="mt-4 text-sm text-zinc-400">
             Du må betale for fadderuka før du kan se innholdet. Betal enkelt med
             Vipps for å bli registrert som fadderbarn.
           </p>
@@ -109,11 +109,11 @@ export default function VippsPaymentOverlay() {
 
         {/* Pay with Vipps section */}
         {!showPhoneCheck ? (
-          <div className="space-y-3">
+          <div className="space-y-4 m-10 mb-12">
             <div>
               <label
                 htmlFor="payment-phone"
-                className="mb-1.5 block text-sm font-medium text-zinc-300"
+                className="mb-2 block text-sm font-medium text-zinc-300"
               >
                 Telefonnummer
               </label>
@@ -129,7 +129,7 @@ export default function VippsPaymentOverlay() {
                   setPaymentPhone(val);
                   if (phoneError) setPhoneError("");
                 }}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3! py-2.5! text-white placeholder:text-zinc-500 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
               {phoneError && (
                 <p className="mt-1 text-sm text-red-400">{phoneError}</p>
@@ -178,7 +178,7 @@ export default function VippsPaymentOverlay() {
           </div>
         ) : (
           /* Already paid - phone check section */
-          <div className="space-y-3">
+          <div className="space-y-4 m-10 mb-12">
             <p className="text-sm text-zinc-400">
               Skriv inn telefonnummeret du betalte med, så sjekker vi om
               betalingen er registrert.
@@ -187,7 +187,7 @@ export default function VippsPaymentOverlay() {
             <div>
               <label
                 htmlFor="check-phone"
-                className="mb-1.5 block text-sm font-medium text-zinc-300"
+                className="mb-2 block text-sm font-medium text-zinc-300"
               >
                 Telefonnummer
               </label>
@@ -203,7 +203,7 @@ export default function VippsPaymentOverlay() {
                   setPhoneNumber(val);
                   if (phoneError) setPhoneError("");
                 }}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-4 py-3 text-white placeholder:text-zinc-500 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3! py-2.5! text-white placeholder:text-zinc-500 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
               />
               {phoneError && (
                 <p className="mt-1 text-sm text-red-400">{phoneError}</p>
