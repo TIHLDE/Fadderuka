@@ -5,7 +5,7 @@ import { Card } from "~/components/ui/card";
 const quickActions = [
   {
     title: "Informasjon",
-    href: "#",
+    href: "/informasjon",
     icon: Info,
   },
   {
