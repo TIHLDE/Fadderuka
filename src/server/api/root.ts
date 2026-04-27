@@ -1,3 +1,4 @@
+import { activityRouter } from "~/server/api/routers/activity";
 import { adminRouter } from "~/server/api/routers/admin";
 import { gruppeRouter } from "~/server/api/routers/gruppe";
 import { paymentRouter } from "~/server/api/routers/payment";
@@ -14,6 +15,7 @@ export const appRouter = createTRPCRouter({
   admin: adminRouter,
   gruppe: gruppeRouter,
   payment: paymentRouter,
+  activity: activityRouter,
 });
 
 // export type definition of API

@@ -86,6 +86,21 @@ export function UsersTab() {
                 <div>
                   <p className="font-medium text-white">{user.name}</p>
                   <p className="text-sm text-[#8694b4]">{user.email}</p>
+                  <div className="mt-1 flex flex-wrap !gap-1.5">
+                    {user.klasse && (
+                      <span className="rounded-full bg-[#73aac4]/15 !px-2 !py-0.5 text-xs font-medium text-[#73aac4]">
+                        {user.klasse}
+                      </span>
+                    )}
+                    {user.studieretning && (
+                      <span className="rounded-full bg-[#6495e6]/15 !px-2 !py-0.5 text-xs font-medium text-[#6495e6]">
+                        {user.studieretning}
+                      </span>
+                    )}
+                    {!user.klasse && !user.studieretning && (
+                      <span className="text-xs text-[#5b6a8f]">Ingen klasse/retning oppgitt</span>
+                    )}
+                  </div>
                   <p className="text-xs text-[#5b6a8f]">
                     Registrert{" "}
                     {new Date(user.createdAt).toLocaleDateString("no-NO", {
@@ -172,6 +187,8 @@ export function UsersTab() {
               <tr className="border-b border-[#73aac4]/20 text-[#8694b4]">
                 <th className="!px-4 !py-3 font-medium">Navn</th>
                 <th className="!px-4 !py-3 font-medium">E-post</th>
+                <th className="!px-4 !py-3 font-medium">Klasse</th>
+                <th className="!px-4 !py-3 font-medium">Studieretning</th>
                 <th className="!px-4 !py-3 font-medium">Gruppe</th>
                 <th className="!px-4 !py-3 font-medium">Rolle</th>
                 <th className="!px-4 !py-3 font-medium text-center">Admin</th>
@@ -190,6 +207,24 @@ export function UsersTab() {
                     </td>
                     <td className="!px-4 !py-3 text-[#8694b4]">
                       {user.email}
+                    </td>
+                    <td className="!px-4 !py-3">
+                      {user.klasse ? (
+                        <span className="rounded-full bg-[#73aac4]/15 !px-2 !py-0.5 text-xs font-medium text-[#73aac4]">
+                          {user.klasse}
+                        </span>
+                      ) : (
+                        <span className="text-[#5b6a8f]">—</span>
+                      )}
+                    </td>
+                    <td className="!px-4 !py-3">
+                      {user.studieretning ? (
+                        <span className="rounded-full bg-[#6495e6]/15 !px-2 !py-0.5 text-xs font-medium text-[#6495e6]">
+                          {user.studieretning}
+                        </span>
+                      ) : (
+                        <span className="text-[#5b6a8f]">—</span>
+                      )}
                     </td>
                     <td className="!px-4 !py-3 text-[#8694b4]">
                       {membership ? membership.gruppe.name : "—"}

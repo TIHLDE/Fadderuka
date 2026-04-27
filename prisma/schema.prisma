@@ -34,6 +34,8 @@ model User {
     emailVerified Boolean   @default(false)
     image         String?
     phone         String?
+    klasse        String?
+    studieretning String?
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)
@@ -65,6 +67,17 @@ model FadderGruppeMember {
     gruppe    FadderGruppe @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
 
     @@unique([userId, gruppeId])
+}
+
+model Activity {
+    id          String   @id @default(cuid())
+    title       String
+    description String
+    location    String
+    imageUrl    String?
+    date        DateTime
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
 }
 
 model GroupMessage {

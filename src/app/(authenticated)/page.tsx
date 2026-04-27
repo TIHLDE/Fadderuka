@@ -2,23 +2,12 @@ import Link from "next/link";
 import Hero from "~/app/(authenticated)/components/hero";
 import Footer from "~/components/layout/footer/footer";
 import ActivityCard from "~/components/ui/small-activity-card";
-
-const upcomingActivities = [
-  {
-    title: "Inndrikkning",
-    meta: "Mandag 7. August, 2024 - Sted: Klubben",
-    description: "Inndrikkning med de nye medlemmene",
-    href: "/aktiviteter",
-  },
-  {
-    title: "Jalla vors",
-    meta: "Tirsdag 8. August, 2024 - Sted: Klubben",
-    description: "Alle skal på jalla",
-    href: "/aktiviteter",
-  },
-];
+import { api } from "~/trpc/server";
 
 export default async function Home() {
+  const activities = await api.activity.getAll();
+  const upcoming = activities.slice(0, 2);
+
   return (
     <main
       className="relative flex w-full flex-1 flex-col overflow-hidden"
@@ -41,21 +30,32 @@ export default async function Home() {
           </Link>
         </div>
 
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
-          {upcomingActivities.map((activity) => (
-            <Link
-              key={activity.title}
-              href={activity.href}
-              className="group block focus:outline-none"
-              aria-label={`Åpne aktivitet: ${activity.title}`}
-            >
-              <div className="relative">
-                <ActivityCard {...activity} />
-                <span className="absolute inset-0 rounded-xl" />
-              </div>
-            </Link>
-          ))}
-        </div>
+        {upcoming.length > 0 ? (
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
+            {upcoming.map((activity) => (
+              <Link
+                key={activity.id}
+                href="/aktiviteter"
+                className="group block focus:outline-none"
+                aria-label={`Åpne aktivitet: ${activity.title}`}
+              >
+                <div className="relative">
+                  <ActivityCard
+                    title={activity.title}
+                    meta={`${new Date(activity.date).toLocaleDateString("no-NO", { weekday: "long", day: "numeric", month: "long", year: "numeric" })} · ${activity.location}`}
+                    description={activity.description}
+                    href="/aktiviteter"
+                  />
+                  <span className="absolute inset-0 rounded-xl" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-6 text-sm text-muted-foreground">
+            Ingen aktiviteter planlagt ennå.
+          </p>
+        )}
       </div>
 
       <div className="mt-auto">

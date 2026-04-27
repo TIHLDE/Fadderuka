@@ -13,6 +13,8 @@ export const adminRouter = createTRPCRouter({
         id: true,
         name: true,
         email: true,
+        klasse: true,
+        studieretning: true,
         isVerified: true,
         isAdmin: true,
         createdAt: true,

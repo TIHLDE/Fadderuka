@@ -36,6 +36,16 @@ export const auth = betterAuth({
         required: false,
         input: false,
       },
+      klasse: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      studieretning: {
+        type: "string",
+        required: false,
+        input: true,
+      },
     },
   },
 });

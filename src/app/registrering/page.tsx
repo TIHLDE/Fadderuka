@@ -52,6 +52,8 @@ export default function RegistreringPage() {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const confirmPassword = formData.get("confirmPassword") as string;
+    const klasse = formData.get("klasse") as string;
+    const studieretning = formData.get("studieretning") as string;
 
     if (password !== confirmPassword) {
       setError("Passordene stemmer ikke overens.");
@@ -59,7 +61,19 @@ export default function RegistreringPage() {
       return;
     }
 
-    const { error } = await authClient.signUp.email({ name, email, password });
+    if (!klasse) {
+      setError("Velg hvilket klassetrinn du er på.");
+      setLoading(false);
+      return;
+    }
+
+    if (!studieretning) {
+      setError("Velg din studieretning.");
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await authClient.signUp.email({ name, email, password, klasse, studieretning });
 
     if (error) {
       setError(error.message ?? "Noe gikk galt ved registrering.");
@@ -206,6 +220,41 @@ export default function RegistreringPage() {
                     placeholder="••••••••"
                     className="h-12"
                   />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="register-klasse">
+                    Klassetrinn <span className="text-destructive">*</span>
+                  </Label>
+                  <select
+                    id="register-klasse"
+                    name="klasse"
+                    defaultValue=""
+                    className="h-12 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="" disabled>Velg klassetrinn</option>
+                    <option value="1 klasse">1. klasse</option>
+                    <option value="2 klasse">2. klasse</option>
+                    <option value="3 klasse">3. klasse</option>
+                    <option value="4 klasse">4. klasse</option>
+                    <option value="5 klasse">5. klasse</option>
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="register-studieretning">
+                    Studieretning <span className="text-destructive">*</span>
+                  </Label>
+                  <select
+                    id="register-studieretning"
+                    name="studieretning"
+                    defaultValue=""
+                    className="h-12 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="" disabled>Velg studieretning</option>
+                    <option value="DigSec">DigSec</option>
+                    <option value="DigFor">DigFor</option>
+                    <option value="Data">Data</option>
+                    <option value="DigTrans">DigTrans</option>
+                  </select>
                 </div>
               </div>
 
