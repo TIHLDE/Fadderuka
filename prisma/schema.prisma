@@ -34,6 +34,8 @@ model User {
     emailVerified Boolean   @default(false)
     image         String?
     phone         String?
+    klasse        String?
+    studieretning String?
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)

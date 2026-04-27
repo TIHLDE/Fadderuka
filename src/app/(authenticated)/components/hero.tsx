@@ -1,4 +1,4 @@
-import { Beer, CalendarDays, Info, Users } from "lucide-react";
+import { CalendarDays, Info, Users } from "lucide-react";
 import Link from "next/link";
 import { Card } from "~/components/ui/card";
 
@@ -17,11 +17,6 @@ const quickActions = [
     title: "Faddergruppe",
     href: "/faddergruppe",
     icon: Users,
-  },
-  {
-    title: "Drikkeleker",
-    href: "/drikkeleker",
-    icon: Beer,
   },
 ];
 
