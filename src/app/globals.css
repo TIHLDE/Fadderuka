@@ -16,7 +16,7 @@
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;  
+    --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 99% 35%;
     --destructive-foreground: 210 40% 98%;
@@ -29,9 +29,22 @@
 
     --page-bg: #f5f7fb;
     --page-bg-image:
-      radial-gradient(700px 420px at 20% 0%, rgba(56, 189, 248, 0.2), transparent 60%),
-      radial-gradient(700px 420px at 80% 20%, rgba(14, 165, 233, 0.18), transparent 60%);
-    --page-gradient: linear-gradient(180deg, #f8fafc 0%, #eef2ff 84%, #e2e8f0 100%);
+      radial-gradient(
+        700px 420px at 20% 0%,
+        rgba(56, 189, 248, 0.2),
+        transparent 60%
+      ),
+      radial-gradient(
+        700px 420px at 80% 20%,
+        rgba(14, 165, 233, 0.18),
+        transparent 60%
+      );
+    --page-gradient: linear-gradient(
+      180deg,
+      #f8fafc 0%,
+      #eef2ff 84%,
+      #e2e8f0 100%
+    );
 
     --surface-strong: rgba(226, 232, 240, 0.95);
     --surface-soft: rgba(248, 250, 252, 0.9);
@@ -49,7 +62,7 @@
 
     --card-border: rgba(115, 170, 196, 0.55);
     --card-border-base: #374973;
-    --card-border-highlight: #73AAC4;
+    --card-border-highlight: #73aac4;
     --card-border-strong: rgba(115, 170, 196, 0.85);
   }
 
@@ -78,9 +91,22 @@
 
     --page-bg: #0b1020;
     --page-bg-image:
-      radial-gradient(700px 420px at 20% 0%, rgba(59, 130, 246, 0.18), transparent 60%),
-      radial-gradient(700px 420px at 80% 20%, rgba(14, 116, 144, 0.22), transparent 60%);
-    --page-gradient: linear-gradient(180deg, #0f172a 0%, #0f1420 84%, #101013 100%);
+      radial-gradient(
+        700px 420px at 20% 0%,
+        rgba(59, 130, 246, 0.18),
+        transparent 60%
+      ),
+      radial-gradient(
+        700px 420px at 80% 20%,
+        rgba(14, 116, 144, 0.22),
+        transparent 60%
+      );
+    --page-gradient: linear-gradient(
+      180deg,
+      #0f172a 0%,
+      #0f1420 84%,
+      #101013 100%
+    );
 
     --surface-strong: rgba(30, 41, 59, 0.92);
     --surface-soft: rgba(17, 24, 39, 0.9);
@@ -98,7 +124,7 @@
 
     --card-border: rgba(115, 170, 196, 0.45);
     --card-border-base: #374973;
-    --card-border-highlight: #73AAC4;
+    --card-border-highlight: #73aac4;
     --card-border-strong: rgba(115, 170, 196, 0.75);
   }
 }
@@ -114,11 +140,6 @@
       "rlig" 1,
       "calt" 1;
   }
-}
-
-* {
-  padding: 0;
-  box-sizing: border-box;
 }
 
 body {
