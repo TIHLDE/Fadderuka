@@ -41,12 +41,6 @@ export default function Hero() {
               Her finner du blant annet informasjon om aktiviteter i fadderuka
               og hvilken faddergruppe du er i.
             </p>
-            <Link
-              className="text-primary hover:text-primary/80 inline-flex text-sm font-semibold transition"
-              href="#"
-            >
-              Les mer om fadderuka her
-            </Link>
           </div>
 
           <div className="flex flex-col items-end gap-6">

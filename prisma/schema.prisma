@@ -69,6 +69,17 @@ model FadderGruppeMember {
     @@unique([userId, gruppeId])
 }
 
+model Activity {
+    id          String   @id @default(cuid())
+    title       String
+    description String
+    location    String
+    imageUrl    String?
+    date        DateTime
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}
+
 model GroupMessage {
     id        String       @id @default(cuid())
     content   String
