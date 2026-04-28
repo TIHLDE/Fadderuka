@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Footer from "~/components/layout/footer/footer";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
@@ -86,13 +87,14 @@ export default function RegistreringPage() {
   };
 
   return (
-    <main
-      className="flex min-h-screen items-center justify-center px-4"
+    <div
+      className="flex min-h-screen flex-col"
       style={{
         backgroundColor: "var(--page-bg)",
         backgroundImage: "var(--page-bg-image)",
       }}
     >
+      <main className="flex flex-1 items-center justify-center px-4 py-8">
       <div className="w-full max-w-xl">
         <Card>
           {view === "login" ? (
@@ -272,6 +274,8 @@ export default function RegistreringPage() {
           )}
         </Card>
       </div>
-    </main>
+      </main>
+      <Footer />
+    </div>
   );
 }
