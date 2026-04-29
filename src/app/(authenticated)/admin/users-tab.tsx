@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Shield, ShieldOff, UserCheck, X } from "lucide-react";
+import { Shield, ShieldOff, Trash2, UserCheck } from "lucide-react";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
@@ -8,17 +8,11 @@ import { toast } from "~/components/ui/use-toast";
 export function UsersTab() {
   const [search, setSearch] = useState("");
   const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const utils = api.useUtils();
 
   const { data: users, isLoading } = api.admin.getUsers.useQuery();
   const { data: grupper } = api.admin.getGrupper.useQuery();
-
-  const verifyMutation = api.admin.setUserVerified.useMutation({
-    onSuccess: () => {
-      void utils.admin.getUsers.invalidate();
-      toast({ title: "Bruker oppdatert" });
-    },
-  });
 
   const verifyAndAssignMutation = api.admin.verifyAndAssign.useMutation({
     onSuccess: () => {
@@ -26,6 +20,17 @@ export function UsersTab() {
       void utils.admin.getGrupper.invalidate();
       setVerifyingUserId(null);
       toast({ title: "Bruker verifisert og lagt til i gruppe som fadderbarn" });
+    },
+  });
+
+  const deleteMutation = api.admin.deleteUser.useMutation({
+    onSuccess: () => {
+      void utils.admin.getUsers.invalidate();
+      setDeletingUserId(null);
+      toast({ title: "Bruker slettet" });
+    },
+    onError: (error) => {
+      toast({ title: "Feil", description: error.message, variant: "destructive" });
     },
   });
 
@@ -147,15 +152,48 @@ export function UsersTab() {
                       </p>
                     )}
                   </div>
+                ) : deletingUserId === user.id ? (
+                  <div className="flex flex-col !gap-2 sm:items-end">
+                    <p className="text-xs font-medium text-red-400">
+                      Sikker på at du vil slette denne brukeren?
+                    </p>
+                    <div className="flex !gap-2">
+                      <button
+                        type="button"
+                        onClick={() => deleteMutation.mutate({ userId: user.id })}
+                        disabled={deleteMutation.isPending}
+                        className="rounded-lg border border-red-500/40 bg-red-500/10 !px-3 !py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20 disabled:opacity-60"
+                      >
+                        {deleteMutation.isPending ? "Sletter..." : "Bekreft sletting"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingUserId(null)}
+                        className="rounded-lg !px-3 !py-1.5 text-xs text-[#8694b4] transition hover:text-white"
+                      >
+                        Avbryt
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setVerifyingUserId(user.id)}
-                    className="inline-flex items-center !gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 !px-4 !py-2 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
-                  >
-                    <UserCheck className="h-4 w-4" />
-                    Verifiser
-                  </button>
+                  <div className="flex !gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setVerifyingUserId(user.id)}
+                      className="inline-flex items-center !gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 !px-4 !py-2 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+                    >
+                      <UserCheck className="h-4 w-4" />
+                      Verifiser
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeletingUserId(user.id)}
+                      className="inline-flex items-center !gap-2 rounded-xl border border-red-500/40 bg-red-500/10 !px-4 !py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/20"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Slett
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

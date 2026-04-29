@@ -41,12 +41,21 @@ const HeaderButtonsWrapper = async ({
         >
           Arrangementer
         </HeaderLink>
-        <HeaderLink
-          className="text-muted-foreground hover:text-foreground"
-          href="/faddergruppe"
-        >
-          Min faddergruppe
-        </HeaderLink>
+        {session?.user?.isAdmin ? (
+          <HeaderLink
+            className="text-muted-foreground hover:text-foreground"
+            href="/admin"
+          >
+            Adminpanel
+          </HeaderLink>
+        ) : (
+          <HeaderLink
+            className="text-muted-foreground hover:text-foreground"
+            href="/faddergruppe"
+          >
+            Min faddergruppe
+          </HeaderLink>
+        )}
       </nav>
 
       <div className="text-muted-foreground flex items-center gap-3">
