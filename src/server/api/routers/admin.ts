@@ -150,6 +150,26 @@ export const adminRouter = createTRPCRouter({
       });
     }),
 
+  /** Permanently delete an unverified user and all their data */
+  deleteUser: adminProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: { isVerified: true },
+      });
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Bruker ikke funnet" });
+      }
+      if (user.isVerified) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Kan ikke slette verifiserte brukere",
+        });
+      }
+      return ctx.db.user.delete({ where: { id: input.userId } });
+    }),
+
   /** Verify a user and assign them to a faddergruppe as FADDERBARN in one step */
   verifyAndAssign: adminProcedure
     .input(

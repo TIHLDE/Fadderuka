@@ -3,85 +3,141 @@ import { TRPCError } from "@trpc/server";
 import {
   createTRPCRouter,
   protectedProcedure,
-  publicProcedure,
 } from "~/server/api/trpc";
+import { env } from "~/env";
 
-/**
- * -------------------------------------------------------
- * Vipps API Placeholder
- * -------------------------------------------------------
- * Replace these functions with actual Vipps ePayment API
- * calls once you have your API keys configured.
- *
- * Vipps ePayment API docs:
- * https://developer.vippsmobilepay.com/docs/APIs/epayment-api/
- *
- * Required env vars (see .env):
- *   VIPPS_CLIENT_ID
- *   VIPPS_CLIENT_SECRET
- *   VIPPS_MERCHANT_SERIAL_NUMBER
- *   VIPPS_SUBSCRIPTION_KEY
- *   VIPPS_API_URL          (e.g. https://api.vipps.no)
- *   VIPPS_CALLBACK_URL     (your callback endpoint)
- * -------------------------------------------------------
- */
+// Vipps ePayment API docs: https://developer.vippsmobilepay.com/docs/APIs/epayment-api/
 
-// TODO: Replace with actual Vipps access token retrieval
-// POST {VIPPS_API_URL}/accesstoken/get
-// Headers: client_id, client_secret, Ocp-Apim-Subscription-Key
-async function _getVippsAccessToken(): Promise<string> {
-  // const response = await fetch(`${env.VIPPS_API_URL}/accesstoken/get`, {
-  //   method: "POST",
-  //   headers: {
-  //     "client_id": env.VIPPS_CLIENT_ID,
-  //     "client_secret": env.VIPPS_CLIENT_SECRET,
-  //     "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
-  //     "Merchant-Serial-Number": env.VIPPS_MERCHANT_SERIAL_NUMBER,
-  //   },
-  // });
-  // const data = await response.json();
-  // return data.access_token;
-  return "placeholder-access-token";
+async function getVippsAccessToken(): Promise<string> {
+  if (
+    !env.VIPPS_CLIENT_ID ||
+    !env.VIPPS_CLIENT_SECRET ||
+    !env.VIPPS_SUBSCRIPTION_KEY ||
+    !env.VIPPS_API_URL
+  ) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Vipps er ikke konfigurert på serveren",
+    });
+  }
+
+  const response = await fetch(`${env.VIPPS_API_URL}/accesstoken/get`, {
+    method: "POST",
+    headers: {
+      client_id: env.VIPPS_CLIENT_ID,
+      client_secret: env.VIPPS_CLIENT_SECRET,
+      "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
+      "Merchant-Serial-Number": env.VIPPS_MERCHANT_SERIAL_NUMBER ?? "",
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    console.error("Vipps access token error:", response.status, body);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Kunne ikke hente Vipps tilgangstoken",
+    });
+  }
+
+  const data = (await response.json()) as { access_token: string };
+  return data.access_token;
 }
 
-// TODO: Replace with actual Vipps ePayment create call
-// POST {VIPPS_API_URL}/epayment/v1/payments
-async function _createVippsPayment(_phoneNumber: string, _orderId: string) {
-  // const accessToken = await getVippsAccessToken();
-  // const response = await fetch(`${env.VIPPS_API_URL}/epayment/v1/payments`, {
-  //   method: "POST",
-  //   headers: {
-  //     "Authorization": `Bearer ${accessToken}`,
-  //     "Content-Type": "application/json",
-  //     "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
-  //     "Merchant-Serial-Number": env.VIPPS_MERCHANT_SERIAL_NUMBER,
-  //     "Idempotency-Key": orderId,
-  //   },
-  //   body: JSON.stringify({
-  //     amount: { currency: "NOK", value: 30000 }, // 300 NOK in øre
-  //     paymentMethod: { type: "WALLET" },
-  //     customer: { phoneNumber },
-  //     reference: orderId,
-  //     returnUrl: `${env.VIPPS_CALLBACK_URL}/payment/callback?orderId=${orderId}`,
-  //     userFlow: "WEB_REDIRECT",
-  //     paymentDescription: "Fadderuka - TIHLDE",
-  //   }),
-  // });
-  // const data = await response.json();
-  // return data.redirectUrl;
-  return {
-    redirectUrl: "https://api.vipps.no/placeholder-redirect",
-  };
+async function createVippsPayment(
+  phoneNumber: string,
+  orderId: string,
+): Promise<{ redirectUrl: string }> {
+  if (
+    !env.VIPPS_API_URL ||
+    !env.VIPPS_SUBSCRIPTION_KEY ||
+    !env.VIPPS_MERCHANT_SERIAL_NUMBER ||
+    !env.VIPPS_CALLBACK_URL
+  ) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Vipps er ikke konfigurert på serveren",
+    });
+  }
+
+  const accessToken = await getVippsAccessToken();
+
+  const response = await fetch(`${env.VIPPS_API_URL}/epayment/v1/payments`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
+      "Merchant-Serial-Number": env.VIPPS_MERCHANT_SERIAL_NUMBER,
+      "Idempotency-Key": orderId,
+    },
+    body: JSON.stringify({
+      amount: { currency: "NOK", value: 30000 }, // 300 NOK in øre
+      paymentMethod: { type: "WALLET" },
+      customer: { phoneNumber: `47${phoneNumber}` }, // E.164 format
+      reference: orderId,
+      returnUrl: `${env.VIPPS_CALLBACK_URL}/payment/callback?orderId=${orderId}`,
+      userFlow: "WEB_REDIRECT",
+      paymentDescription: "Fadderuka - TIHLDE",
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    console.error("Vipps create payment error:", response.status, body);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Kunne ikke opprette Vipps betaling",
+    });
+  }
+
+  const data = (await response.json()) as { redirectUrl: string };
+  return { redirectUrl: data.redirectUrl };
+}
+
+async function getVippsPaymentStatus(orderId: string): Promise<string> {
+  if (
+    !env.VIPPS_API_URL ||
+    !env.VIPPS_SUBSCRIPTION_KEY ||
+    !env.VIPPS_MERCHANT_SERIAL_NUMBER
+  ) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Vipps er ikke konfigurert på serveren",
+    });
+  }
+
+  const accessToken = await getVippsAccessToken();
+
+  const response = await fetch(
+    `${env.VIPPS_API_URL}/epayment/v1/payments/${orderId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
+        "Merchant-Serial-Number": env.VIPPS_MERCHANT_SERIAL_NUMBER,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    console.error("Vipps payment status error:", response.status, body);
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Kunne ikke hente betalingsstatus fra Vipps",
+    });
+  }
+
+  const data = (await response.json()) as { state: string };
+  return data.state;
 }
 
 export const paymentRouter = createTRPCRouter({
-  /**
-   * Get the current user's payment status.
-   */
   getStatus: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.db.user.findUnique({
       where: { id: ctx.session.user.id },
-      select: { hasPaid: true, isVerified: true, phone: true },
+      select: { hasPaid: true, isVerified: true },
     });
     return {
       hasPaid: user?.hasPaid ?? false,
@@ -89,10 +145,6 @@ export const paymentRouter = createTRPCRouter({
     };
   }),
 
-  /**
-   * Initiate a Vipps payment for the current user.
-   * Returns a redirect URL to Vipps checkout.
-   */
   initiatePayment: protectedProcedure
     .input(
       z.object({
@@ -107,7 +159,10 @@ export const paymentRouter = createTRPCRouter({
       });
 
       if (!user) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Bruker ikke funnet" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Bruker ikke funnet",
+        });
       }
 
       if (user.hasPaid) {
@@ -117,24 +172,17 @@ export const paymentRouter = createTRPCRouter({
         });
       }
 
-      // Save phone number to user profile
       await ctx.db.user.update({
         where: { id: ctx.session.user.id },
         data: { phone: input.phoneNumber },
       });
 
       const orderId = `fadderuka-${ctx.session.user.id}-${Date.now()}`;
-
-      // TODO: Replace with actual Vipps API call
-      const payment = await _createVippsPayment(input.phoneNumber, orderId);
+      const payment = await createVippsPayment(input.phoneNumber, orderId);
 
       return { redirectUrl: payment.redirectUrl };
     }),
 
-  /**
-   * Check if a phone number is already registered as paid.
-   * Used for the "Jeg har allerede betalt" flow.
-   */
   checkPaymentByPhone: protectedProcedure
     .input(
       z.object({
@@ -144,7 +192,6 @@ export const paymentRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Look up if any user with this phone number has paid
       const paidUser = await ctx.db.user.findFirst({
         where: {
           phone: input.phoneNumber,
@@ -154,7 +201,6 @@ export const paymentRouter = createTRPCRouter({
       });
 
       if (paidUser) {
-        // Mark the current user as paid and verified
         await ctx.db.user.update({
           where: { id: ctx.session.user.id },
           data: {
@@ -169,39 +215,30 @@ export const paymentRouter = createTRPCRouter({
       return { found: false };
     }),
 
-  /**
-   * Vipps payment callback handler.
-   * Called after Vipps redirects back or via webhook.
-   *
-   * TODO: In production, verify the payment status with Vipps API:
-   * GET {VIPPS_API_URL}/epayment/v1/payments/{reference}
-   * and check that state === "AUTHORIZED" or "CAPTURED"
-   */
-  confirmPayment: publicProcedure
-    .input(
-      z.object({
-        userId: z.string(),
-        orderId: z.string(),
-      }),
-    )
+  confirmPayment: protectedProcedure
+    .input(z.object({ orderId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // TODO: Verify payment with Vipps API before marking as paid
-      // const accessToken = await getVippsAccessToken();
-      // const response = await fetch(
-      //   `${env.VIPPS_API_URL}/epayment/v1/payments/${input.orderId}`,
-      //   { headers: { Authorization: `Bearer ${accessToken}`, ... } }
-      // );
-      // const data = await response.json();
-      // if (data.state !== "AUTHORIZED" && data.state !== "CAPTURED") {
-      //   throw new TRPCError({ code: "BAD_REQUEST", message: "Betaling ikke bekreftet" });
-      // }
+      // orderId format: fadderuka-{userId}-{timestamp}
+      // Ensure this order belongs to the authenticated user
+      if (!input.orderId.includes(ctx.session.user.id)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Ugyldig ordre",
+        });
+      }
+
+      const state = await getVippsPaymentStatus(input.orderId);
+
+      if (state !== "AUTHORIZED" && state !== "CAPTURED") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Betaling ikke bekreftet av Vipps (status: ${state})`,
+        });
+      }
 
       await ctx.db.user.update({
-        where: { id: input.userId },
-        data: {
-          hasPaid: true,
-          isVerified: true,
-        },
+        where: { id: ctx.session.user.id },
+        data: { hasPaid: true, isVerified: true },
       });
 
       return { success: true };
