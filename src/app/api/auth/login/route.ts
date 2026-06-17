@@ -11,11 +11,16 @@ import { db } from "~/server/db";
 import {
   TihldeAuthError,
   isAdminFromPermissions,
+  isMemberOfGroup,
   mapProfile,
   tihldeGetMe,
+  tihldeGetMemberships,
   tihldeGetPermissions,
   tihldeLogin,
 } from "~/server/auth/tihlde";
+
+/** TIHLDE group whose members are always app admins. */
+const ADMIN_GROUP_SLUG = "fadderkom";
 
 const bodySchema = z.object({
   user_id: z.string().min(1, "Brukernavn er påkrevd."),
@@ -37,9 +42,10 @@ export async function POST(request: Request) {
     const profile = await tihldeGetMe(token);
     const mapped = mapProfile(profile);
 
-    // 2. Derive admin status live from TIHLDE permissions (as Kvark does).
-    //    Backend admins are automatically app admins and skip payment, so we
-    //    also mark them verified/paid. A permissions fetch failure must not
+    // 2. Derive admin status live from TIHLDE (as Kvark does). A user is an
+    //    app admin if they hold write permissions OR are a member of the
+    //    FadderKom committee. Admins are automatically app admins and skip
+    //    payment, so we also mark them verified/paid. A fetch failure must not
     //    block login — and must not silently revoke an existing admin — so on
     //    error we leave admin-related flags untouched.
     let adminGrant: {
@@ -48,12 +54,18 @@ export async function POST(request: Request) {
       hasPaid?: boolean;
     } = {};
     try {
-      const isAdmin = isAdminFromPermissions(await tihldeGetPermissions(token));
+      const [perms, memberships] = await Promise.all([
+        tihldeGetPermissions(token),
+        tihldeGetMemberships(token, profile.user_id),
+      ]);
+      const isAdmin =
+        isAdminFromPermissions(perms) ||
+        isMemberOfGroup(memberships, ADMIN_GROUP_SLUG);
       adminGrant = isAdmin
         ? { isAdmin: true, isVerified: true, hasPaid: true }
         : { isAdmin: false };
     } catch (err) {
-      console.error("[auth/login] permissions fetch failed", err);
+      console.error("[auth/login] admin derivation failed", err);
     }
 
     // 3. Upsert the local user, keyed by TIHLDE user_id. Payment flags for

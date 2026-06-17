@@ -136,6 +136,44 @@ export function isAdminFromPermissions(perms: TihldePermissions): boolean {
   );
 }
 
+interface TihldeMembership {
+  group: { slug?: string; name?: string } | null;
+}
+
+/**
+ * Fetch the user's group memberships. The endpoint is paginated (25 per page);
+ * we read the first page, which is enough to detect committee membership.
+ */
+export async function tihldeGetMemberships(
+  token: string,
+  userId: string,
+): Promise<TihldeMembership[]> {
+  const res = await fetch(
+    apiUrl(`/users/${encodeURIComponent(userId)}/memberships/`),
+    { headers: { [TOKEN_HEADER]: token }, cache: "no-store" },
+  );
+
+  if (!res.ok) {
+    throw new TihldeAuthError(
+      await readDetail(res, "Kunne ikke hente gruppemedlemskap."),
+      res.status,
+    );
+  }
+
+  const body = (await res.json()) as
+    | { results?: TihldeMembership[] }
+    | TihldeMembership[];
+  return Array.isArray(body) ? body : (body.results ?? []);
+}
+
+/** Whether the user is a member of the group with the given slug. */
+export function isMemberOfGroup(
+  memberships: TihldeMembership[],
+  slug: string,
+): boolean {
+  return memberships.some((m) => m.group?.slug === slug);
+}
+
 /** Map a TIHLDE profile onto the fields we persist locally. */
 export function mapProfile(profile: TihldeProfile) {
   const name = [profile.first_name, profile.last_name]
