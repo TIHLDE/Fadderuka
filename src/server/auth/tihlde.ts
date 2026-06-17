@@ -93,6 +93,49 @@ export async function tihldeGetMe(token: string): Promise<TihldeProfile> {
   return (await res.json()) as TihldeProfile;
 }
 
+interface PermissionEntry {
+  read?: boolean;
+  write?: boolean;
+  write_all?: boolean;
+  destroy?: boolean;
+}
+
+interface TihldePermissions {
+  permissions: Record<string, PermissionEntry>;
+}
+
+/** Fetch the authenticated user's global TIHLDE permissions. */
+export async function tihldeGetPermissions(
+  token: string,
+): Promise<TihldePermissions> {
+  const res = await fetch(apiUrl("/users/me/permissions/"), {
+    headers: { [TOKEN_HEADER]: token },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new TihldeAuthError(
+      await readDetail(res, "Kunne ikke hente brukerens tillatelser."),
+      res.status,
+    );
+  }
+
+  return (await res.json()) as TihldePermissions;
+}
+
+/**
+ * Whether a TIHLDE user counts as an admin for this app.
+ *
+ * Mirrors Kvark's `hasWritePermission`: a user with `write` or `write_all` on
+ * any permission app holds an elevated/backend role (board, committee, HS,
+ * Index, …). Regular members get read-only permissions and are not admins.
+ */
+export function isAdminFromPermissions(perms: TihldePermissions): boolean {
+  return Object.values(perms.permissions ?? {}).some(
+    (p) => p?.write === true || p?.write_all === true,
+  );
+}
+
 /** Map a TIHLDE profile onto the fields we persist locally. */
 export function mapProfile(profile: TihldeProfile) {
   const name = [profile.first_name, profile.last_name]

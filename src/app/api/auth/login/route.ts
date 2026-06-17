@@ -10,8 +10,10 @@ import {
 import { db } from "~/server/db";
 import {
   TihldeAuthError,
+  isAdminFromPermissions,
   mapProfile,
   tihldeGetMe,
+  tihldeGetPermissions,
   tihldeLogin,
 } from "~/server/auth/tihlde";
 
@@ -35,21 +37,41 @@ export async function POST(request: Request) {
     const profile = await tihldeGetMe(token);
     const mapped = mapProfile(profile);
 
-    // 2. Upsert the local user, keyed by TIHLDE user_id. App-specific flags
-    //    (isAdmin, hasPaid, isVerified) are owned by us and never overwritten.
+    // 2. Derive admin status live from TIHLDE permissions (as Kvark does).
+    //    Backend admins are automatically app admins and skip payment, so we
+    //    also mark them verified/paid. A permissions fetch failure must not
+    //    block login — and must not silently revoke an existing admin — so on
+    //    error we leave admin-related flags untouched.
+    let adminGrant: {
+      isAdmin?: boolean;
+      isVerified?: boolean;
+      hasPaid?: boolean;
+    } = {};
+    try {
+      const isAdmin = isAdminFromPermissions(await tihldeGetPermissions(token));
+      adminGrant = isAdmin
+        ? { isAdmin: true, isVerified: true, hasPaid: true }
+        : { isAdmin: false };
+    } catch (err) {
+      console.error("[auth/login] permissions fetch failed", err);
+    }
+
+    // 3. Upsert the local user, keyed by TIHLDE user_id. Payment flags for
+    //    non-admins are owned by us (earned via Vipps) and left untouched.
     const user = await db.user.upsert({
       where: { tihldeUserId: mapped.tihldeUserId },
-      create: mapped,
+      create: { ...mapped, ...adminGrant },
       update: {
         name: mapped.name,
         email: mapped.email,
         image: mapped.image,
         studieretning: mapped.studieretning,
         klasse: mapped.klasse,
+        ...adminGrant,
       },
     });
 
-    // 3. Mint our own session and set the httpOnly cookie.
+    // 4. Mint our own session and set the httpOnly cookie.
     const hdrs = await headers();
     const { token: sessionToken, expiresAt } = await createSession({
       userId: user.id,
