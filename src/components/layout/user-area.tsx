@@ -35,12 +35,13 @@ export const UserArea = ({
   const signOutButton = async () => {
     setOpen(false);
     await authClient.signOut();
+    router.push("/registrering");
     router.refresh();
   };
 
   const signInButton = () => {
     setOpen(false);
-    // TODO: implement non-Vipps sign in
+    router.push("/registrering");
   };
 
   const goToAdmin = () => {

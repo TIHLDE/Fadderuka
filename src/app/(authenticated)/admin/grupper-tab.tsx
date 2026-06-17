@@ -358,7 +358,7 @@ function AddMemberForm({
 }: {
   gruppeId: string;
   role: "FADDER" | "FADDERBARN";
-  availableUsers: { id: string; name: string; email: string }[];
+  availableUsers: { id: string; name: string; email: string | null }[];
   onAdd: (userId: string) => void;
   onCancel: () => void;
   isPending: boolean;
@@ -369,7 +369,7 @@ function AddMemberForm({
   const filtered = availableUsers.filter(
     (u) =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()),
+      (u.email?.toLowerCase().includes(search.toLowerCase()) ?? false),
   );
 
   return (

@@ -28,10 +28,12 @@ model Post {
 }
 
 model User {
+    // tihldeUserId is the TIHLDE account identifier (Lepton `user_id`) and the
+    // stable link between a TIHLDE account and this app's user record.
     id            String    @id @default(cuid())
+    tihldeUserId  String    @unique
     name          String
-    email         String    @unique
-    emailVerified Boolean   @default(false)
+    email         String?   @unique
     image         String?
     phone         String?
     klasse        String?
@@ -42,7 +44,6 @@ model User {
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
     sessions      Session[]
-    accounts      Account[]
     posts         Post[]
     memberships   FadderGruppeMember[]
     groupMessages GroupMessage[]
@@ -91,39 +92,16 @@ model GroupMessage {
 }
 
 model Session {
-    id        String   @id @default(cuid())
-    expiresAt DateTime
-    token     String   @unique
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    ipAddress String?
-    userAgent String?
-    userId    String
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Account {
-    id                    String    @id @default(cuid())
-    accountId             String
-    providerId            String
-    userId                String
-    user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    accessToken           String?
-    refreshToken          String?
-    idToken               String?
-    accessTokenExpiresAt  DateTime?
-    refreshTokenExpiresAt DateTime?
-    scope                 String?
-    password              String?
-    createdAt             DateTime  @default(now())
-    updatedAt             DateTime  @updatedAt
-}
-
-model Verification {
-    id         String   @id @default(cuid())
-    identifier String
-    value      String
-    expiresAt  DateTime
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+    // Opaque app session. `tihldeToken` stores the TIHLDE API token so we can
+    // call Lepton on the user's behalf (e.g. refresh their profile).
+    id          String   @id @default(cuid())
+    expiresAt   DateTime
+    token       String   @unique
+    tihldeToken String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    ipAddress   String?
+    userAgent   String?
+    userId      String
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
