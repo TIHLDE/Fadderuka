@@ -130,6 +130,28 @@ export default async function FaddergroupPage() {
             gruppeId={gruppe.id}
             canPost={canPost}
             currentUserName={session.user.name}
+            channel="ANNOUNCEMENT"
+            title="Meldinger fra fadderne"
+            composerTitle="Ny melding"
+            composerSubtitle="Skriv en beskjed til faddergruppen."
+            composerPlaceholder="Hva vil du si til gruppa?"
+            emptyMessage={
+              canPost
+                ? "Ingen meldinger enda. Skriv den forste meldingen til gruppa!"
+                : "Ingen meldinger enda."
+            }
+          />
+
+          <GroupView
+            gruppeId={gruppe.id}
+            canPost
+            currentUserName={session.user.name}
+            channel="CHAT"
+            title={`${gruppe.name} chat`}
+            composerTitle="Nytt sporsmal"
+            composerSubtitle="Still et sporsmal til resten av faddergruppa."
+            composerPlaceholder="Hva lurer du pa?"
+            emptyMessage="Ingen sporsmal enda. Vaer den forste til a spore!"
           />
         </div>
       </div>

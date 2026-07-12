@@ -5,10 +5,28 @@ import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
 
+const MAJORS = [
+  "Dataingeniør",
+  "Digital Forretningsutvikling",
+  "Digital Infrastruktur og Cybersikkerhet",
+  "Digital transformasjon",
+  "Informasjonsbehandling",
+] as const;
+
+const UKJENT_STUDIERETNING = "Ukjent studieretning";
+
+/** TIHLDE's casing for studieretning names isn't guaranteed, so match case-insensitively. */
+function findMajor(studieretning: string | null): (typeof MAJORS)[number] | null {
+  if (!studieretning) return null;
+  const normalized = studieretning.trim().toLowerCase();
+  return MAJORS.find((major) => major.toLowerCase() === normalized) ?? null;
+}
+
 export function UsersTab() {
   const [search, setSearch] = useState("");
   const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [expandedMajor, setExpandedMajor] = useState<string | null>(null);
   const utils = api.useUtils();
 
   const { data: users, isLoading } = api.admin.getUsers.useQuery();
@@ -57,6 +75,27 @@ export function UsersTab() {
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       (u.email?.toLowerCase().includes(search.toLowerCase()) ?? false),
   );
+
+  const verifiedByStudieretning = new Map<string, typeof filteredVerified>();
+  for (const major of MAJORS) verifiedByStudieretning.set(major, []);
+  for (const user of filteredVerified) {
+    const key = findMajor(user.studieretning) ?? UKJENT_STUDIERETNING;
+    const group = verifiedByStudieretning.get(key) ?? [];
+    group.push(user);
+    verifiedByStudieretning.set(key, group);
+  }
+  const studieretninger = [...verifiedByStudieretning.keys()].sort((a, b) => {
+    const aIsMajor = (MAJORS as readonly string[]).includes(a);
+    const bIsMajor = (MAJORS as readonly string[]).includes(b);
+    if (a === UKJENT_STUDIERETNING) return 1;
+    if (b === UKJENT_STUDIERETNING) return -1;
+    if (aIsMajor && !bIsMajor) return -1;
+    if (!aIsMajor && bIsMajor) return 1;
+    if (aIsMajor && bIsMajor) {
+      return MAJORS.indexOf(a as (typeof MAJORS)[number]) - MAJORS.indexOf(b as (typeof MAJORS)[number]);
+    }
+    return a.localeCompare(b, "no");
+  });
 
   if (isLoading) {
     return (
@@ -205,7 +244,7 @@ export function UsersTab() {
         )}
       </section>
 
-      {/* Verified users table */}
+      {/* Verified users grouped by studieretning */}
       <section className="!space-y-4">
         <h3 className="text-lg font-semibold text-white">
           Verifiserte brukere ({verifiedUsers.length})
@@ -219,126 +258,154 @@ export function UsersTab() {
           className="w-full max-w-sm rounded-xl border border-[#73aac4]/40 bg-[#111a2f] !px-4 !py-2.5 text-sm text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
         />
 
-        <div className="overflow-x-auto rounded-xl border border-[#73aac4]/40 bg-[color:var(--surface-soft)] backdrop-blur">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-[#73aac4]/20 text-[#8694b4]">
-                <th className="!px-4 !py-3 font-medium">Navn</th>
-                <th className="!px-4 !py-3 font-medium">E-post</th>
-                <th className="!px-4 !py-3 font-medium">Klasse</th>
-                <th className="!px-4 !py-3 font-medium">Studieretning</th>
-                <th className="!px-4 !py-3 font-medium">Gruppe</th>
-                <th className="!px-4 !py-3 font-medium">Rolle</th>
-                <th className="!px-4 !py-3 font-medium text-center">Admin</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredVerified.map((user) => {
-                const membership = user.memberships[0];
-                return (
-                  <tr
-                    key={user.id}
-                    className="border-b border-[#73aac4]/10 last:border-0 hover:bg-[#1a2540]/50"
-                  >
-                    <td className="!px-4 !py-3 font-medium text-white">
-                      {user.name}
-                    </td>
-                    <td className="!px-4 !py-3 text-[#8694b4]">
-                      {user.email}
-                    </td>
-                    <td className="!px-4 !py-3">
-                      {user.klasse ? (
-                        <span className="rounded-full bg-[#73aac4]/15 !px-2 !py-0.5 text-xs font-medium text-[#73aac4]">
-                          {user.klasse}
-                        </span>
-                      ) : (
-                        <span className="text-[#5b6a8f]">—</span>
-                      )}
-                    </td>
-                    <td className="!px-4 !py-3">
-                      {user.studieretning ? (
-                        <span className="rounded-full bg-[#6495e6]/15 !px-2 !py-0.5 text-xs font-medium text-[#6495e6]">
-                          {user.studieretning}
-                        </span>
-                      ) : (
-                        <span className="text-[#5b6a8f]">—</span>
-                      )}
-                    </td>
-                    <td className="!px-4 !py-3 text-[#8694b4]">
-                      {membership ? membership.gruppe.name : "—"}
-                    </td>
-                    <td className="!px-4 !py-3">
-                      {membership ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateRoleMutation.mutate({
-                              membershipId: membership.id,
-                              role:
-                                membership.role === "FADDER"
-                                  ? "FADDERBARN"
-                                  : "FADDER",
-                            })
-                          }
-                          disabled={updateRoleMutation.isPending}
-                          className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${
-                            membership.role === "FADDER"
-                              ? "bg-[#90dfed]/15 text-[#90dfed] hover:bg-[#90dfed]/25"
-                              : "bg-[#6495e6]/15 text-[#6495e6] hover:bg-[#6495e6]/25"
-                          }`}
-                          title={
-                            membership.role === "FADDER"
-                              ? "Klikk for a endre til fadderbarn"
-                              : "Klikk for a endre til fadder"
-                          }
-                        >
-                          {membership.role === "FADDER"
-                            ? "Fadder"
-                            : "Fadderbarn"}
-                        </button>
-                      ) : (
-                        <span className="text-[#5b6a8f]">—</span>
-                      )}
-                    </td>
-                    <td className="!px-4 !py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          adminMutation.mutate({
-                            userId: user.id,
-                            isAdmin: !user.isAdmin,
-                          })
-                        }
-                        disabled={adminMutation.isPending}
-                        className="inline-flex items-center justify-center rounded-lg !p-1.5 transition hover:bg-white/10"
-                        title={
-                          user.isAdmin
-                            ? "Fjern admintilgang"
-                            : "Gi admintilgang"
-                        }
-                      >
-                        {user.isAdmin ? (
-                          <Shield className="h-4 w-4 text-amber-400" />
-                        ) : (
-                          <ShieldOff className="h-4 w-4 text-[#5b6a8f]" />
+        <div className="grid grid-cols-1 !gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {studieretninger.map((studieretning) => {
+            const usersInGroup = verifiedByStudieretning.get(studieretning) ?? [];
+            const isExpanded = expandedMajor === studieretning;
+            return (
+              <div
+                key={studieretning}
+                className={`rounded-xl border bg-[color:var(--surface-soft)] backdrop-blur transition ${
+                  isExpanded
+                    ? "border-[#73aac4] sm:col-span-2 lg:col-span-3"
+                    : "border-[#73aac4]/40"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedMajor(isExpanded ? null : studieretning)
+                  }
+                  className="flex w-full items-center justify-between !gap-3 !p-4 text-left"
+                >
+                  <div>
+                    <p className="font-semibold text-white">{studieretning}</p>
+                    <p className="text-xs text-[#8694b4]">
+                      {usersInGroup.length}{" "}
+                      {usersInGroup.length === 1 ? "bruker" : "brukere"}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-[#6495e6]/15 !px-2.5 !py-0.5 text-sm font-semibold text-[#6495e6]">
+                    {usersInGroup.length}
+                  </span>
+                </button>
+
+                {isExpanded && (
+                  <div className="overflow-x-auto border-t border-[#73aac4]/20">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-[#73aac4]/20 text-[#8694b4]">
+                          <th className="!px-4 !py-3 font-medium">Navn</th>
+                          <th className="!px-4 !py-3 font-medium">E-post</th>
+                          <th className="!px-4 !py-3 font-medium">Klasse</th>
+                          <th className="!px-4 !py-3 font-medium">Gruppe</th>
+                          <th className="!px-4 !py-3 font-medium">Rolle</th>
+                          <th className="!px-4 !py-3 font-medium text-center">Admin</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {usersInGroup.map((user) => {
+                          const membership = user.memberships[0];
+                          return (
+                            <tr
+                              key={user.id}
+                              className="border-b border-[#73aac4]/10 last:border-0 hover:bg-[#1a2540]/50"
+                            >
+                              <td className="!px-4 !py-3 font-medium text-white">
+                                {user.name}
+                              </td>
+                              <td className="!px-4 !py-3 text-[#8694b4]">
+                                {user.email}
+                              </td>
+                              <td className="!px-4 !py-3">
+                                {user.klasse ? (
+                                  <span className="rounded-full bg-[#73aac4]/15 !px-2 !py-0.5 text-xs font-medium text-[#73aac4]">
+                                    {user.klasse}
+                                  </span>
+                                ) : (
+                                  <span className="text-[#5b6a8f]">—</span>
+                                )}
+                              </td>
+                              <td className="!px-4 !py-3 text-[#8694b4]">
+                                {membership ? membership.gruppe.name : "—"}
+                              </td>
+                              <td className="!px-4 !py-3">
+                                {membership ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateRoleMutation.mutate({
+                                        membershipId: membership.id,
+                                        role:
+                                          membership.role === "FADDER"
+                                            ? "FADDERBARN"
+                                            : "FADDER",
+                                      })
+                                    }
+                                    disabled={updateRoleMutation.isPending}
+                                    className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${
+                                      membership.role === "FADDER"
+                                        ? "bg-[#90dfed]/15 text-[#90dfed] hover:bg-[#90dfed]/25"
+                                        : "bg-[#6495e6]/15 text-[#6495e6] hover:bg-[#6495e6]/25"
+                                    }`}
+                                    title={
+                                      membership.role === "FADDER"
+                                        ? "Klikk for a endre til fadderbarn"
+                                        : "Klikk for a endre til fadder"
+                                    }
+                                  >
+                                    {membership.role === "FADDER"
+                                      ? "Fadder"
+                                      : "Fadderbarn"}
+                                  </button>
+                                ) : (
+                                  <span className="text-[#5b6a8f]">—</span>
+                                )}
+                              </td>
+                              <td className="!px-4 !py-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    adminMutation.mutate({
+                                      userId: user.id,
+                                      isAdmin: !user.isAdmin,
+                                    })
+                                  }
+                                  disabled={adminMutation.isPending}
+                                  className="inline-flex items-center justify-center rounded-lg !p-1.5 transition hover:bg-white/10"
+                                  title={
+                                    user.isAdmin
+                                      ? "Fjern admintilgang"
+                                      : "Gi admintilgang"
+                                  }
+                                >
+                                  {user.isAdmin ? (
+                                    <Shield className="h-4 w-4 text-amber-400" />
+                                  ) : (
+                                    <ShieldOff className="h-4 w-4 text-[#5b6a8f]" />
+                                  )}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {usersInGroup.length === 0 && (
+                          <tr>
+                            <td
+                              colSpan={6}
+                              className="!px-4 !py-6 text-center text-[#8694b4]"
+                            >
+                              Ingen brukere funnet
+                            </td>
+                          </tr>
                         )}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filteredVerified.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="!px-4 !py-8 text-center text-[#8694b4]"
-                  >
-                    Ingen brukere funnet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>

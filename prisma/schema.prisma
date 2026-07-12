@@ -15,6 +15,11 @@ enum MemberRole {
     FADDERBARN
 }
 
+enum MessageChannel {
+    ANNOUNCEMENT
+    CHAT
+}
+
 model Post {
     id        Int      @id @default(autoincrement())
     name      String
@@ -82,13 +87,14 @@ model Activity {
 }
 
 model GroupMessage {
-    id        String       @id @default(cuid())
+    id        String         @id @default(cuid())
     content   String
-    createdAt DateTime     @default(now())
+    channel   MessageChannel @default(ANNOUNCEMENT)
+    createdAt DateTime       @default(now())
     authorId  String
-    author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
     gruppeId  String
-    gruppe    FadderGruppe @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
+    gruppe    FadderGruppe   @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
 }
 
 model Session {

@@ -14,13 +14,38 @@ export default function InformasjonPage() {
 
       <div className="max-w-page mx-auto w-full px-4 pt-24 pb-24 md:px-6">
         <h1 className="text-foreground text-4xl font-extrabold tracking-tight sm:text-6xl">
-          Informasjon
+          FAQ om fadderuka
         </h1>
 
-        <div className="text-muted-foreground mt-10 space-y-6">
-          {
-            "Informasjonssiden er under arbeid, og vil bli tilgjengelig før fadderuka starter."
-          }
+        <div className="mt-10 space-y-4">
+          <h2 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">
+            Hva bør jeg vite om fadderuka 2026?
+          </h2>
+          <ul className="text-muted-foreground list-disc space-y-2 pl-5">
+            <li>Punkt 1</li>
+            <li>Punkt 2</li>
+            <li>Punkt 3</li>
+          </ul>
+        </div>
+        <div className="mt-10 space-y-4">
+          <h2 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">
+            Hva MÅ jeg huske til fadderuka?
+          </h2>
+          <ul className="text-muted-foreground list-disc space-y-2 pl-5">
+            <li>Punkt 1</li>
+            <li>Punkt 2</li>
+            <li>Punkt 3</li>
+          </ul>
+        </div>
+        <div className="mt-10 space-y-4">
+          <h2 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">
+            Øvrig informasjon
+          </h2>
+          <ul className="text-muted-foreground list-disc space-y-2 pl-5">
+            <li>Punkt 1</li>
+            <li>Punkt 2</li>
+            <li>Punkt 3</li>
+          </ul>
         </div>
       </div>
 
