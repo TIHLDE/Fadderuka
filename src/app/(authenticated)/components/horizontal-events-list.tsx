@@ -113,7 +113,7 @@ export default function HorizontalEventsList({
                 {event.type}
               </span>
             </div>
-            <p className="mt-2 truncate text-[13px] font-medium text-white">
+            <p className="text-foreground mt-2 truncate text-[13px] font-medium">
               {event.title}
             </p>
           </button>

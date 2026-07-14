@@ -38,7 +38,7 @@ export default async function Home() {
         ) : null}
 
         <div className="max-w-page mx-auto flex w-full items-center justify-between px-4 pt-6 md:px-6">
-          <h2 className="text-lg font-semibold text-foreground">Arrangementer</h2>
+          <h2 className="text-foreground text-lg font-semibold">Aktiviteter</h2>
           <Link
             href="/aktiviteter"
             className="text-muted-foreground hover:text-foreground text-sm font-medium transition"

@@ -99,7 +99,7 @@ export const gruppeRouter = createTRPCRouter({
         }
       }
 
-      return ctx.db.groupMessage.create({
+      const created = await ctx.db.groupMessage.create({
         data: {
           content: input.content,
           authorId: ctx.session.user.id,
@@ -110,6 +110,29 @@ export const gruppeRouter = createTRPCRouter({
           author: { select: { id: true, name: true } },
         },
       });
+
+      const otherMembers = await ctx.db.fadderGruppeMember.findMany({
+        where: {
+          gruppeId: input.gruppeId,
+          userId: { not: ctx.session.user.id },
+        },
+        select: { userId: true },
+      });
+
+      if (otherMembers.length > 0) {
+        const channelLabel =
+          input.channel === "ANNOUNCEMENT" ? "kunngjøring" : "melding";
+        await ctx.db.notification.createMany({
+          data: otherMembers.map((member) => ({
+            userId: member.userId,
+            gruppeId: input.gruppeId,
+            messageId: created.id,
+            message: `${created.author.name} postet en ny ${channelLabel} i faddergruppa: "${input.content.slice(0, 80)}"`,
+          })),
+        });
+      }
+
+      return created;
     }),
 
   /** Delete a message (author or admin only) */
