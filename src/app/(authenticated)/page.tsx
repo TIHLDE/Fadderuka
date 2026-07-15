@@ -46,7 +46,7 @@ export default async function Home() {
             {"Se alle ->"}
           </Link>
         </div>
-        <HorizontalEventsList events={events.length > 0 ? events : undefined} />
+        <HorizontalEventsList events={events} />
         <Footer />
       </div>
     </main>

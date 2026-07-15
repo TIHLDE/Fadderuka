@@ -126,7 +126,6 @@ export const gruppeRouter = createTRPCRouter({
           data: otherMembers.map((member) => ({
             userId: member.userId,
             gruppeId: input.gruppeId,
-            messageId: created.id,
             message: `${created.author.name} postet en ny ${channelLabel} i faddergruppa: "${input.content.slice(0, 80)}"`,
           })),
         });

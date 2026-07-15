@@ -20,9 +20,12 @@ export default function Countdown({
   title: string;
   target: Date;
 }) {
-  const [remaining, setRemaining] = useState(() => getRemaining(target));
+  const [remaining, setRemaining] = useState<ReturnType<
+    typeof getRemaining
+  > | null>(null);
 
   useEffect(() => {
+    setRemaining(getRemaining(target));
     const interval = setInterval(() => {
       setRemaining(getRemaining(target));
     }, 1000);
@@ -30,16 +33,16 @@ export default function Countdown({
   }, [target]);
 
   const units = [
-    { label: "Dager", value: remaining.days },
-    { label: "Timer", value: remaining.hours },
-    { label: "Min", value: remaining.minutes },
-    { label: "Sek", value: remaining.seconds },
+    { label: "Dager", value: remaining?.days },
+    { label: "Timer", value: remaining?.hours },
+    { label: "Min", value: remaining?.minutes },
+    { label: "Sek", value: remaining?.seconds },
   ];
 
   return (
     <div className="max-w-page mx-auto w-full px-4 pt-10 text-center md:px-6">
       <p className="text-sm font-medium text-muted-foreground">
-        {remaining.done
+        {remaining?.done
           ? "Aktiviteten har startet"
           : `Neste happening! (${title}) om`}
       </p>
@@ -47,7 +50,7 @@ export default function Countdown({
         {units.map((unit) => (
           <div key={unit.label} className="flex flex-col items-center">
             <span className="text-5xl font-bold tabular-nums tracking-tight text-foreground sm:text-6xl md:text-7xl">
-              {String(unit.value).padStart(2, "0")}
+              {String(unit.value ?? 0).padStart(2, "0")}
             </span>
             <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
               {unit.label}

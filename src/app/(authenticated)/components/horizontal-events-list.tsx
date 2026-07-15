@@ -11,87 +11,20 @@ interface Event extends ModalActivity {
   imageUrl: string;
 }
 
-const placeholderEvents: Event[] = [
-  {
-    id: "1",
-    title: "Bedriftspresentasjon med DNV",
-    imageUrl: PLACEHOLDER_IMAGE,
-    type: "Arr.",
-    description: "Bli bedre kjent med DNV og mulighetene de tilbyr.",
-    location: "Sted kommer",
-    date: new Date(),
-  },
-  {
-    id: "2",
-    title: "Nye styremedlemmer valgt",
-    imageUrl: PLACEHOLDER_IMAGE,
-    type: "Nyh.",
-    description: "Nytt styre er nå på plass for kommende periode.",
-    location: "Sted kommer",
-    date: new Date(),
-  },
-  {
-    id: "3",
-    title: "Fadderuka 2026 er i gang",
-    imageUrl: PLACEHOLDER_IMAGE,
-    type: "Nyh.",
-    description: "Endelig er fadderuka her, følg med for oppdateringer.",
-    location: "Sted kommer",
-    date: new Date(),
-  },
-  {
-    id: "4",
-    title: "Hyttetur til Oppdal",
-    imageUrl: PLACEHOLDER_IMAGE,
-    type: "Arr.",
-    description: "Bli med på tur til fjells sammen med faddergruppa.",
-    location: "Sted kommer",
-    date: new Date(),
-  },
-  {
-    id: "5",
-    title: "Åpent styremøte torsdag",
-    imageUrl: PLACEHOLDER_IMAGE,
-    type: "Arr.",
-    description: "Alle er velkomne til å delta på det åpne styremøtet.",
-    location: "Sted kommer",
-    date: new Date(),
-  },
-  {
-    id: "6",
-    title: "Ny samarbeidsavtale signert",
-    imageUrl: PLACEHOLDER_IMAGE,
-    type: "Nyh.",
-    description: "Vi har signert en ny samarbeidsavtale med næringslivet.",
-    location: "Sted kommer",
-    date: new Date(),
-  },
-  {
-    id: "7",
-    title: "Vinterball på Storsalen",
-    imageUrl: PLACEHOLDER_IMAGE,
-    type: "Arr.",
-    description: "Årets vinterball arrangeres på Storsalen.",
-    location: "Sted kommer",
-    date: new Date(),
-  },
-  {
-    id: "8",
-    title: "Sommerjobb-messe 2026",
-    imageUrl: PLACEHOLDER_IMAGE,
-    type: "Arr.",
-    description: "Møt bedrifter som tilbyr sommerjobber og internship.",
-    location: "Sted kommer",
-    date: new Date(),
-  },
-];
-
-export default function HorizontalEventsList({
-  events = placeholderEvents,
-}: {
-  events?: Event[];
-}) {
+export default function HorizontalEventsList({ events }: { events: Event[] }) {
   const [selected, setSelected] = useState<ModalActivity | null>(null);
+
+  if (events.length === 0) {
+    return (
+      <div className="py-8">
+        <div className="max-w-page mx-auto w-full px-4 md:px-6">
+          <p className="text-muted-foreground py-8 text-center text-sm">
+            Ingen kommende aktiviteter enda.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-8">

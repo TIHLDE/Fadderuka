@@ -49,6 +49,13 @@ export function NotificationBell() {
     },
   });
 
+  const markAllRead = api.notification.markAllRead.useMutation({
+    onSuccess: () => {
+      void utils.notification.unreadCount.invalidate();
+      void utils.notification.list.invalidate();
+    },
+  });
+
   const handleSelect = (notificationId: string) => {
     markRead.mutate({ id: notificationId });
     router.push("/faddergruppe");
@@ -71,7 +78,21 @@ export function NotificationBell() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel>Varsler</DropdownMenuLabel>
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <DropdownMenuLabel className="p-0">Varsler</DropdownMenuLabel>
+          {!!unreadCount && unreadCount > 0 && (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground text-xs font-medium transition"
+              onClick={(e) => {
+                e.preventDefault();
+                markAllRead.mutate();
+              }}
+            >
+              Merk alle som lest
+            </button>
+          )}
+        </div>
         <DropdownMenuSeparator />
         {notifications && notifications.length > 0 ? (
           notifications.map((notification) => (
