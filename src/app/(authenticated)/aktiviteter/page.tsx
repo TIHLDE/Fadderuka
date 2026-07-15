@@ -9,8 +9,8 @@ export default async function AktiviteterPage() {
   const grouped = activities.reduce<Record<string, typeof activities>>(
     (acc, activity) => {
       const key = new Date(activity.date).toDateString();
-      if (!acc[key]) acc[key] = [];
-      acc[key]!.push(activity);
+      acc[key] ??= [];
+      acc[key].push(activity);
       return acc;
     },
     {},

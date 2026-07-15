@@ -32,7 +32,7 @@ export default function VippsPaymentOverlay() {
     onSuccess: (data) => {
       if (data.found) {
         toast({ title: "Betaling funnet!", description: "Du er nå registrert." });
-        paymentStatus.refetch();
+        void paymentStatus.refetch();
       } else {
         toast({
           title: "Ingen betaling funnet",
