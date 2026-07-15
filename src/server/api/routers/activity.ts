@@ -24,6 +24,8 @@ export const activityRouter = createTRPCRouter({
           title: input.title,
           description: input.description,
           location: input.location,
+          // `||` is intentional: coerce empty string (allowed by the schema) to null, not "".
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
           imageUrl: input.imageUrl || null,
           date: new Date(input.date),
         },
@@ -48,6 +50,8 @@ export const activityRouter = createTRPCRouter({
           title: input.title,
           description: input.description,
           location: input.location,
+          // `||` is intentional: coerce empty string (allowed by the schema) to null, not "".
+          // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
           imageUrl: input.imageUrl || null,
           date: new Date(input.date),
         },

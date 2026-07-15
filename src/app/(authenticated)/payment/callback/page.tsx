@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "~/trpc/react";
 
@@ -27,9 +28,9 @@ function PaymentCallback() {
       <div className="flex min-h-screen items-center justify-center bg-zinc-950">
         <div className="text-center">
           <p className="text-red-400">Ugyldig tilbakekobling fra Vipps.</p>
-          <a href="/" className="mt-4 block text-orange-500 underline">
+          <Link href="/" className="mt-4 block text-orange-500 underline">
             Gå til forsiden
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -42,9 +43,9 @@ function PaymentCallback() {
           <p className="text-red-400">
             Betalingen kunne ikke bekreftes: {confirm.error.message}
           </p>
-          <a href="/" className="block text-orange-500 underline">
+          <Link href="/" className="block text-orange-500 underline">
             Gå til forsiden
-          </a>
+          </Link>
         </div>
       </div>
     );

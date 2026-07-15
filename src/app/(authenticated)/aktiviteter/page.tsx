@@ -9,8 +9,8 @@ export default async function AktiviteterPage() {
   const grouped = activities.reduce<Record<string, typeof activities>>(
     (acc, activity) => {
       const key = new Date(activity.date).toDateString();
-      if (!acc[key]) acc[key] = [];
-      acc[key]!.push(activity);
+      acc[key] ??= [];
+      acc[key].push(activity);
       return acc;
     },
     {},
@@ -58,7 +58,7 @@ export default async function AktiviteterPage() {
                     </span>
                   </div>
                   <div className="grid gap-6 md:grid-cols-2">
-                    {dayActivities!.map((activity) => (
+                    {dayActivities.map((activity) => (
                       <div
                         key={activity.id}
                         className="rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-strong)] p-6 shadow-[0_0_0_1px_var(--surface-border)] backdrop-blur"
