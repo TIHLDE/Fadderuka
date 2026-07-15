@@ -10,9 +10,25 @@ type GroupViewProps = {
   gruppeId: string;
   canPost: boolean;
   currentUserName: string;
+  channel: "ANNOUNCEMENT" | "CHAT";
+  title: string;
+  composerTitle: string;
+  composerSubtitle: string;
+  composerPlaceholder: string;
+  emptyMessage: string;
 };
 
-export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps) {
+export function GroupView({
+  gruppeId,
+  canPost,
+  currentUserName,
+  channel,
+  title,
+  composerTitle,
+  composerSubtitle,
+  composerPlaceholder,
+  emptyMessage,
+}: GroupViewProps) {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [composerMessage, setComposerMessage] = useState("");
 
@@ -20,11 +36,12 @@ export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps
 
   const { data: messages, isLoading } = api.gruppe.getMessages.useQuery({
     gruppeId,
+    channel,
   });
 
   const postMutation = api.gruppe.postMessage.useMutation({
     onSuccess: () => {
-      void utils.gruppe.getMessages.invalidate({ gruppeId });
+      void utils.gruppe.getMessages.invalidate({ gruppeId, channel });
       setComposerMessage("");
       setIsComposerOpen(false);
       toast({ title: "Melding sendt" });
@@ -36,7 +53,7 @@ export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps
 
   const deleteMutation = api.gruppe.deleteMessage.useMutation({
     onSuccess: () => {
-      void utils.gruppe.getMessages.invalidate({ gruppeId });
+      void utils.gruppe.getMessages.invalidate({ gruppeId, channel });
       toast({ title: "Melding slettet" });
     },
   });
@@ -45,7 +62,7 @@ export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps
     e.preventDefault();
     const content = composerMessage.trim();
     if (!content) return;
-    postMutation.mutate({ gruppeId, content });
+    postMutation.mutate({ gruppeId, content, channel });
   };
 
   const formatTime = (date: Date) => {
@@ -71,7 +88,7 @@ export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps
     <section className="!space-y-6">
       <div className="flex flex-wrap items-end justify-between !gap-4">
         <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-white sm:text-[36px]">
-          Meldinger fra fadderne
+          {title}
         </h2>
         {canPost && (
           <button
@@ -80,7 +97,7 @@ export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps
             onClick={() => setIsComposerOpen(true)}
           >
             <Plus className="h-4 w-4" />
-            Ny melding
+            {composerTitle}
           </button>
         )}
       </div>
@@ -125,10 +142,7 @@ export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps
           ))}
         </div>
       ) : (
-        <p className="text-center text-[#8694b4] !py-8">
-          Ingen meldinger enda.
-          {canPost && " Skriv den forste meldingen til gruppa!"}
-        </p>
+        <p className="text-center text-[#8694b4] !py-8">{emptyMessage}</p>
       )}
 
       {/* Composer modal */}
@@ -146,9 +160,9 @@ export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps
           <div className="relative w-full max-w-lg rounded-2xl border border-[#73aac4]/70 bg-[color:var(--surface-strong)] !p-6 text-white shadow-[0_40px_90px_rgba(2,6,23,0.6)] backdrop-blur sm:!p-8">
             <div className="flex items-start justify-between !gap-4">
               <div>
-                <h3 className="text-xl font-semibold">Ny melding</h3>
+                <h3 className="text-xl font-semibold">{composerTitle}</h3>
                 <p className="!mt-1 text-sm text-[#8694b4]">
-                  Skriv en beskjed til faddergruppen.
+                  {composerSubtitle}
                 </p>
               </div>
               <button
@@ -168,7 +182,7 @@ export function GroupView({ gruppeId, canPost, currentUserName }: GroupViewProps
                 Melding
                 <textarea
                   className="min-h-[140px] w-full rounded-xl border border-[#73aac4]/40 bg-[#111a2f] !px-4 !py-3 text-base text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
-                  placeholder="Hva vil du si til gruppa?"
+                  placeholder={composerPlaceholder}
                   value={composerMessage}
                   onChange={(e) => setComposerMessage(e.target.value)}
                 />

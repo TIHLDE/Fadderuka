@@ -4,7 +4,7 @@ import { Card } from "~/components/ui/card";
 
 const quickActions = [
   {
-    title: "Informasjon",
+    title: "Informasjon (FAQ)",
     href: "/informasjon",
     icon: Info,
   },
@@ -20,8 +20,6 @@ const quickActions = [
   },
 ];
 
-const currentYear = new Date().getFullYear();
-
 export default function Hero() {
   return (
     <section className="relative w-full pt-6">
@@ -30,7 +28,7 @@ export default function Hero() {
           <div className="space-y-4">
             <h1 className="text-4xl font-semibold tracking-tight text-transparent sm:text-5xl md:text-6xl">
               <span className="bg-gradient-to-r from-sky-600 to-blue-700 bg-clip-text dark:from-sky-300 dark:to-blue-400">
-                Fadderuka
+                Velkommen til fadderuka 2026!
               </span>
             </h1>
             <p className="text-muted-foreground max-w-xl text-sm leading-relaxed sm:text-base">
@@ -39,14 +37,11 @@ export default function Hero() {
             </p>
             <p className="text-muted-foreground max-w-xl text-sm leading-relaxed sm:text-base">
               Her finner du blant annet informasjon om aktiviteter i fadderuka
-              og hvilken faddergruppe du er i.
+              og hvilken faddergruppe du er i. Vi gleder oss til å se deg!
             </p>
           </div>
 
           <div className="flex flex-col items-end gap-6">
-            <span className="text-foreground/10 text-5xl font-semibold tracking-tight sm:text-6xl md:text-7xl">
-              {currentYear}
-            </span>
             <div className="grid w-full max-w-sm grid-cols-2 gap-3">
               {quickActions.map((action) => {
                 const Icon = action.icon;
