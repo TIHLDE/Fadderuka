@@ -4,27 +4,27 @@ import { useState } from "react";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
+import { DateTimePicker } from "~/components/ui/date-time-picker";
 
 type FormState = {
   title: string;
   description: string;
   location: string;
   imageUrl: string;
-  date: string;
+  date: Date | undefined;
 };
 
-const emptyForm: FormState = {
-  title: "",
-  description: "",
-  location: "",
-  imageUrl: "",
-  date: "",
-};
+/** Fresh form with the date pre-filled to today at 18:00 — the common case. */
+function makeEmptyForm(): FormState {
+  const date = new Date();
+  date.setHours(18, 0, 0, 0);
+  return { title: "", description: "", location: "", imageUrl: "", date };
+}
 
 export function AktiviteterTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [form, setForm] = useState<FormState>(makeEmptyForm);
   const utils = api.useUtils();
 
   const { data: activities, isLoading } = api.activity.getAll.useQuery();
@@ -33,7 +33,7 @@ export function AktiviteterTab() {
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
       setShowForm(false);
-      setForm(emptyForm);
+      setForm(makeEmptyForm());
       toast({ title: "Aktivitet opprettet" });
     },
   });
@@ -42,7 +42,7 @@ export function AktiviteterTab() {
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
       setEditingId(null);
-      setForm(emptyForm);
+      setForm(makeEmptyForm());
       toast({ title: "Aktivitet oppdatert" });
     },
   });
@@ -54,14 +54,22 @@ export function AktiviteterTab() {
     },
   });
 
+  const isValid =
+    form.title.trim().length > 0 &&
+    form.location.trim().length > 0 &&
+    form.description.trim().length > 0 &&
+    form.date instanceof Date &&
+    !Number.isNaN(form.date.getTime());
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValid || !form.date) return;
     const payload = {
-      title: form.title,
-      description: form.description,
-      location: form.location,
-      imageUrl: form.imageUrl || undefined,
-      date: new Date(form.date).toISOString(),
+      title: form.title.trim(),
+      description: form.description.trim(),
+      location: form.location.trim(),
+      imageUrl: form.imageUrl.trim() || undefined,
+      date: form.date.toISOString(),
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, ...payload });
@@ -77,7 +85,7 @@ export function AktiviteterTab() {
       description: activity.description,
       location: activity.location,
       imageUrl: activity.imageUrl ?? "",
-      date: new Date(activity.date).toISOString().slice(0, 16),
+      date: new Date(activity.date),
     });
     setShowForm(true);
   };
@@ -85,7 +93,7 @@ export function AktiviteterTab() {
   const cancelForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setForm(emptyForm);
+    setForm(makeEmptyForm());
   };
 
   if (isLoading) {
@@ -144,13 +152,16 @@ export function AktiviteterTab() {
               />
             </div>
             <div className="flex flex-col !gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Dato og tid *</label>
-              <input
-                required
-                type="datetime-local"
+              <label
+                htmlFor="activity-date"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Dato og tid *
+              </label>
+              <DateTimePicker
+                id="activity-date"
                 value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+                onChange={(date) => setForm({ ...form, date })}
               />
             </div>
           </div>
@@ -198,8 +209,10 @@ export function AktiviteterTab() {
             </button>
             <button
               type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending}
-              className="rounded-xl border border-[#73aac4]/40 bg-primary !px-4 !py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
+              disabled={
+                !isValid || createMutation.isPending || updateMutation.isPending
+              }
+              className="rounded-xl border border-[#73aac4]/40 bg-primary !px-4 !py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {editingId ? "Lagre endringer" : "Opprett aktivitet"}
             </button>
