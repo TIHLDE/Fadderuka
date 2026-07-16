@@ -99,14 +99,14 @@ export function AktiviteterTab() {
   return (
     <div className="!space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white">
+        <h3 className="text-lg font-semibold text-foreground">
           Aktiviteter ({activities?.length ?? 0})
         </h3>
         {!showForm && (
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4]/40 bg-[#1a2540] !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-[#29385a]"
+            className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4]/40 bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
           >
             <Plus className="h-4 w-4" />
             Ny aktivitet
@@ -117,16 +117,16 @@ export function AktiviteterTab() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="!space-y-4 rounded-xl border border-[#73aac4]/30 bg-[#1a2540] !p-5"
+          className="!space-y-4 rounded-xl border border-[#73aac4]/30 bg-secondary !p-5"
         >
           <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-white">
+            <h4 className="font-semibold text-foreground">
               {editingId ? "Rediger aktivitet" : "Ny aktivitet"}
             </h4>
             <button
               type="button"
               onClick={cancelForm}
-              className="text-[#8694b4] transition hover:text-white"
+              className="text-muted-foreground transition hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -134,57 +134,57 @@ export function AktiviteterTab() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col !gap-1.5">
-              <label className="text-xs font-medium text-[#8694b4]">Tittel *</label>
+              <label className="text-xs font-medium text-muted-foreground">Tittel *</label>
               <input
                 required
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="Navn på aktiviteten"
-                className="rounded-lg border border-[#73aac4]/30 bg-[#111a2f] !px-3 !py-2 text-sm text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+                className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
               />
             </div>
             <div className="flex flex-col !gap-1.5">
-              <label className="text-xs font-medium text-[#8694b4]">Dato og tid *</label>
+              <label className="text-xs font-medium text-muted-foreground">Dato og tid *</label>
               <input
                 required
                 type="datetime-local"
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="rounded-lg border border-[#73aac4]/30 bg-[#111a2f] !px-3 !py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#73aac4] [color-scheme:dark]"
+                className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
               />
             </div>
           </div>
 
           <div className="flex flex-col !gap-1.5">
-            <label className="text-xs font-medium text-[#8694b4]">Sted / kart-lenke *</label>
+            <label className="text-xs font-medium text-muted-foreground">Sted / kart-lenke *</label>
             <input
               required
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
               placeholder="F.eks. Gløshaugen eller https://maps.google.com/..."
-              className="rounded-lg border border-[#73aac4]/30 bg-[#111a2f] !px-3 !py-2 text-sm text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+              className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
             />
           </div>
 
           <div className="flex flex-col !gap-1.5">
-            <label className="text-xs font-medium text-[#8694b4]">Bilde-URL (valgfritt)</label>
+            <label className="text-xs font-medium text-muted-foreground">Bilde-URL (valgfritt)</label>
             <input
               value={form.imageUrl}
               onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
               placeholder="https://..."
-              className="rounded-lg border border-[#73aac4]/30 bg-[#111a2f] !px-3 !py-2 text-sm text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+              className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
             />
           </div>
 
           <div className="flex flex-col !gap-1.5">
-            <label className="text-xs font-medium text-[#8694b4]">Beskrivelse *</label>
+            <label className="text-xs font-medium text-muted-foreground">Beskrivelse *</label>
             <textarea
               required
               rows={3}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Beskriv aktiviteten..."
-              className="rounded-lg border border-[#73aac4]/30 bg-[#111a2f] !px-3 !py-2 text-sm text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+              className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
             />
           </div>
 
@@ -192,14 +192,14 @@ export function AktiviteterTab() {
             <button
               type="button"
               onClick={cancelForm}
-              className="rounded-lg !px-4 !py-2 text-sm text-[#8694b4] transition hover:text-white"
+              className="rounded-lg !px-4 !py-2 text-sm text-muted-foreground transition hover:text-foreground"
             >
               Avbryt
             </button>
             <button
               type="submit"
               disabled={createMutation.isPending || updateMutation.isPending}
-              className="rounded-xl border border-[#73aac4]/40 bg-[#73aac4]/20 !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-[#73aac4]/30 disabled:opacity-60"
+              className="rounded-xl border border-[#73aac4]/40 bg-primary !px-4 !py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60"
             >
               {editingId ? "Lagre endringer" : "Opprett aktivitet"}
             </button>
@@ -229,8 +229,8 @@ export function AktiviteterTab() {
                   </div>
                 )}
                 <div className="!space-y-1">
-                  <p className="font-semibold text-white">{activity.title}</p>
-                  <p className="text-xs text-[#8694b4]">
+                  <p className="font-semibold text-foreground">{activity.title}</p>
+                  <p className="text-xs text-muted-foreground">
                     {new Date(activity.date).toLocaleDateString("no-NO", {
                       weekday: "short",
                       day: "numeric",
@@ -240,11 +240,11 @@ export function AktiviteterTab() {
                       minute: "2-digit",
                     })}
                   </p>
-                  <div className="flex items-center !gap-1 text-xs text-[#5b6a8f]">
+                  <div className="flex items-center !gap-1 text-xs text-muted-foreground">
                     <MapPin className="h-3 w-3" />
                     <span className="max-w-xs truncate">{activity.location}</span>
                   </div>
-                  <p className="max-w-sm text-xs text-[#8694b4] line-clamp-2">{activity.description}</p>
+                  <p className="max-w-sm text-xs text-muted-foreground line-clamp-2">{activity.description}</p>
                 </div>
               </div>
 
@@ -252,7 +252,7 @@ export function AktiviteterTab() {
                 <button
                   type="button"
                   onClick={() => openEdit(activity)}
-                  className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 bg-[#1a2540] !px-3 !py-1.5 text-xs font-medium text-white transition hover:bg-[#29385a]"
+                  className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 bg-secondary !px-3 !py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary/80"
                 >
                   <Pencil className="h-3 w-3" />
                   Rediger
@@ -271,7 +271,7 @@ export function AktiviteterTab() {
           ))}
         </div>
       ) : (
-        <p className="rounded-xl border border-[#73aac4]/20 bg-[color:var(--surface-soft)] !px-4 !py-6 text-center text-sm text-[#5b6a8f]">
+        <p className="rounded-xl border border-[#73aac4]/20 bg-[color:var(--surface-soft)] !px-4 !py-6 text-center text-sm text-muted-foreground">
           Ingen aktiviteter lagt til ennå
         </p>
       )}

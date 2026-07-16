@@ -87,12 +87,12 @@ export function GroupView({
   return (
     <section className="!space-y-6">
       <div className="flex flex-wrap items-end justify-between !gap-4">
-        <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-white sm:text-[36px]">
+        <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-foreground sm:text-[36px]">
           {title}
         </h2>
         {canPost && (
           <button
-            className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-[#212d49] !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-[#29385a] sm:text-base"
+            className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 sm:text-base"
             type="button"
             onClick={() => setIsComposerOpen(true)}
           >
@@ -114,11 +114,11 @@ export function GroupView({
               className="rounded-xl border border-[#73aac4]/70 bg-[color:var(--surface-soft)] !p-6 shadow-[0_24px_60px_rgba(4,10,23,0.35)] backdrop-blur"
             >
               <div className="flex flex-wrap items-start justify-between !gap-3">
-                <h3 className="text-lg font-extrabold text-white sm:text-xl">
+                <h3 className="text-lg font-extrabold text-foreground sm:text-xl">
                   {message.author.name}
                 </h3>
                 <div className="flex items-center !gap-2">
-                  <span className="text-sm font-medium text-[#8694b4] sm:text-base">
+                  <span className="text-sm font-medium text-muted-foreground sm:text-base">
                     {formatTime(message.createdAt)}
                   </span>
                   {(message.author.name === currentUserName) && (
@@ -135,14 +135,14 @@ export function GroupView({
                   )}
                 </div>
               </div>
-              <p className="!mt-3 text-base font-medium text-[#8694b4] sm:text-lg">
+              <p className="!mt-3 text-base font-medium text-muted-foreground sm:text-lg">
                 {message.content}
               </p>
             </article>
           ))}
         </div>
       ) : (
-        <p className="text-center text-[#8694b4] !py-8">{emptyMessage}</p>
+        <p className="text-center text-muted-foreground !py-8">{emptyMessage}</p>
       )}
 
       {/* Composer modal */}
@@ -157,16 +157,16 @@ export function GroupView({
               setComposerMessage("");
             }}
           />
-          <div className="relative w-full max-w-lg rounded-2xl border border-[#73aac4]/70 bg-[color:var(--surface-strong)] !p-6 text-white shadow-[0_40px_90px_rgba(2,6,23,0.6)] backdrop-blur sm:!p-8">
+          <div className="relative w-full max-w-lg rounded-2xl border border-[#73aac4]/70 bg-[color:var(--surface-strong)] !p-6 text-foreground shadow-[0_40px_90px_rgba(2,6,23,0.6)] backdrop-blur sm:!p-8">
             <div className="flex items-start justify-between !gap-4">
               <div>
                 <h3 className="text-xl font-semibold">{composerTitle}</h3>
-                <p className="!mt-1 text-sm text-[#8694b4]">
+                <p className="!mt-1 text-sm text-muted-foreground">
                   {composerSubtitle}
                 </p>
               </div>
               <button
-                className="rounded-full border border-[#73aac4]/50 !px-3 !py-1 text-sm text-[#d8e6ff] transition hover:bg-white/10"
+                className="rounded-full border border-[#73aac4]/50 !px-3 !py-1 text-sm text-foreground transition hover:bg-foreground/10"
                 type="button"
                 onClick={() => {
                   setIsComposerOpen(false);
@@ -178,10 +178,10 @@ export function GroupView({
             </div>
 
             <form className="!mt-6 !space-y-4" onSubmit={handleSubmit}>
-              <label className="block !space-y-2 text-sm font-medium text-[#d8e6ff]">
+              <label className="block !space-y-2 text-sm font-medium text-foreground">
                 Melding
                 <textarea
-                  className="min-h-[140px] w-full rounded-xl border border-[#73aac4]/40 bg-[#111a2f] !px-4 !py-3 text-base text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+                  className="min-h-[140px] w-full rounded-xl border border-[#73aac4]/40 bg-background !px-4 !py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
                   placeholder={composerPlaceholder}
                   value={composerMessage}
                   onChange={(e) => setComposerMessage(e.target.value)}
@@ -190,7 +190,7 @@ export function GroupView({
 
               <div className="flex flex-wrap items-center justify-end !gap-3">
                 <button
-                  className="rounded-xl border border-[#73aac4]/50 !px-4 !py-2 text-sm text-[#d8e6ff] transition hover:bg-white/10"
+                  className="rounded-xl border border-[#73aac4]/50 !px-4 !py-2 text-sm text-foreground transition hover:bg-foreground/10"
                   type="button"
                   onClick={() => {
                     setIsComposerOpen(false);
@@ -200,7 +200,7 @@ export function GroupView({
                   Avbryt
                 </button>
                 <button
-                  className="rounded-xl bg-[#2c3a5d] !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-[#33466f] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl bg-primary !px-4 !py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                   type="submit"
                   disabled={
                     composerMessage.trim().length === 0 || postMutation.isPending

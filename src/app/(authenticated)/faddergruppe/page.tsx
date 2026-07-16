@@ -39,7 +39,7 @@ export default async function FaddergroupPage() {
   if (!membership) {
     return (
       <main
-        className="relative flex min-h-screen w-full flex-1 flex-col overflow-hidden text-white"
+        className="relative flex min-h-screen w-full flex-1 flex-col overflow-hidden text-foreground"
         style={{
           backgroundColor: "var(--page-bg)",
           backgroundImage: "var(--page-bg-image), var(--page-gradient)",
@@ -48,10 +48,10 @@ export default async function FaddergroupPage() {
         <div className="pointer-events-none absolute top-[-280px] left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(100,149,230,0.35),transparent_70%)] blur-3xl" />
         <div className="max-w-page relative mx-auto flex w-full flex-1 flex-col items-center justify-center !px-4 !pt-24 !pb-16 md:!px-6">
           <div className="mx-auto max-w-md !space-y-4 text-center">
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-3xl font-bold text-foreground">
               Ingen faddergruppe
             </h1>
-            <p className="text-[#8694b4]">
+            <p className="text-muted-foreground">
               Du er ikke tildelt en faddergruppe enda. Kontakt en administrator
               for a bli lagt til i en gruppe.
             </p>
@@ -71,7 +71,7 @@ export default async function FaddergroupPage() {
 
   return (
     <main
-      className="relative flex min-h-screen w-full flex-1 flex-col overflow-hidden text-white"
+      className="relative flex min-h-screen w-full flex-1 flex-col overflow-hidden text-foreground"
       style={{
         backgroundColor: "var(--page-bg)",
         backgroundImage: "var(--page-bg-image), var(--page-gradient)",
@@ -87,7 +87,7 @@ export default async function FaddergroupPage() {
             <h1 className="bg-gradient-to-r from-[#90dfed] to-[#6495e6] bg-clip-text text-4xl leading-[1.15] font-bold text-transparent md:text-5xl">
               {gruppe.name}
             </h1>
-            <p className="max-w-3xl text-base text-[#8694b4] sm:text-lg">
+            <p className="max-w-3xl text-base text-muted-foreground sm:text-lg">
               Velkommen til {gruppe.name}! Her finner du en oversikt over alle
               faddere og fadderbarn i tillegg til informasjon fra fadderne til
               faddergruppa.
@@ -95,31 +95,31 @@ export default async function FaddergroupPage() {
           </section>
 
           <section className="!space-y-6">
-            <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-white sm:text-[36px]">
+            <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-foreground sm:text-[36px]">
               Medlemmer
             </h2>
             <div className="grid !gap-10 rounded-xl border border-[#73aac4]/70 bg-[color:var(--surface-soft)] !p-6 shadow-[0_24px_60px_rgba(4,10,23,0.35)] backdrop-blur md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:!gap-16">
               <div className="!space-y-4">
-                <h3 className="text-lg font-semibold text-white">Fadderbarn</h3>
-                <ul className="!space-y-2 text-sm text-[#7f8fb2] sm:text-base">
+                <h3 className="text-lg font-semibold text-foreground">Fadderbarn</h3>
+                <ul className="!space-y-2 text-sm text-muted-foreground sm:text-base">
                   {fadderbarn.map((member) => (
                     <li key={member.id}>{member.user.name}</li>
                   ))}
                   {fadderbarn.length === 0 && (
-                    <li className="text-[#5b6a8f]">Ingen fadderbarn enda</li>
+                    <li className="text-muted-foreground">Ingen fadderbarn enda</li>
                   )}
                 </ul>
               </div>
               <div className="!space-y-4">
-                <h3 className="text-lg font-semibold text-white">Faddere</h3>
-                <div className="grid !gap-2 text-sm text-[#7f8fb2] sm:text-base">
+                <h3 className="text-lg font-semibold text-foreground">Faddere</h3>
+                <div className="grid !gap-2 text-sm text-muted-foreground sm:text-base">
                   {faddere.map((member) => (
                     <div key={member.id}>
                       <span>{member.user.name}</span>
                     </div>
                   ))}
                   {faddere.length === 0 && (
-                    <span className="text-[#5b6a8f]">Ingen faddere enda</span>
+                    <span className="text-muted-foreground">Ingen faddere enda</span>
                   )}
                 </div>
               </div>
