@@ -25,7 +25,7 @@ function PaymentCallback() {
 
   if (!orderId) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <p className="text-red-400">Ugyldig tilbakekobling fra Vipps.</p>
           <Link href="/" className="mt-4 block text-orange-500 underline">
@@ -38,7 +38,7 @@ function PaymentCallback() {
 
   if (confirm.isError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center space-y-3">
           <p className="text-red-400">
             Betalingen kunne ikke bekreftes: {confirm.error.message}
@@ -52,10 +52,10 @@ function PaymentCallback() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center space-y-4">
         <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
-        <p className="text-zinc-300">Bekrefter betaling med Vipps...</p>
+        <p className="text-muted-foreground">Bekrefter betaling med Vipps...</p>
       </div>
     </div>
   );
@@ -65,7 +65,7 @@ export default function PaymentCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-zinc-950">
+        <div className="flex min-h-screen items-center justify-center bg-background">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
         </div>
       }

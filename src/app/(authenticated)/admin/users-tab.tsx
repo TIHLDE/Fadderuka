@@ -110,7 +110,7 @@ export function UsersTab() {
       {/* Unverified users section */}
       <section className="!space-y-4">
         <div className="flex items-center !gap-3">
-          <h3 className="text-lg font-semibold text-white">
+          <h3 className="text-lg font-semibold text-foreground">
             Nye uverifiserte brukere
           </h3>
           {unverifiedUsers.length > 0 && (
@@ -128,8 +128,8 @@ export function UsersTab() {
                 className="flex flex-col !gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 !p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
-                  <p className="font-medium text-white">{user.name}</p>
-                  <p className="text-sm text-[#8694b4]">{user.email}</p>
+                  <p className="font-medium text-foreground">{user.name}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
                   <div className="mt-1 flex flex-wrap !gap-1.5">
                     {user.klasse && (
                       <span className="rounded-full bg-[#73aac4]/15 !px-2 !py-0.5 text-xs font-medium text-[#73aac4]">
@@ -142,10 +142,10 @@ export function UsersTab() {
                       </span>
                     )}
                     {!user.klasse && !user.studieretning && (
-                      <span className="text-xs text-[#5b6a8f]">Ingen klasse/retning oppgitt</span>
+                      <span className="text-xs text-muted-foreground">Ingen klasse/retning oppgitt</span>
                     )}
                   </div>
-                  <p className="text-xs text-[#5b6a8f]">
+                  <p className="text-xs text-muted-foreground">
                     Registrert{" "}
                     {new Date(user.createdAt).toLocaleDateString("no-NO", {
                       day: "numeric",
@@ -157,7 +157,7 @@ export function UsersTab() {
 
                 {verifyingUserId === user.id ? (
                   <div className="flex flex-col !gap-2 sm:items-end">
-                    <p className="text-xs font-medium text-[#8694b4]">
+                    <p className="text-xs font-medium text-muted-foreground">
                       Velg faddergruppe:
                     </p>
                     <div className="flex flex-wrap !gap-2">
@@ -172,7 +172,7 @@ export function UsersTab() {
                             })
                           }
                           disabled={verifyAndAssignMutation.isPending}
-                          className="rounded-lg border border-[#73aac4]/40 bg-[#212d49] !px-3 !py-1.5 text-xs font-medium text-white transition hover:bg-[#29385a] disabled:opacity-60"
+                          className="rounded-lg border border-[#73aac4]/40 bg-secondary !px-3 !py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
                         >
                           {gruppe.name}
                         </button>
@@ -180,7 +180,7 @@ export function UsersTab() {
                       <button
                         type="button"
                         onClick={() => setVerifyingUserId(null)}
-                        className="rounded-lg !px-3 !py-1.5 text-xs text-[#8694b4] hover:text-white transition"
+                        className="rounded-lg !px-3 !py-1.5 text-xs text-muted-foreground hover:text-foreground transition"
                       >
                         Avbryt
                       </button>
@@ -208,7 +208,7 @@ export function UsersTab() {
                       <button
                         type="button"
                         onClick={() => setDeletingUserId(null)}
-                        className="rounded-lg !px-3 !py-1.5 text-xs text-[#8694b4] transition hover:text-white"
+                        className="rounded-lg !px-3 !py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
                       >
                         Avbryt
                       </button>
@@ -238,7 +238,7 @@ export function UsersTab() {
             ))}
           </div>
         ) : (
-          <p className="rounded-xl border border-[#73aac4]/20 bg-[color:var(--surface-soft)] !px-4 !py-6 text-center text-sm text-[#5b6a8f]">
+          <p className="rounded-xl border border-[#73aac4]/20 bg-[color:var(--surface-soft)] !px-4 !py-6 text-center text-sm text-muted-foreground">
             Ingen uverifiserte brukere
           </p>
         )}
@@ -246,7 +246,7 @@ export function UsersTab() {
 
       {/* Verified users grouped by studieretning */}
       <section className="!space-y-4">
-        <h3 className="text-lg font-semibold text-white">
+        <h3 className="text-lg font-semibold text-foreground">
           Verifiserte brukere ({verifiedUsers.length})
         </h3>
 
@@ -255,7 +255,7 @@ export function UsersTab() {
           placeholder="Sok etter bruker..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm rounded-xl border border-[#73aac4]/40 bg-[#111a2f] !px-4 !py-2.5 text-sm text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+          className="w-full max-w-sm rounded-xl border border-[#73aac4]/40 bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
         />
 
         <div className="grid grid-cols-1 !gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -279,8 +279,8 @@ export function UsersTab() {
                   className="flex w-full items-center justify-between !gap-3 !p-4 text-left"
                 >
                   <div>
-                    <p className="font-semibold text-white">{studieretning}</p>
-                    <p className="text-xs text-[#8694b4]">
+                    <p className="font-semibold text-foreground">{studieretning}</p>
+                    <p className="text-xs text-muted-foreground">
                       {usersInGroup.length}{" "}
                       {usersInGroup.length === 1 ? "bruker" : "brukere"}
                     </p>
@@ -294,7 +294,7 @@ export function UsersTab() {
                   <div className="overflow-x-auto border-t border-[#73aac4]/20">
                     <table className="w-full text-left text-sm">
                       <thead>
-                        <tr className="border-b border-[#73aac4]/20 text-[#8694b4]">
+                        <tr className="border-b border-[#73aac4]/20 text-muted-foreground">
                           <th className="!px-4 !py-3 font-medium">Navn</th>
                           <th className="!px-4 !py-3 font-medium">E-post</th>
                           <th className="!px-4 !py-3 font-medium">Klasse</th>
@@ -309,12 +309,12 @@ export function UsersTab() {
                           return (
                             <tr
                               key={user.id}
-                              className="border-b border-[#73aac4]/10 last:border-0 hover:bg-[#1a2540]/50"
+                              className="border-b border-[#73aac4]/10 last:border-0 hover:bg-muted/50"
                             >
-                              <td className="!px-4 !py-3 font-medium text-white">
+                              <td className="!px-4 !py-3 font-medium text-foreground">
                                 {user.name}
                               </td>
-                              <td className="!px-4 !py-3 text-[#8694b4]">
+                              <td className="!px-4 !py-3 text-muted-foreground">
                                 {user.email}
                               </td>
                               <td className="!px-4 !py-3">
@@ -323,10 +323,10 @@ export function UsersTab() {
                                     {user.klasse}
                                   </span>
                                 ) : (
-                                  <span className="text-[#5b6a8f]">—</span>
+                                  <span className="text-muted-foreground">—</span>
                                 )}
                               </td>
-                              <td className="!px-4 !py-3 text-[#8694b4]">
+                              <td className="!px-4 !py-3 text-muted-foreground">
                                 {membership ? membership.gruppe.name : "—"}
                               </td>
                               <td className="!px-4 !py-3">
@@ -359,7 +359,7 @@ export function UsersTab() {
                                       : "Fadderbarn"}
                                   </button>
                                 ) : (
-                                  <span className="text-[#5b6a8f]">—</span>
+                                  <span className="text-muted-foreground">—</span>
                                 )}
                               </td>
                               <td className="!px-4 !py-3 text-center">
@@ -372,7 +372,7 @@ export function UsersTab() {
                                     })
                                   }
                                   disabled={adminMutation.isPending}
-                                  className="inline-flex items-center justify-center rounded-lg !p-1.5 transition hover:bg-white/10"
+                                  className="inline-flex items-center justify-center rounded-lg !p-1.5 transition hover:bg-foreground/10"
                                   title={
                                     user.isAdmin
                                       ? "Fjern admintilgang"
@@ -382,7 +382,7 @@ export function UsersTab() {
                                   {user.isAdmin ? (
                                     <Shield className="h-4 w-4 text-amber-400" />
                                   ) : (
-                                    <ShieldOff className="h-4 w-4 text-[#5b6a8f]" />
+                                    <ShieldOff className="h-4 w-4 text-muted-foreground" />
                                   )}
                                 </button>
                               </td>
@@ -393,7 +393,7 @@ export function UsersTab() {
                           <tr>
                             <td
                               colSpan={6}
-                              className="!px-4 !py-6 text-center text-[#8694b4]"
+                              className="!px-4 !py-6 text-center text-muted-foreground"
                             >
                               Ingen brukere funnet
                             </td>
