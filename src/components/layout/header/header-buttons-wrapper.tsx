@@ -32,8 +32,11 @@ const HeaderButtonsWrapper = async ({
         >
           <Logo />
         </HeaderLink>
-        <HeaderLink className="text-foreground" href="/">
-          Generelt
+        <HeaderLink
+          className="text-muted-foreground hover:text-foreground"
+          href="/informasjon"
+        >
+          Informasjon
         </HeaderLink>
         <HeaderLink
           className="text-muted-foreground hover:text-foreground"
