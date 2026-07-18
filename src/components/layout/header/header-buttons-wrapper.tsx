@@ -33,27 +33,27 @@ const HeaderButtonsWrapper = async ({
           <Logo />
         </HeaderLink>
         <HeaderLink
-          className="text-muted-foreground hover:text-foreground"
+          className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
           href="/informasjon"
         >
-          Informasjon
+          Informasjon/FAQ
         </HeaderLink>
         <HeaderLink
-          className="text-muted-foreground hover:text-foreground"
+          className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
           href="/aktiviteter"
         >
           Aktiviteter
         </HeaderLink>
         {session?.user?.isAdmin ? (
           <HeaderLink
-            className="text-muted-foreground hover:text-foreground"
+            className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
             href="/admin"
           >
             Adminpanel
           </HeaderLink>
         ) : (
           <HeaderLink
-            className="text-muted-foreground hover:text-foreground"
+            className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
             href="/faddergruppe"
           >
             Min faddergruppe

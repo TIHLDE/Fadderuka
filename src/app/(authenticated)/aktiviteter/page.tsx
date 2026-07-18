@@ -26,24 +26,24 @@ export default async function AktiviteterPage() {
         backgroundImage: "var(--page-gradient)",
       }}
     >
-      <div className="pointer-events-none absolute -left-40 -top-32 h-[520px] w-[520px] rounded-full bg-sky-400/10 blur-[140px]" />
-      <div className="pointer-events-none absolute right-[-10%] top-[10%] h-[420px] w-[420px] rounded-full bg-blue-500/10 blur-[120px]" />
+      <div className="pointer-events-none absolute -top-32 -left-40 h-[520px] w-[520px] rounded-full bg-sky-400/10 blur-[140px]" />
+      <div className="pointer-events-none absolute top-[10%] right-[-10%] h-[420px] w-[420px] rounded-full bg-blue-500/10 blur-[120px]" />
       <div className="pointer-events-none absolute bottom-[10%] left-[20%] h-[420px] w-[420px] rounded-full bg-slate-500/10 blur-[140px]" />
 
-      <div className="mx-auto w-full max-w-page px-4 pb-24 pt-24 md:px-6">
+      <div className="max-w-page mx-auto w-full px-4 pt-24 pb-24 md:px-6">
         <div className="text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
+          <h1 className="text-foreground text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl">
             Aktiviteter
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-            Her finner du en oversikt over kommende aktiviteter.
+          <p className="text-muted-foreground mx-auto mt-4 max-w-2xl text-base sm:text-lg">
+            Her finner du en oversikt over kommende aktiviteter i fadderuka!
           </p>
         </div>
 
         {days.length > 0 ? (
           <AktiviteterList days={days} />
         ) : (
-          <p className="mt-16 text-center text-muted-foreground">
+          <p className="text-muted-foreground mt-16 text-center">
             Ingen aktiviteter planlagt ennå.
           </p>
         )}
