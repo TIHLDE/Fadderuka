@@ -20,6 +20,16 @@ enum MessageChannel {
     CHAT
 }
 
+enum PaymentStatus {
+    CREATED
+    AUTHORIZED
+    CAPTURED
+    ABORTED
+    EXPIRED
+    TERMINATED
+    FAILED
+}
+
 model Post {
     id        Int      @id @default(autoincrement())
     name      String
@@ -53,6 +63,7 @@ model User {
     memberships   FadderGruppeMember[]
     groupMessages GroupMessage[]
     notifications Notification[]
+    payments      Payment[]
 }
 
 model FadderGruppe {
@@ -110,6 +121,25 @@ model Notification {
     gruppe    FadderGruppe @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
 
     @@index([userId, read])
+}
+
+model Payment {
+    // One row per initiated Vipps payment. `orderId` is the Vipps `reference`
+    // and the stable key both the return-URL callback and the webhook use to
+    // settle a payment. Persisting the order (instead of trusting a phone
+    // number) is what lets us mark a user paid only for *their own* verified
+    // Vipps payment.
+    id        String        @id @default(cuid())
+    orderId   String        @unique
+    phone     String
+    amount    Int // amount in øre
+    status    PaymentStatus @default(CREATED)
+    createdAt DateTime      @default(now())
+    updatedAt DateTime      @updatedAt
+    userId    String
+    user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
 }
 
 model Session {

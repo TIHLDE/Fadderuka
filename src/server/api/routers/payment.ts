@@ -1,136 +1,34 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
-  createTRPCRouter,
-  protectedProcedure,
-} from "~/server/api/trpc";
-import { env } from "~/env";
+  PAYMENT_AMOUNT_ORE,
+  VippsError,
+  VippsNotConfiguredError,
+  buildOrderId,
+  createPayment,
+  parseUserIdFromOrderId,
+  settlePayment,
+} from "~/server/payment/vipps";
 
-// Vipps ePayment API docs: https://developer.vippsmobilepay.com/docs/APIs/epayment-api/
+const phoneInput = z.object({
+  phoneNumber: z.string().regex(/^\d{8}$/, "Telefonnummeret må være 8 siffer"),
+});
 
-async function getVippsAccessToken(): Promise<string> {
-  if (
-    !env.VIPPS_CLIENT_ID ||
-    !env.VIPPS_CLIENT_SECRET ||
-    !env.VIPPS_SUBSCRIPTION_KEY ||
-    !env.VIPPS_API_URL
-  ) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Vipps er ikke konfigurert på serveren",
-    });
+/** Translate a Vipps-layer error into the tRPC error shown to the client. */
+function toTRPCError(err: unknown): TRPCError {
+  if (err instanceof TRPCError) return err;
+  if (err instanceof VippsNotConfiguredError) {
+    return new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err.message });
   }
-
-  const response = await fetch(`${env.VIPPS_API_URL}/accesstoken/get`, {
-    method: "POST",
-    headers: {
-      client_id: env.VIPPS_CLIENT_ID,
-      client_secret: env.VIPPS_CLIENT_SECRET,
-      "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
-      "Merchant-Serial-Number": env.VIPPS_MERCHANT_SERIAL_NUMBER ?? "",
-    },
+  if (err instanceof VippsError) {
+    return new TRPCError({ code: "BAD_GATEWAY", message: err.message });
+  }
+  console.error("[payment] unexpected error", err);
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Noe gikk galt med betalingen.",
   });
-
-  if (!response.ok) {
-    const body = await response.text();
-    console.error("Vipps access token error:", response.status, body);
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Kunne ikke hente Vipps tilgangstoken",
-    });
-  }
-
-  const data = (await response.json()) as { access_token: string };
-  return data.access_token;
-}
-
-async function createVippsPayment(
-  phoneNumber: string,
-  orderId: string,
-): Promise<{ redirectUrl: string }> {
-  if (
-    !env.VIPPS_API_URL ||
-    !env.VIPPS_SUBSCRIPTION_KEY ||
-    !env.VIPPS_MERCHANT_SERIAL_NUMBER ||
-    !env.VIPPS_CALLBACK_URL
-  ) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Vipps er ikke konfigurert på serveren",
-    });
-  }
-
-  const accessToken = await getVippsAccessToken();
-
-  const response = await fetch(`${env.VIPPS_API_URL}/epayment/v1/payments`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
-      "Merchant-Serial-Number": env.VIPPS_MERCHANT_SERIAL_NUMBER,
-      "Idempotency-Key": orderId,
-    },
-    body: JSON.stringify({
-      amount: { currency: "NOK", value: 30000 }, // 300 NOK in øre
-      paymentMethod: { type: "WALLET" },
-      customer: { phoneNumber: `47${phoneNumber}` }, // E.164 format
-      reference: orderId,
-      returnUrl: `${env.VIPPS_CALLBACK_URL}/payment/callback?orderId=${orderId}`,
-      userFlow: "WEB_REDIRECT",
-      paymentDescription: "Fadderuka - TIHLDE",
-    }),
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    console.error("Vipps create payment error:", response.status, body);
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Kunne ikke opprette Vipps betaling",
-    });
-  }
-
-  const data = (await response.json()) as { redirectUrl: string };
-  return { redirectUrl: data.redirectUrl };
-}
-
-async function getVippsPaymentStatus(orderId: string): Promise<string> {
-  if (
-    !env.VIPPS_API_URL ||
-    !env.VIPPS_SUBSCRIPTION_KEY ||
-    !env.VIPPS_MERCHANT_SERIAL_NUMBER
-  ) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Vipps er ikke konfigurert på serveren",
-    });
-  }
-
-  const accessToken = await getVippsAccessToken();
-
-  const response = await fetch(
-    `${env.VIPPS_API_URL}/epayment/v1/payments/${orderId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Ocp-Apim-Subscription-Key": env.VIPPS_SUBSCRIPTION_KEY,
-        "Merchant-Serial-Number": env.VIPPS_MERCHANT_SERIAL_NUMBER,
-      },
-    },
-  );
-
-  if (!response.ok) {
-    const body = await response.text();
-    console.error("Vipps payment status error:", response.status, body);
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Kunne ikke hente betalingsstatus fra Vipps",
-    });
-  }
-
-  const data = (await response.json()) as { state: string };
-  return data.state;
 }
 
 export const paymentRouter = createTRPCRouter({
@@ -146,23 +44,15 @@ export const paymentRouter = createTRPCRouter({
   }),
 
   initiatePayment: protectedProcedure
-    .input(
-      z.object({
-        phoneNumber: z
-          .string()
-          .regex(/^\d{8}$/, "Telefonnummeret må være 8 siffer"),
-      }),
-    )
+    .input(phoneInput)
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.db.user.findUnique({
         where: { id: ctx.session.user.id },
+        select: { hasPaid: true },
       });
 
       if (!user) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Bruker ikke funnet",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Bruker ikke funnet" });
       }
 
       if (user.hasPaid) {
@@ -177,70 +67,84 @@ export const paymentRouter = createTRPCRouter({
         data: { phone: input.phoneNumber },
       });
 
-      const orderId = `fadderuka-${ctx.session.user.id}-${Date.now()}`;
-      const payment = await createVippsPayment(input.phoneNumber, orderId);
+      const orderId = buildOrderId(ctx.session.user.id);
 
-      return { redirectUrl: payment.redirectUrl };
-    }),
+      try {
+        const payment = await createPayment(input.phoneNumber, orderId);
 
-  checkPaymentByPhone: protectedProcedure
-    .input(
-      z.object({
-        phoneNumber: z
-          .string()
-          .regex(/^\d{8}$/, "Telefonnummeret må være 8 siffer"),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const paidUser = await ctx.db.user.findFirst({
-        where: {
-          phone: input.phoneNumber,
-          hasPaid: true,
-        },
-        select: { id: true },
-      });
-
-      if (paidUser) {
-        await ctx.db.user.update({
-          where: { id: ctx.session.user.id },
+        // Persist the order so the callback and webhook can settle it, and so
+        // "Jeg har allerede betalt" can re-check this user's own payments.
+        await ctx.db.payment.create({
           data: {
-            hasPaid: true,
-            isVerified: true,
+            orderId,
+            userId: ctx.session.user.id,
             phone: input.phoneNumber,
+            amount: PAYMENT_AMOUNT_ORE,
           },
         });
-        return { found: true };
+
+        return { redirectUrl: payment.redirectUrl };
+      } catch (err) {
+        throw toTRPCError(err);
+      }
+    }),
+
+  // Fallback for when the Vipps redirect never returns the user to us (they
+  // closed the app, lost connection, etc.). We only ever settle *this* user's
+  // own orders against Vipps — never trust a phone number as proof of payment.
+  checkPaymentByPhone: protectedProcedure
+    .input(phoneInput)
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: { phone: input.phoneNumber },
+      });
+
+      const orders = await ctx.db.payment.findMany({
+        where: {
+          userId: ctx.session.user.id,
+          status: { in: ["CREATED", "AUTHORIZED"] },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { orderId: true },
+      });
+
+      for (const order of orders) {
+        try {
+          const { paid } = await settlePayment(order.orderId);
+          if (paid) return { found: true };
+        } catch (err) {
+          // A single unsettleable order shouldn't abort the whole check.
+          console.error("[payment] settle failed for", order.orderId, err);
+        }
       }
 
-      return { found: false };
+      const user = await ctx.db.user.findUnique({
+        where: { id: ctx.session.user.id },
+        select: { hasPaid: true },
+      });
+      return { found: user?.hasPaid ?? false };
     }),
 
   confirmPayment: protectedProcedure
     .input(z.object({ orderId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // orderId format: fadderuka-{userId}-{timestamp}
-      // Ensure this order belongs to the authenticated user
-      if (!input.orderId.includes(ctx.session.user.id)) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Ugyldig ordre",
-        });
+      // The order must belong to the authenticated user.
+      if (parseUserIdFromOrderId(input.orderId) !== ctx.session.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Ugyldig ordre" });
       }
 
-      const state = await getVippsPaymentStatus(input.orderId);
-
-      if (state !== "AUTHORIZED" && state !== "CAPTURED") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Betaling ikke bekreftet av Vipps (status: ${state})`,
-        });
+      try {
+        const { paid, state } = await settlePayment(input.orderId);
+        if (!paid) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Betaling ikke bekreftet av Vipps (status: ${state})`,
+          });
+        }
+        return { success: true };
+      } catch (err) {
+        throw toTRPCError(err);
       }
-
-      await ctx.db.user.update({
-        where: { id: ctx.session.user.id },
-        data: { hasPaid: true, isVerified: true },
-      });
-
-      return { success: true };
     }),
 });
