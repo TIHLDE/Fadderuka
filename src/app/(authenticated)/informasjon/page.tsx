@@ -66,7 +66,8 @@ const packingList = [
   "En hvit t-skjorte du kan skrive på",
   'Noe til "anything, but a cup"',
   "Klær du ikke er redd for",
-  "Kostyme som begynner på forbokstav",
+  "Kostyme som begynner på forbokstaven din",
+  "Kostyme som en artist",
   "Dress/ballkjole (til immeball)",
 ];
 
