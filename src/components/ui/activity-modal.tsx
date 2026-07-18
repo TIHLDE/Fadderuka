@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { MapPin, X } from "lucide-react";
 
+import Markdown from "~/components/ui/markdown";
+
 export interface ModalActivity {
   id: string;
   title: string;
@@ -107,9 +109,9 @@ export default function ActivityModal({
             </span>
           </div>
 
-          <p className="whitespace-pre-line text-base leading-relaxed text-muted-foreground">
+          <Markdown className="text-base text-muted-foreground">
             {activity.description}
-          </p>
+          </Markdown>
         </div>
       </div>
     </div>

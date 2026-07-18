@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MapPin } from "lucide-react";
 import ActivityModal, { type ModalActivity } from "~/components/ui/activity-modal";
+import { stripMarkdown } from "~/lib/utils";
 
 export default function AktiviteterList({
   days,
@@ -73,7 +74,7 @@ export default function AktiviteterList({
                         </span>
                       </div>
                       <p className="line-clamp-2 text-sm text-muted-foreground">
-                        {activity.description}
+                        {stripMarkdown(activity.description)}
                       </p>
                     </div>
                   </button>
