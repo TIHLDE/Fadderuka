@@ -1,11 +1,41 @@
 import { z } from "zod";
 import { adminProcedure, createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  getTihldeFadderukaEvents,
+  type EventItem,
+} from "~/server/tihlde/events";
 
 export const activityRouter = createTRPCRouter({
   getAll: publicProcedure.query(({ ctx }) => {
     return ctx.db.activity.findMany({
       orderBy: { date: "asc" },
     });
+  }),
+
+  /**
+   * Merged, date-sorted event feed for the public pages: Fadderuka events from
+   * TIHLDE plus any locally-managed activities. Admins still create local
+   * activities via the mutations below; TIHLDE events are read-only.
+   */
+  getUpcoming: publicProcedure.query(async ({ ctx }): Promise<EventItem[]> => {
+    const [local, tihlde] = await Promise.all([
+      ctx.db.activity.findMany({ orderBy: { date: "asc" } }),
+      getTihldeFadderukaEvents(),
+    ]);
+
+    const localEvents: EventItem[] = local.map((a) => ({
+      id: a.id,
+      title: a.title,
+      description: a.description,
+      location: a.location,
+      date: a.date,
+      imageUrl: a.imageUrl,
+      source: "local",
+    }));
+
+    return [...tihlde, ...localEvents].sort(
+      (a, b) => a.date.getTime() - b.date.getTime(),
+    );
   }),
 
   create: adminProcedure

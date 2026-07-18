@@ -3,7 +3,7 @@ import { api } from "~/trpc/server";
 import AktiviteterList from "./aktiviteter-list";
 
 export default async function AktiviteterPage() {
-  const activities = await api.activity.getAll();
+  const activities = await api.activity.getUpcoming();
 
   // Group activities by calendar day
   const grouped = activities.reduce<Record<string, typeof activities>>(
