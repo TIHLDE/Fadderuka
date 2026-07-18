@@ -6,6 +6,7 @@ import {
   VippsError,
   VippsNotConfiguredError,
   buildOrderId,
+  buildPaymentDescription,
   createPayment,
   parseUserIdFromOrderId,
   settlePayment,
@@ -45,7 +46,7 @@ export const paymentRouter = createTRPCRouter({
   initiatePayment: protectedProcedure.mutation(async ({ ctx }) => {
     const user = await ctx.db.user.findUnique({
       where: { id: ctx.session.user.id },
-      select: { hasPaid: true },
+      select: { hasPaid: true, name: true },
     });
 
     if (!user) {
@@ -62,7 +63,10 @@ export const paymentRouter = createTRPCRouter({
     const orderId = buildOrderId(ctx.session.user.id);
 
     try {
-      const payment = await createPayment(orderId);
+      // Payer's name in the description so the Vipps portal shows who paid.
+      const payment = await createPayment(orderId, {
+        paymentDescription: buildPaymentDescription({ name: user.name }),
+      });
 
       // Persist the order so the callback and webhook can settle it, and so
       // "Jeg har allerede betalt" can re-check this user's own payments.
