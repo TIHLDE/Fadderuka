@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "crypto";
+
 import type { PaymentStatus } from "@prisma/client";
 
 import { env } from "~/env";
@@ -43,6 +45,21 @@ export function buildOrderId(userId: string): string {
 export function parseUserIdFromOrderId(orderId: string): string | null {
   const match = /^fadderuka-(.+)-\d+$/.exec(orderId);
   return match?.[1] ?? null;
+}
+
+/**
+ * Vipps caps the `Idempotency-Key` header at 50 chars. Our `orderId` is already
+ * ~49 (`fadderuka-<cuid>-<timestamp>`), so appending anything (e.g. `-capture`)
+ * overflows and Vipps rejects the request with 400. Derive a short, stable key
+ * from the orderId + operation instead — deterministic, so retries stay
+ * idempotent, and always ≤ 50 chars.
+ */
+function idempotencyKey(orderId: string, operation: string): string {
+  const digest = createHash("sha256")
+    .update(`${orderId}:${operation}`)
+    .digest("hex")
+    .slice(0, 40);
+  return `${operation}-${digest}`;
 }
 
 /** Narrowed view of the Vipps credentials once we've asserted they exist. */
@@ -132,7 +149,7 @@ export async function createPayment(
       "Content-Type": "application/json",
       "Ocp-Apim-Subscription-Key": cfg.subscriptionKey,
       "Merchant-Serial-Number": cfg.merchantSerialNumber,
-      "Idempotency-Key": orderId,
+      "Idempotency-Key": idempotencyKey(orderId, "create"),
     },
     body: JSON.stringify({
       amount: { currency: "NOK", value: PAYMENT_AMOUNT_ORE },
@@ -215,8 +232,9 @@ async function capture(
         "Content-Type": "application/json",
         "Ocp-Apim-Subscription-Key": cfg.subscriptionKey,
         "Merchant-Serial-Number": cfg.merchantSerialNumber,
-        // A fixed key per order makes retries idempotent on Vipps' side.
-        "Idempotency-Key": `${orderId}-capture`,
+        // A fixed key per order makes retries idempotent on Vipps' side. Derived
+        // (not `${orderId}-capture`) so it stays within Vipps' 50-char cap.
+        "Idempotency-Key": idempotencyKey(orderId, "capture"),
       },
       body: JSON.stringify({
         modificationAmount: { currency: "NOK", value: PAYMENT_AMOUNT_ORE },
