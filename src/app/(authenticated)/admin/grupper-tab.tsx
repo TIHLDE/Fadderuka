@@ -400,25 +400,75 @@ function AddMemberForm({
 }: {
   gruppeId: string;
   role: "FADDER" | "FADDERBARN";
-  availableUsers: { id: string; name: string; email: string | null }[];
+  availableUsers: {
+    id: string;
+    name: string;
+    email: string | null;
+    studieretning: string | null;
+  }[];
   onAdd: (userId: string) => void;
   onCancel: () => void;
   isPending: boolean;
 }) {
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedMajor, setSelectedMajor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
-  const filtered = availableUsers.filter(
-    (u) =>
+  const usersByMajor = new Map<string, typeof availableUsers>();
+  for (const user of availableUsers) {
+    const key = findMajor(user.studieretning) ?? UKJENT_STUDIERETNING;
+    const bucket = usersByMajor.get(key) ?? [];
+    bucket.push(user);
+    usersByMajor.set(key, bucket);
+  }
+  const majorOptions = [...usersByMajor.keys()].sort(compareMajorLabels);
+
+  const filtered = availableUsers.filter((u) => {
+    const matchesMajor =
+      !selectedMajor ||
+      (findMajor(u.studieretning) ?? UKJENT_STUDIERETNING) === selectedMajor;
+    const matchesSearch =
       u.name.toLowerCase().includes(search.toLowerCase()) ||
-      (u.email?.toLowerCase().includes(search.toLowerCase()) ?? false),
-  );
+      (u.email?.toLowerCase().includes(search.toLowerCase()) ?? false);
+    return matchesMajor && matchesSearch;
+  });
 
   return (
     <div className="rounded-lg border border-[#73aac4]/30 bg-background !p-4 !space-y-3">
       <p className="text-sm font-medium text-foreground">
         Legg til {role === "FADDER" ? "fadder" : "fadderbarn"}
       </p>
+
+      <div className="flex flex-wrap !gap-1.5">
+        <button
+          type="button"
+          onClick={() => setSelectedMajor(null)}
+          className={`rounded-full border !px-2.5 !py-1 text-xs font-medium transition ${
+            selectedMajor === null
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-[#73aac4]/30 text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          Alle ({availableUsers.length})
+        </button>
+        {majorOptions.map((major) => (
+          <button
+            key={major}
+            type="button"
+            onClick={() =>
+              setSelectedMajor(selectedMajor === major ? null : major)
+            }
+            className={`rounded-full border !px-2.5 !py-1 text-xs font-medium transition ${
+              selectedMajor === major
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-[#73aac4]/30 text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            {major} ({usersByMajor.get(major)?.length ?? 0})
+          </button>
+        ))}
+      </div>
+
       <input
         type="text"
         placeholder="Sok etter bruker..."
