@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import React from "react";
 import { auth } from "~/server/auth/config";
+import AllergySync from "~/components/allergy-sync";
 import VippsPaymentOverlay from "~/components/vipps-payment-overlay";
 
 export default async function AuthenticatedLayout({
@@ -21,10 +22,16 @@ export default async function AuthenticatedLayout({
     return (
       <>
         {children}
+        <AllergySync />
         <VippsPaymentOverlay />
       </>
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <AllergySync />
+    </>
+  );
 }

@@ -9,6 +9,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { REGISTRATION_STUDIES } from "~/lib/majors";
 import { authClient } from "~/lib/auth-client";
+import { PENDING_ALLERGY_KEY } from "~/lib/pending-allergy";
 import { api } from "~/trpc/react";
 
 export default function RegistreringPage() {
@@ -47,7 +48,6 @@ export default function RegistreringPage() {
       user_id,
       password,
       study,
-      allergies: allergies || undefined,
     });
 
     if (registerError) {
@@ -55,6 +55,17 @@ export default function RegistreringPage() {
       setErrorField(field ?? null);
       setLoading(false);
       return;
+    }
+
+    // Allergies live in TIHLDE, not our DB. The account is still pending here
+    // (no TIHLDE token yet), so buffer the value and let `AllergySync` push it
+    // to the TIHLDE profile on a later authenticated load after activation.
+    if (allergies) {
+      try {
+        localStorage.setItem(PENDING_ALLERGY_KEY, allergies);
+      } catch {
+        // Non-critical: the user can always set allergies on tihlde.org.
+      }
     }
 
     // Account created + logged in — hand off to Vipps to pay.
