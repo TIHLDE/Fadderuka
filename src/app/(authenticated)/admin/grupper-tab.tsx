@@ -11,7 +11,20 @@ import {
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { toast } from "~/components/ui/use-toast";
+import { compareMajorLabels, findMajor, UKJENT_STUDIERETNING } from "~/lib/majors";
 import { api } from "~/trpc/react";
+import type { RouterOutputs } from "~/trpc/react";
+
+type Gruppe = RouterOutputs["admin"]["getGrupper"][number];
+
+/** A gruppe only ever holds students of one major; derive it from its members. */
+function gruppeMajor(gruppe: Gruppe): string {
+  for (const member of gruppe.members) {
+    const major = findMajor(member.user.studieretning);
+    if (major) return major;
+  }
+  return UKJENT_STUDIERETNING;
+}
 
 export function GrupperTab() {
   const [newGruppeName, setNewGruppeName] = useState("");
@@ -83,6 +96,18 @@ export function GrupperTab() {
     return users.filter((u) => u.isVerified && !memberIds.has(u.id));
   };
 
+  // Categorize grupper by major, sorted in canonical major order
+  const byMajor = new Map<string, Gruppe[]>();
+  for (const gruppe of grupper ?? []) {
+    const major = gruppeMajor(gruppe);
+    const bucket = byMajor.get(major) ?? [];
+    bucket.push(gruppe);
+    byMajor.set(major, bucket);
+  }
+  const groupsByMajor = [...byMajor.entries()].sort(([a], [b]) =>
+    compareMajorLabels(a, b),
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center !py-12">
@@ -112,231 +137,248 @@ export function GrupperTab() {
         </button>
       </form>
 
-      {/* Grupper list */}
-      <div className="!space-y-4">
-        {grupper?.map((gruppe) => {
-          const isExpanded = expandedGruppe === gruppe.id;
-          const faddere = gruppe.members.filter((m) => m.role === "FADDER");
-          const fadderbarn = gruppe.members.filter(
-            (m) => m.role === "FADDERBARN",
-          );
+      {/* Grupper list, categorized and sorted by major */}
+      <div className="!space-y-8">
+        {groupsByMajor.map(([major, grupperIMajor]) => (
+          <section key={major} className="!space-y-4">
+            <div className="flex items-center !gap-3">
+              <h3 className="text-base font-semibold text-[#90dfed]">
+                {major}
+              </h3>
+              <span className="text-sm text-muted-foreground">
+                {grupperIMajor.length}{" "}
+                {grupperIMajor.length === 1 ? "gruppe" : "grupper"}
+              </span>
+            </div>
+            <div className="!space-y-4">
+              {grupperIMajor.map((gruppe) => {
+                const isExpanded = expandedGruppe === gruppe.id;
+                const faddere = gruppe.members.filter(
+                  (m) => m.role === "FADDER",
+                );
+                const fadderbarn = gruppe.members.filter(
+                  (m) => m.role === "FADDERBARN",
+                );
 
-          return (
-            <div
-              key={gruppe.id}
-              className="rounded-xl border border-[#73aac4]/40 bg-[color:var(--surface-soft)] backdrop-blur overflow-hidden"
-            >
-              {/* Gruppe header */}
-              <button
-                type="button"
-                className="flex w-full items-center justify-between !px-5 !py-4 text-left transition hover:bg-muted/50"
-                onClick={() =>
-                  setExpandedGruppe(isExpanded ? null : gruppe.id)
-                }
-              >
-                <div className="flex items-center !gap-3">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {gruppe.name}
-                  </h3>
-                  <span className="text-sm text-muted-foreground">
-                    {gruppe.members.length} medlemmer
-                  </span>
-                </div>
-                {isExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                )}
-              </button>
-
-              {isExpanded && (
-                <div className="border-t border-[#73aac4]/20 !px-5 !py-4 !space-y-5">
-                  {/* Faddere section */}
-                  <div className="!space-y-2">
-                    <h4 className="text-sm font-semibold text-[#90dfed]">
-                      Faddere ({faddere.length})
-                    </h4>
-                    {faddere.length > 0 ? (
-                      <ul className="!space-y-1">
-                        {faddere.map((member) => (
-                          <li
-                            key={member.id}
-                            className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
-                          >
-                            <div>
-                              <span className="text-sm text-foreground">
-                                {member.user.name}
-                              </span>
-                              <span className="!ml-2 text-xs text-muted-foreground">
-                                {member.user.email}
-                              </span>
-                            </div>
-                            <div className="flex items-center !gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  updateRoleMutation.mutate({
-                                    membershipId: member.id,
-                                    role: "FADDERBARN",
-                                  })
-                                }
-                                className="text-xs text-muted-foreground hover:text-foreground transition"
-                                title="Endre til fadderbarn"
-                              >
-                                Til fadderbarn
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeMemberMutation.mutate({
-                                    membershipId: member.id,
-                                  })
-                                }
-                                className="!p-1 text-red-400/70 hover:text-red-400 transition"
-                                title="Fjern fra gruppen"
-                              >
-                                <UserMinus className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Ingen faddere enda
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Fadderbarn section */}
-                  <div className="!space-y-2">
-                    <h4 className="text-sm font-semibold text-[#6495e6]">
-                      Fadderbarn ({fadderbarn.length})
-                    </h4>
-                    {fadderbarn.length > 0 ? (
-                      <ul className="!space-y-1">
-                        {fadderbarn.map((member) => (
-                          <li
-                            key={member.id}
-                            className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
-                          >
-                            <div>
-                              <span className="text-sm text-foreground">
-                                {member.user.name}
-                              </span>
-                              <span className="!ml-2 text-xs text-muted-foreground">
-                                {member.user.email}
-                              </span>
-                            </div>
-                            <div className="flex items-center !gap-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  updateRoleMutation.mutate({
-                                    membershipId: member.id,
-                                    role: "FADDER",
-                                  })
-                                }
-                                className="text-xs text-muted-foreground hover:text-foreground transition"
-                                title="Endre til fadder"
-                              >
-                                Til fadder
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeMemberMutation.mutate({
-                                    membershipId: member.id,
-                                  })
-                                }
-                                className="!p-1 text-red-400/70 hover:text-red-400 transition"
-                                title="Fjern fra gruppen"
-                              >
-                                <UserMinus className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Ingen fadderbarn enda
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Add member form */}
-                  {addMemberState?.gruppeId === gruppe.id ? (
-                    <AddMemberForm
-                      gruppeId={gruppe.id}
-                      role={addMemberState.role}
-                      availableUsers={getAvailableUsers(gruppe.id)}
-                      onAdd={(userId) =>
-                        addMemberMutation.mutate({
-                          userId,
-                          gruppeId: gruppe.id,
-                          role: addMemberState.role,
-                        })
-                      }
-                      onCancel={() => setAddMemberState(null)}
-                      isPending={addMemberMutation.isPending}
-                    />
-                  ) : (
-                    <div className="flex flex-wrap !gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setAddMemberState({
-                            gruppeId: gruppe.id,
-                            role: "FADDER",
-                          })
-                        }
-                        className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#90dfed] transition hover:bg-muted"
-                      >
-                        <UserPlus className="h-3.5 w-3.5" />
-                        Legg til fadder
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setAddMemberState({
-                            gruppeId: gruppe.id,
-                            role: "FADDERBARN",
-                          })
-                        }
-                        className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#6495e6] transition hover:bg-muted"
-                      >
-                        <UserPlus className="h-3.5 w-3.5" />
-                        Legg til fadderbarn
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Delete gruppe button */}
-                  <div className="border-t border-[#73aac4]/10 !pt-3">
+                return (
+                  <div
+                    key={gruppe.id}
+                    className="rounded-xl border border-[#73aac4]/40 bg-[color:var(--surface-soft)] backdrop-blur overflow-hidden"
+                  >
+                    {/* Gruppe header */}
                     <button
                       type="button"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            `Er du sikker pa at du vil slette "${gruppe.name}"? Alle medlemskap og meldinger vil bli slettet.`,
-                          )
-                        ) {
-                          deleteMutation.mutate({ gruppeId: gruppe.id });
-                        }
-                      }}
-                      disabled={deleteMutation.isPending}
-                      className="inline-flex items-center !gap-1.5 text-xs text-red-400/70 transition hover:text-red-400"
+                      className="flex w-full items-center justify-between !px-5 !py-4 text-left transition hover:bg-muted/50"
+                      onClick={() =>
+                        setExpandedGruppe(isExpanded ? null : gruppe.id)
+                      }
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Slett gruppe
+                      <div className="flex items-center !gap-3">
+                        <h3 className="text-lg font-semibold text-foreground">
+                          {gruppe.name}
+                        </h3>
+                        <span className="text-sm text-muted-foreground">
+                          {gruppe.members.length} medlemmer
+                        </span>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                      )}
                     </button>
+
+                    {isExpanded && (
+                      <div className="border-t border-[#73aac4]/20 !px-5 !py-4 !space-y-5">
+                        {/* Faddere section */}
+                        <div className="!space-y-2">
+                          <h4 className="text-sm font-semibold text-[#90dfed]">
+                            Faddere ({faddere.length})
+                          </h4>
+                          {faddere.length > 0 ? (
+                            <ul className="!space-y-1">
+                              {faddere.map((member) => (
+                                <li
+                                  key={member.id}
+                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
+                                >
+                                  <div>
+                                    <span className="text-sm text-foreground">
+                                      {member.user.name}
+                                    </span>
+                                    <span className="!ml-2 text-xs text-muted-foreground">
+                                      {member.user.email}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center !gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateRoleMutation.mutate({
+                                          membershipId: member.id,
+                                          role: "FADDERBARN",
+                                        })
+                                      }
+                                      className="text-xs text-muted-foreground hover:text-foreground transition"
+                                      title="Endre til fadderbarn"
+                                    >
+                                      Til fadderbarn
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removeMemberMutation.mutate({
+                                          membershipId: member.id,
+                                        })
+                                      }
+                                      className="!p-1 text-red-400/70 hover:text-red-400 transition"
+                                      title="Fjern fra gruppen"
+                                    >
+                                      <UserMinus className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Ingen faddere enda
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Fadderbarn section */}
+                        <div className="!space-y-2">
+                          <h4 className="text-sm font-semibold text-[#6495e6]">
+                            Fadderbarn ({fadderbarn.length})
+                          </h4>
+                          {fadderbarn.length > 0 ? (
+                            <ul className="!space-y-1">
+                              {fadderbarn.map((member) => (
+                                <li
+                                  key={member.id}
+                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
+                                >
+                                  <div>
+                                    <span className="text-sm text-foreground">
+                                      {member.user.name}
+                                    </span>
+                                    <span className="!ml-2 text-xs text-muted-foreground">
+                                      {member.user.email}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center !gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateRoleMutation.mutate({
+                                          membershipId: member.id,
+                                          role: "FADDER",
+                                        })
+                                      }
+                                      className="text-xs text-muted-foreground hover:text-foreground transition"
+                                      title="Endre til fadder"
+                                    >
+                                      Til fadder
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        removeMemberMutation.mutate({
+                                          membershipId: member.id,
+                                        })
+                                      }
+                                      className="!p-1 text-red-400/70 hover:text-red-400 transition"
+                                      title="Fjern fra gruppen"
+                                    >
+                                      <UserMinus className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Ingen fadderbarn enda
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Add member form */}
+                        {addMemberState?.gruppeId === gruppe.id ? (
+                          <AddMemberForm
+                            gruppeId={gruppe.id}
+                            role={addMemberState.role}
+                            availableUsers={getAvailableUsers(gruppe.id)}
+                            onAdd={(userId) =>
+                              addMemberMutation.mutate({
+                                userId,
+                                gruppeId: gruppe.id,
+                                role: addMemberState.role,
+                              })
+                            }
+                            onCancel={() => setAddMemberState(null)}
+                            isPending={addMemberMutation.isPending}
+                          />
+                        ) : (
+                          <div className="flex flex-wrap !gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAddMemberState({
+                                  gruppeId: gruppe.id,
+                                  role: "FADDER",
+                                })
+                              }
+                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#90dfed] transition hover:bg-muted"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                              Legg til fadder
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAddMemberState({
+                                  gruppeId: gruppe.id,
+                                  role: "FADDERBARN",
+                                })
+                              }
+                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#6495e6] transition hover:bg-muted"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                              Legg til fadderbarn
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Delete gruppe button */}
+                        <div className="border-t border-[#73aac4]/10 !pt-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Er du sikker på at du vil slette "${gruppe.name}"? Alle medlemskap og meldinger vil bli slettet.`,
+                                )
+                              ) {
+                                deleteMutation.mutate({ gruppeId: gruppe.id });
+                              }
+                            }}
+                            disabled={deleteMutation.isPending}
+                            className="inline-flex items-center !gap-1.5 text-xs text-red-400/70 transition hover:text-red-400"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Slett gruppe
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })}
             </div>
-          );
-        })}
+          </section>
+        ))}
 
         {grupper?.length === 0 && (
           <p className="text-center text-muted-foreground !py-8">

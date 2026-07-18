@@ -4,23 +4,12 @@ import { Shield, ShieldOff, Trash2, UserCheck } from "lucide-react";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
-
-const MAJORS = [
-  "Dataingeniør",
-  "Digital Forretningsutvikling",
-  "Digital Infrastruktur og Cybersikkerhet",
-  "Digital transformasjon",
-  "Informasjonsbehandling",
-] as const;
-
-const UKJENT_STUDIERETNING = "Ukjent studieretning";
-
-/** TIHLDE's casing for studieretning names isn't guaranteed, so match case-insensitively. */
-function findMajor(studieretning: string | null): (typeof MAJORS)[number] | null {
-  if (!studieretning) return null;
-  const normalized = studieretning.trim().toLowerCase();
-  return MAJORS.find((major) => major.toLowerCase() === normalized) ?? null;
-}
+import {
+  MAJORS,
+  UKJENT_STUDIERETNING,
+  compareMajorLabels,
+  findMajor,
+} from "~/lib/majors";
 
 export function UsersTab() {
   const [search, setSearch] = useState("");
@@ -84,18 +73,9 @@ export function UsersTab() {
     group.push(user);
     verifiedByStudieretning.set(key, group);
   }
-  const studieretninger = [...verifiedByStudieretning.keys()].sort((a, b) => {
-    const aIsMajor = (MAJORS as readonly string[]).includes(a);
-    const bIsMajor = (MAJORS as readonly string[]).includes(b);
-    if (a === UKJENT_STUDIERETNING) return 1;
-    if (b === UKJENT_STUDIERETNING) return -1;
-    if (aIsMajor && !bIsMajor) return -1;
-    if (!aIsMajor && bIsMajor) return 1;
-    if (aIsMajor && bIsMajor) {
-      return MAJORS.indexOf(a as (typeof MAJORS)[number]) - MAJORS.indexOf(b as (typeof MAJORS)[number]);
-    }
-    return a.localeCompare(b, "no");
-  });
+  const studieretninger = [...verifiedByStudieretning.keys()].sort(
+    compareMajorLabels,
+  );
 
   if (isLoading) {
     return (

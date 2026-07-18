@@ -56,7 +56,9 @@ export const adminRouter = createTRPCRouter({
       include: {
         members: {
           include: {
-            user: { select: { id: true, name: true, email: true } },
+            user: {
+              select: { id: true, name: true, email: true, studieretning: true },
+            },
           },
         },
         _count: { select: { messages: true } },

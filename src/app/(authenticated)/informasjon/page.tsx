@@ -37,6 +37,11 @@ const faqItems = [
       "Ja. For å få delta på aktivitetene som arrangeres av linjeforeningen må du betale avgiften. Avgiften gir deg medlemskap i linjeforeningen og dekker alt det morsomme vi skal gjøre de første 2 ukene.",
   },
   {
+    question: "Hvordan betaler jeg for fadderukene?",
+    answer:
+      "Du betaler direkte her på siden. Når du logger inn får du opp et betalingsvindu – skriv inn telefonnummeret ditt og trykk «Betal med Vipps» for å betale avgiften på 380 kr. Har du allerede betalt, men fortsatt ser betalingsvinduet, trykk «Jeg har allerede betalt» for å bekrefte betalingen.",
+  },
+  {
     question: "Hvorfor koster det penger å delta i fadderukene?",
     answer:
       "Fadderukene byr på to uker med et stort og variert sosialt program. Selv om arrangementene planlegges og gjennomføres av frivillige, koster det penger å leie lokaler, kjøpe inn utstyr og gjennomføre aktivitetene. Vi mottar noe støtte, men deltakerbetalingen er nødvendig for å få hele opplegget til å gå rundt. Til gjengjeld får du være med på en rekke sosiale arrangementer og aktiviteter gjennom begge ukene.",
@@ -61,7 +66,7 @@ const packingList = [
   "En hvit t-skjorte du kan skrive på",
   'Noe til "anything, but a cup"',
   "Klær du ikke er redd for",
-  "Kostyme på forbokstav",
+  "Kostyme som begynner på forbokstav",
   "Dress/ballkjole (til immeball)",
 ];
 
