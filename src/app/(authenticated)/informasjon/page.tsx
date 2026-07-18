@@ -62,7 +62,7 @@ const packingList = [
   "Din råeste hatt/parykk",
   "Trønderkostyme",
   "OBS! Jeg kom feil",
-  "Toga laken (kjøp i god tid!)",
+  "Toga laken, IKKE MED STRETCH! (kjøp i god tid!)",
   "En hvit t-skjorte du kan skrive på",
   'Noe til "anything, but a cup"',
   "Klær du ikke er redd for",
