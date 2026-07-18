@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { auth } from "~/server/auth/config";
 import Footer from "~/components/layout/footer/footer";
+import { auth } from "~/server/auth/config";
 import { AdminPanel } from "./admin-panel";
 
 export default async function AdminPage() {
@@ -15,7 +15,7 @@ export default async function AdminPage() {
 
   return (
     <main
-      className="relative flex min-h-screen w-full flex-1 flex-col overflow-hidden text-foreground"
+      className="text-foreground relative flex min-h-screen w-full flex-1 flex-col overflow-hidden"
       style={{
         backgroundColor: "var(--page-bg)",
         backgroundImage: "var(--page-bg-image), var(--page-gradient)",
@@ -29,8 +29,8 @@ export default async function AdminPage() {
             <h1 className="bg-gradient-to-r from-[#90dfed] to-[#6495e6] bg-clip-text text-4xl leading-[1.15] font-bold text-transparent md:text-5xl">
               Adminpanel
             </h1>
-            <p className="max-w-3xl text-base text-muted-foreground sm:text-lg">
-              Administrer brukere, faddergrupper og medlemskap.
+            <p className="text-muted-foreground max-w-3xl text-base sm:text-lg">
+              Administrer brukere, faddergrupper og aktiviteter.
             </p>
           </section>
 
