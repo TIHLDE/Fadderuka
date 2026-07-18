@@ -15,7 +15,7 @@ const links = [
 ] as const;
 
 export function MobileNavMenu({ isAdmin }: { isAdmin?: boolean }) {
-  const gruppeLink = isAdmin
+  const groupLink = isAdmin
     ? { href: "/admin", label: "Adminpanel", icon: Users }
     : { href: "/faddergruppe", label: "Min faddergruppe", icon: Users };
 
@@ -31,7 +31,7 @@ export function MobileNavMenu({ isAdmin }: { isAdmin?: boolean }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
-        {[...links, gruppeLink].map(({ href, label, icon: Icon }) => (
+        {[...links, groupLink].map(({ href, label, icon: Icon }) => (
           <DropdownMenuItem key={href} asChild>
             <Link href={href} className="flex items-center gap-2">
               <Icon className="h-4 w-4" />
