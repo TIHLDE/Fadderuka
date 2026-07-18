@@ -442,7 +442,10 @@ function AddMemberForm({
       <div className="flex flex-wrap !gap-1.5">
         <button
           type="button"
-          onClick={() => setSelectedMajor(null)}
+          onClick={() => {
+            setSelectedUserId("");
+            setSelectedMajor(null);
+          }}
           className={`rounded-full border !px-2.5 !py-1 text-xs font-medium transition ${
             selectedMajor === null
               ? "border-primary bg-primary text-primary-foreground"
