@@ -455,9 +455,10 @@ function AddMemberForm({
           <button
             key={major}
             type="button"
-            onClick={() =>
-              setSelectedMajor(selectedMajor === major ? null : major)
-            }
+            onClick={() => {
+              setSelectedUserId("");
+              setSelectedMajor(selectedMajor === major ? null : major);
+            }}
             className={`rounded-full border !px-2.5 !py-1 text-xs font-medium transition ${
               selectedMajor === major
                 ? "border-primary bg-primary text-primary-foreground"
