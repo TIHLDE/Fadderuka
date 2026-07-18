@@ -220,15 +220,18 @@ export default function RegistreringPage() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="reg-allergies">Har du noen matallergier?</Label>
+                  <Label htmlFor="reg-allergies">Matallergier</Label>
                   <Input
                     id="reg-allergies"
                     name="allergies"
                     type="text"
                     maxLength={500}
-                    placeholder="Valgfritt"
+                    placeholder="F.eks. nøtter, laktose, gluten"
                     className="h-12"
                   />
+                  <p className="text-muted-foreground text-xs">
+                    Fyll ut kun hvis du har allergier – la stå tomt ellers.
+                  </p>
                 </div>
               </div>
 
