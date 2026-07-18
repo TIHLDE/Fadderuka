@@ -14,7 +14,7 @@ export default async function MobileHeaderButtons() {
   return (
     <div className="flex w-full items-center justify-between">
       <MobileNavMenu isAdmin={!!session?.user?.isAdmin} />
-      <Link href="/">
+      <Link href="/" aria-label="TIHLDE">
         <Logo />
       </Link>
       <div className="text-muted-foreground flex items-center">
