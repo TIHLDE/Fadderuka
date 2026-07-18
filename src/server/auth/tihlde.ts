@@ -251,6 +251,38 @@ export function isMemberOfGroup(
   return memberships.some((m) => m.group?.slug === slug);
 }
 
+/**
+ * Write the user's food allergies onto their TIHLDE profile (Lepton's `allergy`
+ * field), so allergies live in TIHLDE — as Kvark does — instead of our own DB.
+ *
+ * Requires the user's own API token; a pending (not-yet-activated) account has
+ * none, so the caller must only invoke this once the user has a real token.
+ * Uses PATCH on `/users/{user_id}/` (Lepton's user update, where `allergy` is
+ * writable) so we touch nothing but the allergy field.
+ */
+export async function tihldeUpdateAllergy(
+  token: string,
+  userId: string,
+  allergy: string,
+): Promise<void> {
+  const res = await fetch(apiUrl(`/users/${encodeURIComponent(userId)}/`), {
+    method: "PATCH",
+    headers: {
+      [TOKEN_HEADER]: token,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ allergy }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new TihldeAuthError(
+      await readDetail(res, "Kunne ikke lagre allergiene dine i TIHLDE."),
+      res.status,
+    );
+  }
+}
+
 /** Map a TIHLDE profile onto the fields we persist locally. */
 export function mapProfile(profile: TihldeProfile) {
   const name = [profile.first_name, profile.last_name]

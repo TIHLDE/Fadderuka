@@ -53,7 +53,6 @@ model User {
     phone         String?
     klasse        String?
     studieretning String?
-    allergies     String?
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)

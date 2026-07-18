@@ -19,7 +19,6 @@ export interface RegisterInput {
   user_id: string;
   password: string;
   study: string;
-  allergies?: string;
 }
 
 interface RegisterResult extends Result {

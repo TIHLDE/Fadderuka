@@ -39,7 +39,6 @@ const bodySchema = z.object({
   study: z.enum(REGISTRATION_STUDY_SLUGS, {
     errorMap: () => ({ message: "Velg hvilken linje du går på." }),
   }),
-  allergies: z.string().trim().max(500).optional(),
 });
 
 /** Split a full name into first + last for TIHLDE (which stores them apart). */
@@ -61,11 +60,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const { full_name, email, user_id, password, study, allergies } = parsed.data;
+  const { full_name, email, user_id, password, study } = parsed.data;
   const userId = user_id.toLowerCase();
   const { first, last } = splitName(full_name);
   const studieretning = studyLabelForSlug(study);
-  const allergiesValue = allergies && allergies.length > 0 ? allergies : null;
 
   try {
     // 1. Create the real TIHLDE account (pending admin approval). class:null —
@@ -89,7 +87,6 @@ export async function POST(request: Request) {
         name: full_name,
         email,
         studieretning,
-        allergies: allergiesValue,
         isVerified: false,
         hasPaid: false,
         isAdmin: false,
@@ -98,7 +95,6 @@ export async function POST(request: Request) {
         name: full_name,
         email,
         studieretning,
-        allergies: allergiesValue,
       },
     });
 
