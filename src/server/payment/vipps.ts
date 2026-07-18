@@ -106,10 +106,16 @@ async function getAccessToken(cfg: VippsConfig): Promise<string> {
   return data.access_token;
 }
 
-/** Create a WALLET payment and return the URL to redirect the user to. */
+/**
+ * Create a WALLET payment and return the URL to redirect the user to.
+ *
+ * `phoneNumber` is optional: with the `WEB_REDIRECT` flow Vipps collects the
+ * number on its own checkout page, so registration doesn't need to ask for it.
+ * When we do have one (e.g. a prefilled retry) we pass it to skip that step.
+ */
 export async function createPayment(
-  phoneNumber: string,
   orderId: string,
+  phoneNumber?: string,
 ): Promise<{ redirectUrl: string }> {
   const cfg = requireConfig();
 
@@ -131,7 +137,11 @@ export async function createPayment(
     body: JSON.stringify({
       amount: { currency: "NOK", value: PAYMENT_AMOUNT_ORE },
       paymentMethod: { type: "WALLET" },
-      customer: { phoneNumber: `47${phoneNumber}` }, // E.164 format
+      // Include the customer only when we actually have a number; otherwise
+      // Vipps prompts for it in the WEB_REDIRECT checkout.
+      ...(phoneNumber
+        ? { customer: { phoneNumber: `47${phoneNumber}` } } // E.164 format
+        : {}),
       reference: orderId,
       returnUrl: `${env.VIPPS_CALLBACK_URL}/payment/callback?orderId=${orderId}`,
       userFlow: "WEB_REDIRECT",

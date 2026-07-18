@@ -103,7 +103,9 @@ export async function POST(request: Request) {
       expires: expiresAt,
     });
 
-    return NextResponse.json({ ok: true });
+    // `verified` lets the registration page skip straight to the app for users
+    // who don't owe a payment (admins/FadderKom are auto-verified above).
+    return NextResponse.json({ ok: true, verified: user.isVerified });
   } catch (err) {
     if (err instanceof TihldeAuthError) {
       // 401/403 from TIHLDE → surface the (Norwegian) detail to the user.
