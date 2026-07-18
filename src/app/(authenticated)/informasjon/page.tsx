@@ -47,7 +47,7 @@ const faqItems = [
       "Fadderukene byr på to uker med et stort og variert sosialt program. Selv om arrangementene planlegges og gjennomføres av frivillige, koster det penger å leie lokaler, kjøpe inn utstyr og gjennomføre aktivitetene. Vi mottar noe støtte, men deltakerbetalingen er nødvendig for å få hele opplegget til å gå rundt. Til gjengjeld får du være med på en rekke sosiale arrangementer og aktiviteter gjennom begge ukene.",
   },
   {
-    question: "Hva hvis jeg kommer for sent eller ikke finner gruppa mi?",
+    question: "Hva skjer hvis jeg kommer for sent eller ikke finner gruppen min?",
     answer:
       "Ta kontakt med fadderne dine eller kom bort til en av de blå TIHLDE-t-skjortene, så hjelper vi deg.",
   },
