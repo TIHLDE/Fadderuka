@@ -30,9 +30,11 @@ const bodySchema = z.object({
   user_id: z
     .string()
     .trim()
-    .min(1, "Fyll inn et brukernavn.")
+    .min(1, "Feltet er påkrevd")
+    // Match Kvark's exact wording; the 15-char cap mirrors Lepton's model limit
+    // (Kvark leaves that to the backend — we surface it up front).
     .max(15, "Brukernavn kan være maks 15 tegn.")
-    .refine((v) => !v.includes("@"), "Brukernavn skal være uten @stud.ntnu.no."),
+    .refine((v) => !v.includes("@"), "Brukernavn må være uten @stud.ntnu.no"),
   password: z.string().min(8, "Passordet må være minst 8 tegn."),
   study: z.enum(REGISTRATION_STUDY_SLUGS, {
     errorMap: () => ({ message: "Velg hvilken linje du går på." }),
