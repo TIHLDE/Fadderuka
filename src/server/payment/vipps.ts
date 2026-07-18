@@ -123,17 +123,44 @@ async function getAccessToken(cfg: VippsConfig): Promise<string> {
   return data.access_token;
 }
 
+/** Vipps caps `paymentDescription` at 100 characters. */
+const PAYMENT_DESCRIPTION_MAX = 100;
+
+/** Event label appended after the payer's name in the portal description. */
+const EVENT_LABEL = "Fadderuka";
+
+/** Default text shown in the Vipps portal when we have no payer name. */
+const DEFAULT_PAYMENT_DESCRIPTION = `${EVENT_LABEL} - TIHLDE`;
+
+/**
+ * Build the `paymentDescription` shown against a transaction in the Vipps
+ * merchant portal. Leading with the payer's name is what lets an admin see
+ * *who* paid — the portal otherwise only shows a generic label. Mirrors the
+ * "Navn - Arrangement" format TIHLDE uses for other events.
+ */
+export function buildPaymentDescription(payer?: {
+  name?: string | null;
+}): string {
+  const name = payer?.name?.trim();
+  if (!name) return DEFAULT_PAYMENT_DESCRIPTION;
+  return `${name} - ${EVENT_LABEL}`.slice(0, PAYMENT_DESCRIPTION_MAX);
+}
+
 /**
  * Create a WALLET payment and return the URL to redirect the user to.
  *
  * `phoneNumber` is optional: with the `WEB_REDIRECT` flow Vipps collects the
  * number on its own checkout page, so registration doesn't need to ask for it.
  * When we do have one (e.g. a prefilled retry) we pass it to skip that step.
+ *
+ * `paymentDescription` is what appears against the transaction in the Vipps
+ * portal — pass the payer's details so admins can tell who paid.
  */
 export async function createPayment(
   orderId: string,
-  phoneNumber?: string,
+  opts: { phoneNumber?: string; paymentDescription?: string } = {},
 ): Promise<{ redirectUrl: string }> {
+  const { phoneNumber, paymentDescription } = opts;
   const cfg = requireConfig();
 
   if (!env.VIPPS_CALLBACK_URL) {
@@ -162,7 +189,7 @@ export async function createPayment(
       reference: orderId,
       returnUrl: `${env.VIPPS_CALLBACK_URL}/payment/callback?orderId=${orderId}`,
       userFlow: "WEB_REDIRECT",
-      paymentDescription: "Fadderuka - TIHLDE",
+      paymentDescription: paymentDescription ?? DEFAULT_PAYMENT_DESCRIPTION,
     }),
   });
 
