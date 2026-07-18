@@ -131,7 +131,7 @@ model Payment {
     // Vipps payment.
     id        String        @id @default(cuid())
     orderId   String        @unique
-    phone     String
+    phone     String? // set only if we prefilled a number; Vipps collects it otherwise
     amount    Int // amount in øre
     status    PaymentStatus @default(CREATED)
     createdAt DateTime      @default(now())

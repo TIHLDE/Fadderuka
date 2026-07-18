@@ -51,7 +51,9 @@ async function getSession({ headers }: { headers: Headers }) {
 /** Create a persisted session for a user and return its cookie token. */
 export async function createSession(opts: {
   userId: string;
-  tihldeToken: string;
+  // Self-registered users have no TIHLDE token until they're activated and log
+  // in via TIHLDE, so this is optional.
+  tihldeToken?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;
 }) {
@@ -62,7 +64,7 @@ export async function createSession(opts: {
     data: {
       token,
       userId: opts.userId,
-      tihldeToken: opts.tihldeToken,
+      tihldeToken: opts.tihldeToken ?? null,
       expiresAt,
       ipAddress: opts.ipAddress ?? null,
       userAgent: opts.userAgent ?? null,

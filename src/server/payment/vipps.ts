@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "crypto";
+
 import type { PaymentStatus } from "@prisma/client";
 
 import { env } from "~/env";
@@ -43,6 +45,21 @@ export function buildOrderId(userId: string): string {
 export function parseUserIdFromOrderId(orderId: string): string | null {
   const match = /^fadderuka-(.+)-\d+$/.exec(orderId);
   return match?.[1] ?? null;
+}
+
+/**
+ * Vipps caps the `Idempotency-Key` header at 50 chars. Our `orderId` is already
+ * ~49 (`fadderuka-<cuid>-<timestamp>`), so appending anything (e.g. `-capture`)
+ * overflows and Vipps rejects the request with 400. Derive a short, stable key
+ * from the orderId + operation instead — deterministic, so retries stay
+ * idempotent, and always ≤ 50 chars.
+ */
+function idempotencyKey(orderId: string, operation: string): string {
+  const digest = createHash("sha256")
+    .update(`${orderId}:${operation}`)
+    .digest("hex")
+    .slice(0, 40);
+  return `${operation}-${digest}`;
 }
 
 /** Narrowed view of the Vipps credentials once we've asserted they exist. */
@@ -106,10 +123,16 @@ async function getAccessToken(cfg: VippsConfig): Promise<string> {
   return data.access_token;
 }
 
-/** Create a WALLET payment and return the URL to redirect the user to. */
+/**
+ * Create a WALLET payment and return the URL to redirect the user to.
+ *
+ * `phoneNumber` is optional: with the `WEB_REDIRECT` flow Vipps collects the
+ * number on its own checkout page, so registration doesn't need to ask for it.
+ * When we do have one (e.g. a prefilled retry) we pass it to skip that step.
+ */
 export async function createPayment(
-  phoneNumber: string,
   orderId: string,
+  phoneNumber?: string,
 ): Promise<{ redirectUrl: string }> {
   const cfg = requireConfig();
 
@@ -126,12 +149,16 @@ export async function createPayment(
       "Content-Type": "application/json",
       "Ocp-Apim-Subscription-Key": cfg.subscriptionKey,
       "Merchant-Serial-Number": cfg.merchantSerialNumber,
-      "Idempotency-Key": orderId,
+      "Idempotency-Key": idempotencyKey(orderId, "create"),
     },
     body: JSON.stringify({
       amount: { currency: "NOK", value: PAYMENT_AMOUNT_ORE },
       paymentMethod: { type: "WALLET" },
-      customer: { phoneNumber: `47${phoneNumber}` }, // E.164 format
+      // Include the customer only when we actually have a number; otherwise
+      // Vipps prompts for it in the WEB_REDIRECT checkout.
+      ...(phoneNumber
+        ? { customer: { phoneNumber: `47${phoneNumber}` } } // E.164 format
+        : {}),
       reference: orderId,
       returnUrl: `${env.VIPPS_CALLBACK_URL}/payment/callback?orderId=${orderId}`,
       userFlow: "WEB_REDIRECT",
@@ -205,8 +232,9 @@ async function capture(
         "Content-Type": "application/json",
         "Ocp-Apim-Subscription-Key": cfg.subscriptionKey,
         "Merchant-Serial-Number": cfg.merchantSerialNumber,
-        // A fixed key per order makes retries idempotent on Vipps' side.
-        "Idempotency-Key": `${orderId}-capture`,
+        // A fixed key per order makes retries idempotent on Vipps' side. Derived
+        // (not `${orderId}-capture`) so it stays within Vipps' 50-char cap.
+        "Idempotency-Key": idempotencyKey(orderId, "capture"),
       },
       body: JSON.stringify({
         modificationAmount: { currency: "NOK", value: PAYMENT_AMOUNT_ORE },

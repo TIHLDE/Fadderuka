@@ -8,7 +8,7 @@ import Footer from "~/components/layout/footer/footer";
 import { api } from "~/trpc/server";
 
 export default async function Home() {
-  const activities = await api.activity.getAll();
+  const activities = await api.activity.getUpcoming();
   const upcoming = activities
     .filter((activity) => new Date(activity.date) >= new Date())
     .slice(0, 8);

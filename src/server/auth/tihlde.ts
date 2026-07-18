@@ -76,6 +76,83 @@ export async function tihldeLogin(
   return data.token;
 }
 
+/** Fields accepted by Lepton's public `POST /users/` (UserCreateSerializer). */
+export interface TihldeCreateUserInput {
+  user_id: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  /** STUDY group slug (linje), or null to skip the study membership. */
+  study: string | null;
+  /** STUDYYEAR group slug (kull), or null to skip the year membership. */
+  class: string | null;
+}
+
+/**
+ * Read a create-user error from Lepton. DRF returns the message in one of a few
+ * shapes: `{detail: "..."}`, per-field arrays nested under `detail`
+ * (`{detail: {email: ["..."]}}`), or those field arrays at the top level. We
+ * surface the first human-readable message, mapping a duplicate `user_id` to a
+ * login hint.
+ */
+async function readCreateError(res: Response, fallback: string): Promise<string> {
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+
+    if (typeof body.detail === "string") return body.detail;
+
+    // Field errors live under `detail` when it's an object, else at top level.
+    const bag =
+      body.detail && typeof body.detail === "object"
+        ? (body.detail as Record<string, unknown>)
+        : (body as Record<string, unknown>);
+
+    // user_id is the primary key; a duplicate means the account already exists.
+    if ("user_id" in bag) {
+      return "Brukernavnet er opptatt. Har du allerede en bruker? Logg inn i stedet.";
+    }
+
+    // Otherwise return the first field error message we can find.
+    for (const value of Object.values(bag)) {
+      if (typeof value === "string") return value;
+      if (Array.isArray(value)) {
+        const first = (value as unknown[])[0];
+        if (typeof first === "string") return first;
+      }
+    }
+    return fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * Create a brand-new TIHLDE account via Lepton's public `POST /users/`.
+ *
+ * The account is created "pending" — it is NOT a TIHLDE member yet, so it cannot
+ * log in on tihlde.org (or via our own TIHLDE login) until an admin approves it
+ * through the normal Kvark flow (`POST /users/activate/`). We never store the
+ * password: it is forwarded straight to TIHLDE.
+ */
+export async function tihldeCreateUser(
+  input: TihldeCreateUserInput,
+): Promise<void> {
+  const res = await fetch(apiUrl("/users/"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new TihldeAuthError(
+      await readCreateError(res, "Kunne ikke opprette TIHLDE-brukeren din."),
+      res.status,
+    );
+  }
+}
+
 /** Fetch the authenticated user's TIHLDE profile. */
 export async function tihldeGetMe(token: string): Promise<TihldeProfile> {
   const res = await fetch(apiUrl("/users/me/"), {
@@ -172,6 +249,38 @@ export function isMemberOfGroup(
   slug: string,
 ): boolean {
   return memberships.some((m) => m.group?.slug === slug);
+}
+
+/**
+ * Write the user's food allergies onto their TIHLDE profile (Lepton's `allergy`
+ * field), so allergies live in TIHLDE — as Kvark does — instead of our own DB.
+ *
+ * Requires the user's own API token; a pending (not-yet-activated) account has
+ * none, so the caller must only invoke this once the user has a real token.
+ * Uses PATCH on `/users/{user_id}/` (Lepton's user update, where `allergy` is
+ * writable) so we touch nothing but the allergy field.
+ */
+export async function tihldeUpdateAllergy(
+  token: string,
+  userId: string,
+  allergy: string,
+): Promise<void> {
+  const res = await fetch(apiUrl(`/users/${encodeURIComponent(userId)}/`), {
+    method: "PATCH",
+    headers: {
+      [TOKEN_HEADER]: token,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ allergy }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new TihldeAuthError(
+      await readDetail(res, "Kunne ikke lagre allergiene dine i TIHLDE."),
+      res.status,
+    );
+  }
 }
 
 /** Map a TIHLDE profile onto the fields we persist locally. */
