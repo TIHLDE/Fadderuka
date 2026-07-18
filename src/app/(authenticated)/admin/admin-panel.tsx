@@ -8,7 +8,7 @@ import { AktiviteterTab } from "./aktiviteter-tab";
 export function AdminPanel() {
   return (
     <Tabs defaultValue="users" className="w-full">
-      <TabsList className="grid w-full max-w-lg grid-cols-3 bg-secondary border border-[#73aac4]/30">
+      <TabsList className="grid w-full max-w-lg grid-cols-3 bg-secondary border border-border">
         <TabsTrigger
           value="users"
           className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground"

@@ -13,19 +13,9 @@ export function Card({ asChild = false, className, ...props }: CardProps) {
     <Comp
       className={cn(
         "relative overflow-hidden rounded-xl",
-        "border border-[color:var(--card-border)]",
-        "bg-[color:var(--surface-soft)]",
-        "transition",
-
-        "shadow-[0_0_0_1px_var(--card-border)]",
-
-        "hover:border-[color:var(--card-border-strong)]",
-        "hover:shadow-[0_0_0_1px_var(--card-border-strong),0_24px_80px_-40px_rgba(115,170,196,0.45)]",
-
-        "before:pointer-events-none before:absolute before:inset-0",
-        "before:bg-[radial-gradient(600px_160px_at_50%_-40px,var(--card-sheen),transparent_60%)]",
-        "before:opacity-70",
-
+        "bg-card text-card-foreground",
+        "ring-1 ring-foreground/10",
+        "transition-colors",
         className,
       )}
       {...props}
@@ -52,7 +42,7 @@ export function CardTitle({
   return (
     <h3
       className={cn(
-        "text-foreground text-xl leading-none font-semibold tracking-tight",
+        "font-heading text-foreground text-xl leading-snug font-medium tracking-tight",
         className,
       )}
       {...props}

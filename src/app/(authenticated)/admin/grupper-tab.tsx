@@ -111,7 +111,7 @@ export function GrupperTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center !py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#73aac4] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-transparent" />
       </div>
     );
   }
@@ -125,12 +125,12 @@ export function GrupperTab() {
           placeholder="Ny faddergruppe navn..."
           value={newGruppeName}
           onChange={(e) => setNewGruppeName(e.target.value)}
-          className="flex-1 max-w-sm rounded-xl border border-[#73aac4]/40 bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+          className="flex-1 max-w-sm rounded-xl border border-border bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <button
           type="submit"
           disabled={createMutation.isPending || !newGruppeName.trim()}
-          className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-secondary !px-4 !py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus className="h-4 w-4" />
           Opprett
@@ -142,7 +142,7 @@ export function GrupperTab() {
         {groupsByMajor.map(([major, grupperIMajor]) => (
           <section key={major} className="!space-y-4">
             <div className="flex items-center !gap-3">
-              <h3 className="text-base font-semibold text-[#90dfed]">
+              <h3 className="text-base font-semibold text-primary">
                 {major}
               </h3>
               <span className="text-sm text-muted-foreground">
@@ -163,7 +163,7 @@ export function GrupperTab() {
                 return (
                   <div
                     key={gruppe.id}
-                    className="rounded-xl border border-[#73aac4]/40 bg-[color:var(--surface-soft)] backdrop-blur overflow-hidden"
+                    className="rounded-xl border border-border bg-card overflow-hidden"
                   >
                     {/* Gruppe header */}
                     <button
@@ -189,10 +189,10 @@ export function GrupperTab() {
                     </button>
 
                     {isExpanded && (
-                      <div className="border-t border-[#73aac4]/20 !px-5 !py-4 !space-y-5">
+                      <div className="border-t border-border !px-5 !py-4 !space-y-5">
                         {/* Faddere section */}
                         <div className="!space-y-2">
-                          <h4 className="text-sm font-semibold text-[#90dfed]">
+                          <h4 className="text-sm font-semibold text-primary">
                             Faddere ({faddere.length})
                           </h4>
                           {faddere.length > 0 ? (
@@ -249,7 +249,7 @@ export function GrupperTab() {
 
                         {/* Fadderbarn section */}
                         <div className="!space-y-2">
-                          <h4 className="text-sm font-semibold text-[#6495e6]">
+                          <h4 className="text-sm font-semibold text-primary">
                             Fadderbarn ({fadderbarn.length})
                           </h4>
                           {fadderbarn.length > 0 ? (
@@ -330,7 +330,7 @@ export function GrupperTab() {
                                   role: "FADDER",
                                 })
                               }
-                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#90dfed] transition hover:bg-muted"
+                              className="inline-flex items-center !gap-1.5 rounded-lg border border-border !px-3 !py-1.5 text-xs font-medium text-primary transition hover:bg-muted"
                             >
                               <UserPlus className="h-3.5 w-3.5" />
                               Legg til fadder
@@ -343,7 +343,7 @@ export function GrupperTab() {
                                   role: "FADDERBARN",
                                 })
                               }
-                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#6495e6] transition hover:bg-muted"
+                              className="inline-flex items-center !gap-1.5 rounded-lg border border-border !px-3 !py-1.5 text-xs font-medium text-primary transition hover:bg-muted"
                             >
                               <UserPlus className="h-3.5 w-3.5" />
                               Legg til fadderbarn
@@ -352,7 +352,7 @@ export function GrupperTab() {
                         )}
 
                         {/* Delete gruppe button */}
-                        <div className="border-t border-[#73aac4]/10 !pt-3">
+                        <div className="border-t border-border !pt-3">
                           <button
                             type="button"
                             onClick={() => {
@@ -434,7 +434,7 @@ function AddMemberForm({
   });
 
   return (
-    <div className="rounded-lg border border-[#73aac4]/30 bg-background !p-4 !space-y-3">
+    <div className="rounded-lg border border-border bg-background !p-4 !space-y-3">
       <p className="text-sm font-medium text-foreground">
         Legg til {role === "FADDER" ? "fadder" : "fadderbarn"}
       </p>
@@ -449,7 +449,7 @@ function AddMemberForm({
           className={`rounded-full border !px-2.5 !py-1 text-xs font-medium transition ${
             selectedMajor === null
               ? "border-primary bg-primary text-primary-foreground"
-              : "border-[#73aac4]/30 text-muted-foreground hover:bg-muted"
+              : "border-border text-muted-foreground hover:bg-muted"
           }`}
         >
           Alle ({availableUsers.length})
@@ -465,7 +465,7 @@ function AddMemberForm({
             className={`rounded-full border !px-2.5 !py-1 text-xs font-medium transition ${
               selectedMajor === major
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-[#73aac4]/30 text-muted-foreground hover:bg-muted"
+                : "border-border text-muted-foreground hover:bg-muted"
             }`}
           >
             {major} ({usersByMajor.get(major)?.length ?? 0})
@@ -478,7 +478,7 @@ function AddMemberForm({
         placeholder="Sok etter bruker..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#73aac4]"
+        className="w-full rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
       />
       <div className="max-h-40 overflow-y-auto !space-y-1">
         {filtered.map((user) => (

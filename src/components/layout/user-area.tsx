@@ -69,14 +69,29 @@ export const UserArea = ({
           <button
             type="button"
             aria-label="Profil"
-            className="hover:bg-muted/50 hover:text-foreground rounded-md p-2 transition"
+            className="hover:bg-muted/50 rounded-full p-0.5 transition"
           >
-            <UserRound className="text-foreground h-4 w-4" />
+            {isAuthenticated ? (
+              <Avatar className="size-8">
+                <AvatarImage
+                  src={image}
+                  alt={name}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-muted/40 text-foreground text-xs font-medium">
+                  {getInitials(name)}
+                </AvatarFallback>
+              </Avatar>
+            ) : (
+              <span className="grid size-8 place-items-center">
+                <UserRound className="text-foreground h-4 w-4" />
+              </span>
+            )}
           </button>
         </PopoverTrigger>
         <PopoverContent
           align="end"
-          className="text-foreground w-72 rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--panel-bg)] p-5 shadow-xl backdrop-blur"
+          className="text-foreground w-72 rounded-xl bg-popover p-5 shadow-md ring-1 ring-foreground/10"
         >
           <div className="flex w-full flex-col gap-4">
             <div className="flex items-center gap-3">
@@ -138,3 +153,14 @@ export const UserArea = ({
     </div>
   );
 };
+
+function getInitials(name: string) {
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.slice(0, 1).toUpperCase())
+      .join("") || "?"
+  );
+}

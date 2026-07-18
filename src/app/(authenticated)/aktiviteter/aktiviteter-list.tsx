@@ -39,7 +39,7 @@ export default function AktiviteterList({
                     key={activity.id}
                     type="button"
                     onClick={() => setSelected(activity)}
-                    className="rounded-2xl border border-[color:var(--surface-border)] bg-[color:var(--surface-strong)] p-6 text-left shadow-[0_0_0_1px_var(--surface-border)] backdrop-blur transition hover:border-[color:var(--surface-border-strong)]"
+                    className="rounded-xl bg-card text-card-foreground p-6 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
                   >
                     {activity.imageUrl ? (
                       <img
@@ -48,7 +48,7 @@ export default function AktiviteterList({
                         className="h-44 w-full rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="flex h-44 w-full items-center justify-center rounded-lg bg-gradient-to-br from-slate-900 via-sky-900/70 to-slate-800">
+                      <div className="flex h-44 w-full items-center justify-center rounded-lg bg-muted">
                         <span className="text-2xl font-extrabold tracking-wide text-white">
                           {activity.title}
                         </span>

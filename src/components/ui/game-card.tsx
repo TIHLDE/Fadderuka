@@ -9,12 +9,9 @@ export default function GameCard({ title, href }: GameCardProps) {
   return (
     <Link
       href={href}
-      className="group relative flex h-[248px] w-full max-w-[358px] items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#02376E] to-[#011830] p-4 shadow-lg transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99] hover:border-white/20 hover:shadow-xl hover:scale-[1.02]"
+      className="group relative flex h-[248px] w-full max-w-[358px] items-center justify-center overflow-hidden rounded-xl bg-card text-card-foreground p-4 ring-1 ring-foreground/10 transition-colors duration-150 hover:bg-muted/50 active:translate-y-px"
     >
-      {/* Glow effect on hover */}
-      <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-br from-sky-400/10 to-transparent" />
-      
-      <h3 className="relative z-10 text-center text-2xl font-bold text-white">
+      <h3 className="font-heading relative z-10 text-center text-2xl font-medium tracking-tight text-foreground">
         {title}
       </h3>
     </Link>

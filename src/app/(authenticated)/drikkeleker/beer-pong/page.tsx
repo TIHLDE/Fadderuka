@@ -10,9 +10,6 @@ export default function BeerPongPage() {
         backgroundImage: "var(--page-gradient)",
       }}
     >
-      <div className="pointer-events-none absolute -top-32 -left-40 h-[520px] w-[520px] rounded-full bg-sky-400/10 blur-[140px]" />
-      <div className="pointer-events-none absolute top-[10%] right-[-10%] h-[420px] w-[420px] rounded-full bg-blue-500/10 blur-[120px]" />
-      <div className="pointer-events-none absolute bottom-[10%] left-[20%] h-[420px] w-[420px] rounded-full bg-slate-500/10 blur-[140px]" />
 
       <div className="mx-auto w-full max-w-page flex-1 !px-4 !pb-24 !pt-24 md:!px-6">
         <div className="mx-auto max-w-2xl text-center">

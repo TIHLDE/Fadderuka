@@ -80,7 +80,7 @@ export function UsersTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center !py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#73aac4] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-transparent" />
       </div>
     );
   }
@@ -105,19 +105,19 @@ export function UsersTab() {
             {unverifiedUsers.map((user) => (
               <div
                 key={user.id}
-                className="flex flex-col !gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 !p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col !gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 !p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <p className="font-medium text-foreground">{user.name}</p>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
                   <div className="mt-1 flex flex-wrap !gap-1.5">
                     {user.klasse && (
-                      <span className="rounded-full bg-[#73aac4]/15 !px-2 !py-0.5 text-xs font-medium text-[#73aac4]">
+                      <span className="rounded-full bg-primary/10 !px-2 !py-0.5 text-xs font-medium text-primary">
                         {user.klasse}
                       </span>
                     )}
                     {user.studieretning && (
-                      <span className="rounded-full bg-[#6495e6]/15 !px-2 !py-0.5 text-xs font-medium text-[#6495e6]">
+                      <span className="rounded-full bg-primary/10 !px-2 !py-0.5 text-xs font-medium text-primary">
                         {user.studieretning}
                       </span>
                     )}
@@ -152,7 +152,7 @@ export function UsersTab() {
                             })
                           }
                           disabled={verifyAndAssignMutation.isPending}
-                          className="rounded-lg border border-[#73aac4]/40 bg-secondary !px-3 !py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
+                          className="rounded-lg border border-border bg-secondary !px-3 !py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
                         >
                           {gruppe.name}
                         </button>
@@ -218,7 +218,7 @@ export function UsersTab() {
             ))}
           </div>
         ) : (
-          <p className="rounded-xl border border-[#73aac4]/20 bg-[color:var(--surface-soft)] !px-4 !py-6 text-center text-sm text-muted-foreground">
+          <p className="rounded-xl border border-border bg-card !px-4 !py-6 text-center text-sm text-muted-foreground">
             Ingen uverifiserte brukere
           </p>
         )}
@@ -235,7 +235,7 @@ export function UsersTab() {
           placeholder="Sok etter bruker..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm rounded-xl border border-[#73aac4]/40 bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+          className="w-full max-w-sm rounded-xl border border-border bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
 
         <div className="grid grid-cols-1 !gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -245,10 +245,10 @@ export function UsersTab() {
             return (
               <div
                 key={studieretning}
-                className={`rounded-xl border bg-[color:var(--surface-soft)] backdrop-blur transition ${
+                className={`rounded-xl border bg-card transition ${
                   isExpanded
-                    ? "border-[#73aac4] sm:col-span-2 lg:col-span-3"
-                    : "border-[#73aac4]/40"
+                    ? "border-border sm:col-span-2 lg:col-span-3"
+                    : "border-border"
                 }`}
               >
                 <button
@@ -265,16 +265,16 @@ export function UsersTab() {
                       {usersInGroup.length === 1 ? "bruker" : "brukere"}
                     </p>
                   </div>
-                  <span className="rounded-full bg-[#6495e6]/15 !px-2.5 !py-0.5 text-sm font-semibold text-[#6495e6]">
+                  <span className="rounded-full bg-primary/10 !px-2.5 !py-0.5 text-sm font-semibold text-primary">
                     {usersInGroup.length}
                   </span>
                 </button>
 
                 {isExpanded && (
-                  <div className="overflow-x-auto border-t border-[#73aac4]/20">
+                  <div className="overflow-x-auto border-t border-border">
                     <table className="w-full text-left text-sm">
                       <thead>
-                        <tr className="border-b border-[#73aac4]/20 text-muted-foreground">
+                        <tr className="border-b border-border text-muted-foreground">
                           <th className="!px-4 !py-3 font-medium">Navn</th>
                           <th className="!px-4 !py-3 font-medium">E-post</th>
                           <th className="!px-4 !py-3 font-medium">Klasse</th>
@@ -289,7 +289,7 @@ export function UsersTab() {
                           return (
                             <tr
                               key={user.id}
-                              className="border-b border-[#73aac4]/10 last:border-0 hover:bg-muted/50"
+                              className="border-b border-border last:border-0 hover:bg-muted/50"
                             >
                               <td className="!px-4 !py-3 font-medium text-foreground">
                                 {user.name}
@@ -299,7 +299,7 @@ export function UsersTab() {
                               </td>
                               <td className="!px-4 !py-3">
                                 {user.klasse ? (
-                                  <span className="rounded-full bg-[#73aac4]/15 !px-2 !py-0.5 text-xs font-medium text-[#73aac4]">
+                                  <span className="rounded-full bg-primary/10 !px-2 !py-0.5 text-xs font-medium text-primary">
                                     {user.klasse}
                                   </span>
                                 ) : (
@@ -325,8 +325,8 @@ export function UsersTab() {
                                     disabled={updateRoleMutation.isPending}
                                     className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${
                                       membership.role === "FADDER"
-                                        ? "bg-[#90dfed]/15 text-[#90dfed] hover:bg-[#90dfed]/25"
-                                        : "bg-[#6495e6]/15 text-[#6495e6] hover:bg-[#6495e6]/25"
+                                        ? "bg-primary/10 text-primary hover:bg-primary/20"
+                                        : "bg-primary/10 text-primary hover:bg-primary/20"
                                     }`}
                                     title={
                                       membership.role === "FADDER"

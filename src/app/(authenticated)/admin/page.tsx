@@ -21,12 +21,11 @@ export default async function AdminPage() {
         backgroundImage: "var(--page-bg-image), var(--page-gradient)",
       }}
     >
-      <div className="pointer-events-none absolute top-[-280px] left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(100,149,230,0.35),transparent_70%)] blur-3xl" />
 
       <div className="max-w-page relative mx-auto flex w-full flex-1 flex-col !px-4 !pt-24 !pb-16 md:!px-6">
         <div className="mx-auto flex w-full max-w-[1040px] flex-col !gap-8">
           <section className="!space-y-3">
-            <h1 className="bg-gradient-to-r from-[#90dfed] to-[#6495e6] bg-clip-text text-4xl leading-[1.15] font-bold text-transparent md:text-5xl">
+            <h1 className="font-heading text-4xl leading-[1.15] font-semibold tracking-tight text-foreground md:text-5xl">
               Adminpanel
             </h1>
             <p className="text-muted-foreground max-w-3xl text-base sm:text-lg">

@@ -24,47 +24,35 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --radius: 0.625rem;
+    --font-heading: "Inter", sans-serif;
     --warning: 35 100% 20%;
     --success: 123 40% 20%;
 
-    --page-bg: #f5f7fb;
-    --page-bg-image:
-      radial-gradient(
-        700px 420px at 20% 0%,
-        rgba(56, 189, 248, 0.2),
-        transparent 60%
-      ),
-      radial-gradient(
-        700px 420px at 80% 20%,
-        rgba(14, 165, 233, 0.18),
-        transparent 60%
-      );
-    --page-gradient: linear-gradient(
-      180deg,
-      #f8fafc 0%,
-      #eef2ff 84%,
-      #e2e8f0 100%
-    );
+    /* Flat, Photon-style surfaces — no gradients/glow. All map back to the
+       theme's semantic tokens so every remaining usage stays on-theme. */
+    --page-bg: hsl(var(--background));
+    --page-bg-image: none;
+    --page-gradient: none;
 
-    --surface-strong: rgba(226, 232, 240, 0.95);
-    --surface-soft: rgba(248, 250, 252, 0.9);
-    --surface-border: rgba(15, 23, 42, 0.12);
-    --surface-border-strong: rgba(15, 23, 42, 0.2);
+    --surface-strong: hsl(var(--card));
+    --surface-soft: hsl(var(--card));
+    --surface-border: hsl(var(--foreground) / 0.1);
+    --surface-border-strong: hsl(var(--foreground) / 0.15);
 
-    --header-bg: rgba(255, 255, 255, 0.7);
-    --footer-bg: #eef2ff;
-    --panel-bg: rgba(255, 255, 255, 0.95);
+    --header-bg: hsl(var(--background) / 0.8);
+    --footer-bg: hsl(var(--background));
+    --panel-bg: hsl(var(--popover));
 
-    --action-bg: rgba(255, 255, 255, 0.9);
-    --action-border: rgba(15, 23, 42, 0.16);
+    --action-bg: hsl(var(--card));
+    --action-border: hsl(var(--foreground) / 0.1);
 
-    --card-sheen: rgba(255, 255, 255, 0.25);
+    --card-sheen: transparent;
 
-    --card-border: rgba(115, 170, 196, 0.55);
-    --card-border-base: #374973;
-    --card-border-highlight: #73aac4;
-    --card-border-strong: rgba(115, 170, 196, 0.85);
+    --card-border: hsl(var(--foreground) / 0.1);
+    --card-border-base: hsl(var(--foreground) / 0.1);
+    --card-border-highlight: hsl(var(--foreground) / 0.15);
+    --card-border-strong: hsl(var(--foreground) / 0.15);
 
     /* Motion — strong custom easing curves (built-in CSS easings are too weak) */
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
@@ -96,43 +84,29 @@
     --warning: 36 100% 86%;
     --success: 122 38% 85%;
 
-    --page-bg: #0b1020;
-    --page-bg-image:
-      radial-gradient(
-        700px 420px at 20% 0%,
-        rgba(59, 130, 246, 0.18),
-        transparent 60%
-      ),
-      radial-gradient(
-        700px 420px at 80% 20%,
-        rgba(14, 116, 144, 0.22),
-        transparent 60%
-      );
-    --page-gradient: linear-gradient(
-      180deg,
-      #0f172a 0%,
-      #0f1420 84%,
-      #101013 100%
-    );
+    /* Flat, Photon-style surfaces — no gradients/glow. */
+    --page-bg: hsl(var(--background));
+    --page-bg-image: none;
+    --page-gradient: none;
 
-    --surface-strong: rgba(30, 41, 59, 0.92);
-    --surface-soft: rgba(17, 24, 39, 0.9);
-    --surface-border: rgba(255, 255, 255, 0.12);
-    --surface-border-strong: rgba(255, 255, 255, 0.2);
+    --surface-strong: hsl(var(--card));
+    --surface-soft: hsl(var(--card));
+    --surface-border: hsl(var(--foreground) / 0.1);
+    --surface-border-strong: hsl(var(--foreground) / 0.15);
 
-    --header-bg: rgba(11, 18, 33, 0.8);
-    --footer-bg: #0a1022;
-    --panel-bg: rgba(15, 23, 42, 0.95);
+    --header-bg: hsl(var(--background) / 0.8);
+    --footer-bg: hsl(var(--background));
+    --panel-bg: hsl(var(--popover));
 
-    --action-bg: rgba(17, 24, 39, 0.9);
-    --action-border: rgba(58, 70, 99, 0.9);
+    --action-bg: hsl(var(--card));
+    --action-border: hsl(var(--foreground) / 0.1);
 
-    --card-sheen: rgba(56, 189, 248, 0.22);
+    --card-sheen: transparent;
 
-    --card-border: rgba(115, 170, 196, 0.45);
-    --card-border-base: #374973;
-    --card-border-highlight: #73aac4;
-    --card-border-strong: rgba(115, 170, 196, 0.75);
+    --card-border: hsl(var(--foreground) / 0.1);
+    --card-border-base: hsl(var(--foreground) / 0.1);
+    --card-border-highlight: hsl(var(--foreground) / 0.15);
+    --card-border-strong: hsl(var(--foreground) / 0.15);
   }
 }
 

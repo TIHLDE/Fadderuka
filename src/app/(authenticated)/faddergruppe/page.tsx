@@ -45,7 +45,6 @@ export default async function FaddergroupPage() {
           backgroundImage: "var(--page-bg-image), var(--page-gradient)",
         }}
       >
-        <div className="pointer-events-none absolute top-[-280px] left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(100,149,230,0.35),transparent_70%)] blur-3xl" />
         <div className="max-w-page relative mx-auto flex w-full flex-1 flex-col items-center justify-center !px-4 !pt-24 !pb-16 md:!px-6">
           <div className="mx-auto max-w-md !space-y-4 text-center">
             <h1 className="text-3xl font-bold text-foreground">
@@ -77,14 +76,11 @@ export default async function FaddergroupPage() {
         backgroundImage: "var(--page-bg-image), var(--page-gradient)",
       }}
     >
-      <div className="pointer-events-none absolute top-[-280px] left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(100,149,230,0.35),transparent_70%)] blur-3xl" />
-      <div className="pointer-events-none absolute top-[180px] right-[-260px] h-[460px] w-[620px] rotate-[-20deg] rounded-[45%] bg-[radial-gradient(circle,rgba(144,223,237,0.28),transparent_72%)] blur-3xl" />
-      <div className="pointer-events-none absolute top-[360px] left-[-320px] h-[520px] w-[760px] rotate-12 rounded-[50%] bg-[radial-gradient(circle,rgba(73,120,179,0.22),transparent_70%)] blur-[120px]" />
 
       <div className="max-w-page relative mx-auto flex w-full flex-1 flex-col !px-4 !pt-24 !pb-16 md:!px-6">
         <div className="mx-auto flex w-full max-w-[1040px] flex-col !gap-12">
           <section className="!space-y-5">
-            <h1 className="bg-gradient-to-r from-[#90dfed] to-[#6495e6] bg-clip-text text-4xl leading-[1.15] font-bold text-transparent md:text-5xl">
+            <h1 className="font-heading text-4xl leading-[1.15] font-semibold tracking-tight text-foreground md:text-5xl">
               {gruppe.name}
             </h1>
             <p className="max-w-3xl text-base text-muted-foreground sm:text-lg">
@@ -98,7 +94,7 @@ export default async function FaddergroupPage() {
             <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-foreground sm:text-[36px]">
               Medlemmer
             </h2>
-            <div className="grid !gap-10 rounded-xl border border-[#73aac4]/70 bg-[color:var(--surface-soft)] !p-6 shadow-[0_24px_60px_rgba(4,10,23,0.35)] backdrop-blur md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:!gap-16">
+            <div className="grid !gap-10 rounded-xl border border-border bg-card !p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:!gap-16">
               <div className="!space-y-4">
                 <h3 className="text-lg font-semibold text-foreground">Fadderbarn</h3>
                 <ul className="!space-y-2 text-sm text-muted-foreground sm:text-base">

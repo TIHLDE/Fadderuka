@@ -37,11 +37,11 @@ const attributes = [
 
 export default function Footer() {
   return (
-    <footer className="pt-6 pb-32 md:py-20 px-12 md:px-40 bg-white dark:bg-transparent text-black dark:text-white border-t space-y-12">
+    <footer className="pt-6 pb-32 md:py-20 px-12 md:px-40 bg-background text-foreground border-t space-y-12">
       <div className="flex flex-col space-y-12 lg:space-y-0 lg:flex-row md:justify-between">
         <div className="order-last lg:order-first space-y-4 lg:w-62.5">
           <div className="space-y-1">
-            <h2 className="text-3xl font-semibold text-center">Kontakt</h2>
+            <h2 className="font-heading text-3xl font-medium tracking-tight text-center">Kontakt</h2>
           </div>
           {attributes.map((attribute) => (
             <div className="text-center" key={attribute.key}>
@@ -54,7 +54,7 @@ export default function Footer() {
               href="https://tihlde.org/kontakt"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-500 hover:underline"
+              className="text-primary hover:underline"
             >
               Kontakt oss
             </a>
@@ -101,7 +101,7 @@ export default function Footer() {
 
         <div className="lg:w-62.5 pb-12 lg:pb-0">
           <div className="space-y-1 mb-4">
-            <h2 className="text-3xl font-semibold text-center">Samarbeid</h2>
+            <h2 className="font-heading text-3xl font-medium tracking-tight text-center">Samarbeid</h2>
           </div>
           <a href="https://www.nito.no/" target="_blank" rel="noopener noreferrer">
             <img
@@ -122,7 +122,7 @@ export default function Footer() {
             href="https://tihlde.org/tilbakemelding"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
+            className="text-primary hover:underline"
           >
             Rapporter til Index
           </a>
@@ -132,7 +132,7 @@ export default function Footer() {
             href="https://tihlde.org/personvern"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-500 hover:underline"
+            className="text-primary hover:underline"
           >
             Personvernerklæring
           </a>
