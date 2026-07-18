@@ -50,11 +50,11 @@ export default function ActivityModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in-0 duration-200 ease-out"
       onClick={onClose}
     >
       <div
-        className="relative flex h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-2xl bg-[color:var(--panel-bg)] shadow-2xl"
+        className="relative flex h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-2xl bg-[color:var(--panel-bg)] shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
         onClick={(e) => e.stopPropagation()}
       >
         <button
