@@ -358,7 +358,7 @@ export function GrupperTab() {
                             onClick={() => {
                               if (
                                 confirm(
-                                  `Er du sikker pa at du vil slette "${gruppe.name}"? Alle medlemskap og meldinger vil bli slettet.`,
+                                  `Er du sikker på at du vil slette "${gruppe.name}"? Alle medlemskap og meldinger vil bli slettet.`,
                                 )
                               ) {
                                 deleteMutation.mutate({ gruppeId: gruppe.id });
