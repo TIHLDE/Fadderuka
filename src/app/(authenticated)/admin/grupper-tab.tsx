@@ -125,12 +125,12 @@ export function GrupperTab() {
           placeholder="Ny faddergruppe navn..."
           value={newGruppeName}
           onChange={(e) => setNewGruppeName(e.target.value)}
-          className="flex-1 max-w-sm rounded-xl border border-[#73aac4]/40 bg-[#111a2f] !px-4 !py-2.5 text-sm text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+          className="flex-1 max-w-sm rounded-xl border border-[#73aac4]/40 bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
         />
         <button
           type="submit"
           disabled={createMutation.isPending || !newGruppeName.trim()}
-          className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-[#212d49] !px-4 !py-2.5 text-sm font-semibold text-white transition hover:bg-[#29385a] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-secondary !px-4 !py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus className="h-4 w-4" />
           Opprett
@@ -145,7 +145,7 @@ export function GrupperTab() {
               <h3 className="text-base font-semibold text-[#90dfed]">
                 {major}
               </h3>
-              <span className="text-sm text-[#8694b4]">
+              <span className="text-sm text-muted-foreground">
                 {grupperIMajor.length}{" "}
                 {grupperIMajor.length === 1 ? "gruppe" : "grupper"}
               </span>
@@ -168,23 +168,23 @@ export function GrupperTab() {
                     {/* Gruppe header */}
                     <button
                       type="button"
-                      className="flex w-full items-center justify-between !px-5 !py-4 text-left transition hover:bg-[#1a2540]/50"
+                      className="flex w-full items-center justify-between !px-5 !py-4 text-left transition hover:bg-muted/50"
                       onClick={() =>
                         setExpandedGruppe(isExpanded ? null : gruppe.id)
                       }
                     >
                       <div className="flex items-center !gap-3">
-                        <h3 className="text-lg font-semibold text-white">
+                        <h3 className="text-lg font-semibold text-foreground">
                           {gruppe.name}
                         </h3>
-                        <span className="text-sm text-[#8694b4]">
+                        <span className="text-sm text-muted-foreground">
                           {gruppe.members.length} medlemmer
                         </span>
                       </div>
                       {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-[#8694b4]" />
+                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-5 w-5 text-[#8694b4]" />
+                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
                       )}
                     </button>
 
@@ -200,13 +200,13 @@ export function GrupperTab() {
                               {faddere.map((member) => (
                                 <li
                                   key={member.id}
-                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-[#1a2540]/50"
+                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
                                 >
                                   <div>
-                                    <span className="text-sm text-white">
+                                    <span className="text-sm text-foreground">
                                       {member.user.name}
                                     </span>
-                                    <span className="!ml-2 text-xs text-[#5b6a8f]">
+                                    <span className="!ml-2 text-xs text-muted-foreground">
                                       {member.user.email}
                                     </span>
                                   </div>
@@ -219,7 +219,7 @@ export function GrupperTab() {
                                           role: "FADDERBARN",
                                         })
                                       }
-                                      className="text-xs text-[#8694b4] hover:text-white transition"
+                                      className="text-xs text-muted-foreground hover:text-foreground transition"
                                       title="Endre til fadderbarn"
                                     >
                                       Til fadderbarn
@@ -241,7 +241,7 @@ export function GrupperTab() {
                               ))}
                             </ul>
                           ) : (
-                            <p className="text-sm text-[#5b6a8f]">
+                            <p className="text-sm text-muted-foreground">
                               Ingen faddere enda
                             </p>
                           )}
@@ -257,13 +257,13 @@ export function GrupperTab() {
                               {fadderbarn.map((member) => (
                                 <li
                                   key={member.id}
-                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-[#1a2540]/50"
+                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
                                 >
                                   <div>
-                                    <span className="text-sm text-white">
+                                    <span className="text-sm text-foreground">
                                       {member.user.name}
                                     </span>
-                                    <span className="!ml-2 text-xs text-[#5b6a8f]">
+                                    <span className="!ml-2 text-xs text-muted-foreground">
                                       {member.user.email}
                                     </span>
                                   </div>
@@ -276,7 +276,7 @@ export function GrupperTab() {
                                           role: "FADDER",
                                         })
                                       }
-                                      className="text-xs text-[#8694b4] hover:text-white transition"
+                                      className="text-xs text-muted-foreground hover:text-foreground transition"
                                       title="Endre til fadder"
                                     >
                                       Til fadder
@@ -298,7 +298,7 @@ export function GrupperTab() {
                               ))}
                             </ul>
                           ) : (
-                            <p className="text-sm text-[#5b6a8f]">
+                            <p className="text-sm text-muted-foreground">
                               Ingen fadderbarn enda
                             </p>
                           )}
@@ -330,7 +330,7 @@ export function GrupperTab() {
                                   role: "FADDER",
                                 })
                               }
-                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#90dfed] transition hover:bg-[#1a2540]"
+                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#90dfed] transition hover:bg-muted"
                             >
                               <UserPlus className="h-3.5 w-3.5" />
                               Legg til fadder
@@ -343,7 +343,7 @@ export function GrupperTab() {
                                   role: "FADDERBARN",
                                 })
                               }
-                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#6495e6] transition hover:bg-[#1a2540]"
+                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#6495e6] transition hover:bg-muted"
                             >
                               <UserPlus className="h-3.5 w-3.5" />
                               Legg til fadderbarn
@@ -381,7 +381,7 @@ export function GrupperTab() {
         ))}
 
         {grupper?.length === 0 && (
-          <p className="text-center text-[#8694b4] !py-8">
+          <p className="text-center text-muted-foreground !py-8">
             Ingen faddergrupper opprettet enda. Bruk skjemaet over for a
             opprette en ny gruppe.
           </p>
@@ -415,8 +415,8 @@ function AddMemberForm({
   );
 
   return (
-    <div className="rounded-lg border border-[#73aac4]/30 bg-[#111a2f] !p-4 !space-y-3">
-      <p className="text-sm font-medium text-white">
+    <div className="rounded-lg border border-[#73aac4]/30 bg-background !p-4 !space-y-3">
+      <p className="text-sm font-medium text-foreground">
         Legg til {role === "FADDER" ? "fadder" : "fadderbarn"}
       </p>
       <input
@@ -424,7 +424,7 @@ function AddMemberForm({
         placeholder="Sok etter bruker..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full rounded-lg border border-[#73aac4]/30 bg-[#0d1525] !px-3 !py-2 text-sm text-white placeholder:text-[#5b6a8f] focus:outline-none focus:ring-1 focus:ring-[#73aac4]"
+        className="w-full rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#73aac4]"
       />
       <div className="max-h-40 overflow-y-auto !space-y-1">
         {filtered.map((user) => (
@@ -434,16 +434,16 @@ function AddMemberForm({
             onClick={() => setSelectedUserId(user.id)}
             className={`flex w-full items-center justify-between rounded-lg !px-3 !py-2 text-left text-sm transition ${
               selectedUserId === user.id
-                ? "bg-[#2c3a5d] text-white"
-                : "text-[#8694b4] hover:bg-[#1a2540]"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted"
             }`}
           >
             <span>{user.name}</span>
-            <span className="text-xs text-[#5b6a8f]">{user.email}</span>
+            <span className="text-xs text-muted-foreground">{user.email}</span>
           </button>
         ))}
         {filtered.length === 0 && (
-          <p className="text-center text-xs text-[#5b6a8f] !py-2">
+          <p className="text-center text-xs text-muted-foreground !py-2">
             Ingen tilgjengelige brukere
           </p>
         )}
@@ -452,7 +452,7 @@ function AddMemberForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg !px-3 !py-1.5 text-xs text-[#8694b4] hover:text-white transition"
+          className="rounded-lg !px-3 !py-1.5 text-xs text-muted-foreground hover:text-foreground transition"
         >
           Avbryt
         </button>
@@ -462,7 +462,7 @@ function AddMemberForm({
             if (selectedUserId) onAdd(selectedUserId);
           }}
           disabled={!selectedUserId || isPending}
-          className="rounded-lg bg-[#2c3a5d] !px-3 !py-1.5 text-xs font-medium text-white transition hover:bg-[#33466f] disabled:opacity-60 disabled:cursor-not-allowed"
+          className="rounded-lg bg-primary !px-3 !py-1.5 text-xs font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           Legg til
         </button>

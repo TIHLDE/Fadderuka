@@ -15,7 +15,7 @@ const games = [
 export default function DrikkelekerPage() {
   return (
     <main
-      className="relative flex min-h-screen w-full flex-col overflow-hidden text-white"
+      className="relative flex min-h-screen w-full flex-col overflow-hidden text-foreground"
       style={{
         backgroundColor: "var(--page-bg)",
         backgroundImage: "var(--page-bg-image), var(--page-gradient)",
@@ -27,10 +27,10 @@ export default function DrikkelekerPage() {
 
       <div className="max-w-page mx-auto w-full flex-1 !px-4 !pt-24 !pb-24 md:!px-6">
         <div className="text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-50 sm:text-6xl md:text-7xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl md:text-7xl">
             Drikkeleker
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-400 sm:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
             Her finner du morsomme leker til aktiviteter. Kayr no pau!
           </p>
         </div>
