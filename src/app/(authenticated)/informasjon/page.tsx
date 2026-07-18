@@ -39,7 +39,7 @@ const faqItems = [
   {
     question: "Hvordan betaler jeg for fadderukene?",
     answer:
-      "Åpne vipps og søk på TIHLDE. Deretter trykker du på FADDERUKE og betaler her.",
+      "Åpne vipps og skriv 519679. Da får du opp TIHLDE linjeforening. Deretter trykker du på FADDERUKE og betaler 380kr her.",
   },
   {
     question: "Hvorfor koster det penger å delta i fadderukene?",
