@@ -34,6 +34,7 @@ export async function createUser(
     name: string;
     email: string | null;
     isAdmin: boolean;
+    adminOverride: boolean | null;
     isVerified: boolean;
     hasPaid: boolean;
     studieretning: string | null;
@@ -48,6 +49,7 @@ export async function createUser(
       name: overrides.name ?? `Test Bruker ${id}`,
       email: overrides.email === undefined ? `${id}@test.no` : overrides.email,
       isAdmin: overrides.isAdmin ?? false,
+      adminOverride: overrides.adminOverride ?? null,
       isVerified: overrides.isVerified ?? false,
       hasPaid: overrides.hasPaid ?? false,
       studieretning: overrides.studieretning ?? null,

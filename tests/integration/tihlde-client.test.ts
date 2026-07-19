@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   TihldeAuthError,
-  isAdminFromPermissions,
-  isMemberOfGroup,
+  isMemberOfAnyGroup,
   mapProfile,
   tihldeCreateUser,
   tihldeGetMe,
   tihldeGetMemberships,
-  tihldeGetPermissions,
   tihldeLogin,
 } from "~/server/auth/tihlde";
 
@@ -133,15 +131,6 @@ describe("profil og tilganger", () => {
     ).toMatchObject({ name: "olanor", studieretning: null, klasse: null });
   });
 
-  it("regner skrivetilgang som admin, lesetilgang som vanlig bruker", () => {
-    expect(isAdminFromPermissions({ permissions: { event: { read: true } } })).toBe(false);
-    expect(isAdminFromPermissions({ permissions: { event: { write: true } } })).toBe(true);
-    expect(
-      isAdminFromPermissions({ permissions: { event: { write_all: true } } }),
-    ).toBe(true);
-    expect(isAdminFromPermissions({ permissions: {} })).toBe(false);
-  });
-
   it("leser medlemskap både som liste og paginert svar", async () => {
     fetchMock.once("GET", "/users/olanor/memberships/", json({ results: [{ group: { slug: "fadderkom" } }] }));
     await expect(tihldeGetMemberships("t", "olanor")).resolves.toEqual([
@@ -154,15 +143,40 @@ describe("profil og tilganger", () => {
     ]);
   });
 
-  it("gjenkjenner medlemskap i en gruppe på slug", () => {
+  it("gjenkjenner medlemskap i en av flere grupper på slug", () => {
     const memberships = [{ group: { slug: "fadderkom" } }, { group: null }];
-    expect(isMemberOfGroup(memberships, "fadderkom")).toBe(true);
-    expect(isMemberOfGroup(memberships, "index")).toBe(false);
+    expect(isMemberOfAnyGroup(memberships, ["fadderkom"])).toBe(true);
+    expect(isMemberOfAnyGroup(memberships, ["index"])).toBe(false);
+    expect(isMemberOfAnyGroup(memberships, ["index", "fadderkom"])).toBe(true);
+    expect(isMemberOfAnyGroup(memberships, [])).toBe(false);
   });
 
-  it("kaster med statuskoden når tilganger ikke kan hentes", async () => {
-    fetchMock.on("GET", "/users/me/permissions/", text("boom", 500));
+  it("følger pagineringen så medlemskap på side 2 ikke går tapt", async () => {
+    fetchMock.once(
+      "GET",
+      "/users/olanor/memberships/",
+      json({
+        results: [{ group: { slug: "index" } }],
+        next: "https://tihlde.test/users/olanor/memberships/?page=2",
+      }),
+    );
+    fetchMock.once(
+      "GET",
+      "/users/olanor/memberships/",
+      json({ results: [{ group: { slug: "fadderkom" } }], next: null }),
+    );
 
-    await expect(tihldeGetPermissions("t")).rejects.toMatchObject({ status: 500 });
+    const memberships = await tihldeGetMemberships("t", "olanor");
+
+    expect(memberships).toHaveLength(2);
+    expect(isMemberOfAnyGroup(memberships, ["fadderkom"])).toBe(true);
+  });
+
+  it("kaster med statuskoden når medlemskap ikke kan hentes", async () => {
+    fetchMock.on("GET", "/users/olanor/memberships/", text("boom", 500));
+
+    await expect(tihldeGetMemberships("t", "olanor")).rejects.toMatchObject({
+      status: 500,
+    });
   });
 });
