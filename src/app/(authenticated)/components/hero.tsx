@@ -11,7 +11,9 @@ export default function Hero() {
 
       <div className="max-w-page mx-auto w-full px-4 pt-10 pb-10 md:px-6">
         <Reveal className="mx-auto flex max-w-2xl flex-col items-center gap-5 text-center">
-          <h1 className="font-heading text-foreground text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-6xl">
+          {/* Fluid size + `nowrap`: the title always sits on one line, shrinking
+              to fit narrow screens instead of wrapping. */}
+          <h1 className="font-heading text-foreground text-[clamp(1.25rem,6.2vw,3.5rem)] font-semibold tracking-tight whitespace-nowrap">
             Velkommen til fadderuka
           </h1>
 
