@@ -89,7 +89,9 @@ export const createTRPCRouter = t.router;
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
 
-  if (t._config.isDev) {
+  // The artificial delay is a dev-only waterfall detector. Skipped under test,
+  // where it would add hundreds of ms to every procedure call for no benefit.
+  if (t._config.isDev && process.env.NODE_ENV !== "test") {
     // artificial delay in dev
     const waitMs = Math.floor(Math.random() * 400) + 100;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
