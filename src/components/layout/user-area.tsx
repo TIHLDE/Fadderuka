@@ -49,11 +49,6 @@ export const UserArea = ({
     router.push("/admin");
   };
 
-  const goToMyPage = () => {
-    setOpen(false);
-    router.push("/min-side");
-  };
-
   return (
     <div
       {...props}
@@ -115,13 +110,6 @@ export const UserArea = ({
 
             {isAuthenticated ? (
               <div className="flex flex-col gap-2">
-                <Button
-                  variant="outline"
-                  className="border-border/60 bg-muted/40 text-foreground hover:bg-muted/60 w-full"
-                  onClick={goToMyPage}
-                >
-                  Min side
-                </Button>
                 {admin ? (
                   <Button
                     variant="outline"
