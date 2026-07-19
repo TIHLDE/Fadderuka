@@ -1,0 +1,78 @@
+name: CI
+
+# Runs on every PR into main or dev, and on pushes to those branches.
+# Enable it as a required status check in the branch protection rules so a red
+# run blocks the merge.
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [main, dev]
+
+# A new push supersedes the previous run for the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        # 16 (>= 12) is required: the payment_refunded_status migration runs
+        # `ALTER TYPE … ADD VALUE` inside Prisma's migration transaction.
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: fadderuke_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # The suite migrates and truncates this database on every run.
+      TEST_DATABASE_URL: postgresql://postgres:password@localhost:5432/fadderuke_test
+      # `next build` and eslint's type-aware rules import ~/env, which validates
+      # at module load. Dummy values only — nothing here reaches a real service.
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/fadderuke_test
+      TIHLDE_API_URL: https://api.tihlde.org
+      SKIP_ENV_VALIDATION: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.5
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      # Applies the migrations to the service database before the suite runs
+      # (the suite also does this itself, but failing here gives a clearer log).
+      - name: Migrate test database
+        run: bunx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+
+      - name: Test
+        run: bun run test
+
+      - name: Build
+        run: bun run build
