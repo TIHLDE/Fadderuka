@@ -134,6 +134,10 @@ model Payment {
     phone     String? // set only if we prefilled a number; Vipps collects it otherwise
     amount    Int // amount in øre
     status    PaymentStatus @default(CREATED)
+    // When the money was actually captured. Distinct from `updatedAt`, which any
+    // later status write would move: this is what the admin overview reports as
+    // the payment time, so it must stay pinned to the capture itself.
+    capturedAt DateTime?
     createdAt DateTime      @default(now())
     updatedAt DateTime      @updatedAt
     userId    String

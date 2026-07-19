@@ -298,6 +298,99 @@ function toStatus(payment: VippsPayment): PaymentStatus {
   }
 }
 
+/** A single entry from the Vipps payment event log, normalised for the admin UI. */
+export interface VippsPaymentEvent {
+  /** What happened: CREATED, AUTHORIZED, CAPTURED, ABORTED, … */
+  action: string;
+  /** Amount in øre this event applied to, when Vipps reports one. */
+  amount: number | null;
+  /** ISO timestamp of the event. */
+  timestamp: string | null;
+  success: boolean;
+}
+
+/** Live view of a payment, straight from Vipps. */
+export interface VippsPaymentSnapshot {
+  state: VippsPayment["state"];
+  /** Amounts in øre. */
+  authorized: number;
+  captured: number;
+  refunded: number;
+  cancelled: number;
+}
+
+/**
+ * Read a payment's current state from Vipps. Vipps — not our database — is the
+ * source of truth, so this is what the admin detail view shows when an order
+ * looks wrong locally.
+ */
+export async function fetchPaymentSnapshot(
+  orderId: string,
+): Promise<VippsPaymentSnapshot> {
+  const cfg = requireConfig();
+  const accessToken = await getAccessToken(cfg);
+  const payment = await getPayment(cfg, accessToken, orderId);
+
+  return {
+    state: payment.state,
+    authorized: payment.aggregate.authorizedAmount.value,
+    captured: payment.aggregate.capturedAmount.value,
+    refunded: payment.aggregate.refundedAmount.value,
+    cancelled: payment.aggregate.cancelledAmount.value,
+  };
+}
+
+/**
+ * Fetch the payment's event log — the same timeline the Vipps portal shows
+ * (reserved → captured → …), with timestamps. This is where an admin sees
+ * exactly *when* something happened, including failed attempts.
+ *
+ * Vipps has used both `name` and `paymentAction` for the event label across API
+ * revisions, so we accept either.
+ */
+export async function fetchPaymentEvents(
+  orderId: string,
+): Promise<VippsPaymentEvent[]> {
+  const cfg = requireConfig();
+  const accessToken = await getAccessToken(cfg);
+
+  const response = await fetch(
+    `${cfg.apiUrl}/epayment/v1/payments/${orderId}/events`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Ocp-Apim-Subscription-Key": cfg.subscriptionKey,
+        "Merchant-Serial-Number": cfg.merchantSerialNumber,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    console.error(
+      "Vipps payment events error:",
+      response.status,
+      await response.text(),
+    );
+    throw new VippsError("Kunne ikke hente hendelsesloggen fra Vipps");
+  }
+
+  const data = (await response.json()) as {
+    name?: string;
+    paymentAction?: string;
+    amount?: { value?: number };
+    timestamp?: string;
+    timeStamp?: string;
+    success?: boolean;
+  }[];
+
+  return data.map((event) => ({
+    action: event.name ?? event.paymentAction ?? "UKJENT",
+    amount: event.amount?.value ?? null,
+    timestamp: event.timestamp ?? event.timeStamp ?? null,
+    success: event.success ?? true,
+  }));
+}
+
 /**
  * Reconcile a single payment against Vipps — the source of truth — capturing it
  * if it is only reserved, and marking the owning user paid/verified once money
@@ -335,6 +428,15 @@ export async function settlePayment(
 
   // No-op when the row is absent (updateMany avoids a P2025 on a missing order).
   await db.payment.updateMany({ where: { orderId }, data: { status } });
+
+  // Stamp the capture time once. Scoped to `capturedAt: null` so a re-settle
+  // (webhook retry, admin sync) never moves an already-recorded payment time.
+  if (paid) {
+    await db.payment.updateMany({
+      where: { orderId, capturedAt: null },
+      data: { capturedAt: new Date() },
+    });
+  }
 
   if (paid && userId) {
     await db.user.update({
