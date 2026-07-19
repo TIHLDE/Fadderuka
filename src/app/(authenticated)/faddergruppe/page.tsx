@@ -137,7 +137,7 @@ export default async function FaddergroupPage() {
             composerPlaceholder="Hva vil du si til gruppa?"
             emptyMessage={
               canPost
-                ? "Ingen meldinger enda. Skriv den forste meldingen til gruppa!"
+                ? "Ingen meldinger enda. Skriv den første meldingen til gruppa!"
                 : "Ingen meldinger enda."
             }
           />
