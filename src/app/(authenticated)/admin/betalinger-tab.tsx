@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Download, RefreshCw } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  Download,
+  RefreshCw,
+  Undo2,
+} from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { api, type RouterOutputs } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
@@ -23,12 +30,14 @@ const STATUS_LABELS: Record<string, string> = {
   EXPIRED: "Utløpt",
   TERMINATED: "Terminert",
   FAILED: "Feilet",
+  REFUNDED: "Refundert",
 };
 
 const STATUS_STYLES: Record<string, string> = {
   CAPTURED: "bg-emerald-500/15 text-emerald-400",
   AUTHORIZED: "bg-sky-500/15 text-sky-400",
   CREATED: "bg-amber-500/15 text-amber-400",
+  REFUNDED: "bg-orange-500/15 text-orange-400",
 };
 
 const FILTERS: { value: Filter; label: string }[] = [
@@ -113,8 +122,101 @@ function StatCard({
   );
 }
 
+/**
+ * The refund control. Deliberately two-step and styled as destructive: a refund
+ * moves real money out of the TIHLDE account and cannot be undone from here, so
+ * the first click only reveals what is about to happen — nothing is sent to
+ * Vipps until the admin confirms the amount and the name.
+ */
+function RefundAction({
+  orderId,
+  name,
+  refundable,
+}: {
+  orderId: string;
+  name: string;
+  refundable: number;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const utils = api.useUtils();
+
+  const refundMutation = api.admin.refundPayment.useMutation({
+    onSuccess: (result) => {
+      setConfirming(false);
+      void utils.admin.getPaymentDetails.invalidate({ orderId });
+      void utils.admin.getRegistrations.invalidate();
+      void utils.admin.getUsers.invalidate();
+      toast({
+        title: "Betalingen er refundert",
+        description: `${kr(result.refunded)} er sendt tilbake til ${result.name}, som nå står som ikke betalt.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Refusjon feilet",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="inline-flex items-center !gap-2 rounded-xl border border-red-500/40 bg-red-500/10 !px-3 !py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/20"
+      >
+        <Undo2 className="h-4 w-4" />
+        Refunder {kr(refundable)}
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-red-500/40 bg-red-500/10 !p-4 !space-y-3">
+      <div className="flex items-start !gap-2">
+        <AlertTriangle className="!mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+        <div className="!space-y-1">
+          <p className="text-sm font-semibold text-red-400">
+            Dette kan ikke angres
+          </p>
+          <p className="text-sm text-foreground">
+            {kr(refundable)} betales tilbake til{" "}
+            <span className="font-semibold">{name}</span> via Vipps. Pengene
+            trekkes fra TIHLDE sin konto, og {name.split(" ")[0]} blir markert
+            som <span className="font-semibold">ikke betalt</span>. Skal
+            personen delta likevel, må hen betale på nytt.
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap !gap-2">
+        <button
+          type="button"
+          onClick={() => refundMutation.mutate({ orderId })}
+          disabled={refundMutation.isPending}
+          className="inline-flex items-center !gap-2 rounded-xl bg-red-600 !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+        >
+          <Undo2 className="h-4 w-4" />
+          {refundMutation.isPending
+            ? "Refunderer..."
+            : `Ja, refunder ${kr(refundable)}`}
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirming(false)}
+          disabled={refundMutation.isPending}
+          className="rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
+        >
+          Avbryt
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Live Vipps status + event timeline for one order, fetched on expand. */
-function PaymentDetails({ orderId }: { orderId: string }) {
+function PaymentDetails({ orderId, name }: { orderId: string; name: string }) {
   const { data, isLoading, error } = api.admin.getPaymentDetails.useQuery(
     { orderId },
     { retry: false },
@@ -196,6 +298,15 @@ function PaymentDetails({ orderId }: { orderId: string }) {
           </ul>
         )}
       </div>
+
+      {/* Only offer a refund when Vipps actually holds money we can pay back. */}
+      {data.snapshot.captured > data.snapshot.refunded && (
+        <RefundAction
+          orderId={orderId}
+          name={name}
+          refundable={data.snapshot.captured - data.snapshot.refunded}
+        />
+      )}
     </div>
   );
 }
@@ -550,7 +661,7 @@ export function BetalingerTab() {
                               {r.attemptCount > 1 &&
                                 ` · ${r.attemptCount} betalingsforsøk`}
                             </p>
-                            <PaymentDetails orderId={r.orderId} />
+                            <PaymentDetails orderId={r.orderId} name={r.name} />
                           </div>
                         ) : (
                           <p className="text-sm text-muted-foreground">
