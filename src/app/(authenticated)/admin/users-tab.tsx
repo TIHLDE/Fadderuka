@@ -1,6 +1,6 @@
 "use client";
 
-import { Shield, ShieldOff, Trash2, UserCheck } from "lucide-react";
+import { KeyRound, Shield, ShieldOff, Trash2, UserCheck } from "lucide-react";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
@@ -16,6 +16,12 @@ export function UsersTab() {
   const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [expandedMajor, setExpandedMajor] = useState<string | null>(null);
+  // Engangspassordet vises kun i denne økten – det kan ikke hentes fram igjen.
+  const [tempPassword, setTempPassword] = useState<{
+    userId: string;
+    tihldeUserId: string;
+    password: string;
+  } | null>(null);
   const utils = api.useUtils();
 
   const { data: users, isLoading } = api.admin.getUsers.useQuery();
@@ -35,6 +41,15 @@ export function UsersTab() {
       void utils.admin.getUsers.invalidate();
       setDeletingUserId(null);
       toast({ title: "Bruker slettet" });
+    },
+    onError: (error) => {
+      toast({ title: "Feil", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const resetPasswordMutation = api.admin.resetUserPassword.useMutation({
+    onSuccess: (data, variables) => {
+      setTempPassword({ userId: variables.userId, ...data });
     },
     onError: (error) => {
       toast({ title: "Feil", description: error.message, variant: "destructive" });
@@ -135,7 +150,26 @@ export function UsersTab() {
                   </p>
                 </div>
 
-                {verifyingUserId === user.id ? (
+                {tempPassword?.userId === user.id ? (
+                  <div className="flex flex-col !gap-2 sm:items-end">
+                    <p className="text-xs font-medium text-foreground">
+                      Gi disse til brukeren – passordet vises kun nå:
+                    </p>
+                    <code className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm font-semibold text-foreground">
+                      {tempPassword.tihldeUserId} / {tempPassword.password}
+                    </code>
+                    <p className="max-w-xs text-xs text-muted-foreground sm:text-right">
+                      Gjelder kun her, fram til kontoen godkjennes på tihlde.org.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setTempPassword(null)}
+                      className="rounded-lg !px-3 !py-1.5 text-xs text-muted-foreground transition hover:text-foreground"
+                    >
+                      Lukk
+                    </button>
+                  </div>
+                ) : verifyingUserId === user.id ? (
                   <div className="flex flex-col !gap-2 sm:items-end">
                     <p className="text-xs font-medium text-muted-foreground">
                       Velg faddergruppe:
@@ -203,6 +237,18 @@ export function UsersTab() {
                     >
                       <UserCheck className="h-4 w-4" />
                       Verifiser
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        resetPasswordMutation.mutate({ userId: user.id })
+                      }
+                      disabled={resetPasswordMutation.isPending}
+                      title="Lag et engangspassord for innlogging her, i påvente av godkjenning på tihlde.org"
+                      className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
+                    >
+                      <KeyRound className="h-4 w-4" />
+                      Engangspassord
                     </button>
                     <button
                       type="button"

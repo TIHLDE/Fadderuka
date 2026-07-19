@@ -38,6 +38,7 @@ export async function createUser(
     hasPaid: boolean;
     studieretning: string | null;
     klasse: string | null;
+    passwordHash: string | null;
     createdAt: Date;
   }> = {},
 ) {
@@ -52,6 +53,7 @@ export async function createUser(
       hasPaid: overrides.hasPaid ?? false,
       studieretning: overrides.studieretning ?? null,
       klasse: overrides.klasse ?? null,
+      passwordHash: overrides.passwordHash ?? null,
       ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
     },
   });
