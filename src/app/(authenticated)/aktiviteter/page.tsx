@@ -1,4 +1,5 @@
 import Footer from "~/components/layout/footer/footer";
+import { Reveal } from "~/components/ui/reveal";
 import { api } from "~/trpc/server";
 import AktiviteterList from "./aktiviteter-list";
 
@@ -28,14 +29,14 @@ export default async function AktiviteterPage() {
     >
 
       <div className="max-w-page mx-auto w-full px-4 pt-24 pb-24 md:px-6">
-        <div className="text-center">
-          <h1 className="text-foreground text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl">
+        <Reveal className="flex flex-col items-center gap-4 text-center">
+          <h1 className="font-heading text-foreground text-4xl font-semibold tracking-tight sm:text-6xl md:text-7xl">
             Aktiviteter
           </h1>
-          <p className="text-muted-foreground mx-auto mt-4 max-w-2xl text-base sm:text-lg">
+          <p className="text-muted-foreground mx-auto max-w-2xl text-base text-pretty sm:text-lg">
             Her finner du en oversikt over kommende aktiviteter i fadderuka!
           </p>
-        </div>
+        </Reveal>
 
         {days.length > 0 ? (
           <AktiviteterList days={days} />

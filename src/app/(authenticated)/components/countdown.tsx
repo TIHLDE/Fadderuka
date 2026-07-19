@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Reveal } from "~/components/ui/reveal";
 
 function getRemaining(target: Date) {
   const diff = Math.max(0, target.getTime() - Date.now());
@@ -40,24 +41,27 @@ export default function Countdown({
   ];
 
   return (
-    <div className="max-w-page mx-auto w-full px-4 pt-10 text-center md:px-6">
-      <p className="text-sm font-medium text-muted-foreground">
+    <Reveal className="max-w-page mx-auto w-full px-4 pt-10 text-center md:px-6">
+      <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
         {remaining?.done
           ? "Aktiviteten har startet"
-          : `Neste happening! (${title}) om`}
+          : `Neste happening — ${title}`}
       </p>
-      <div className="mt-4 flex items-start justify-center gap-6 sm:gap-10">
+      <div className="mt-5 flex items-stretch justify-center gap-2.5 sm:gap-4">
         {units.map((unit) => (
-          <div key={unit.label} className="flex flex-col items-center">
-            <span className="text-5xl font-bold tabular-nums tracking-tight text-foreground sm:text-6xl md:text-7xl">
+          <div
+            key={unit.label}
+            className="bg-card ring-foreground/10 flex min-w-[68px] flex-col items-center gap-1 rounded-2xl px-3 py-4 ring-1 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)] sm:min-w-[92px] sm:px-5"
+          >
+            <span className="font-heading text-foreground text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl md:text-6xl">
               {String(unit.value ?? 0).padStart(2, "0")}
             </span>
-            <span className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:text-sm">
+            <span className="text-muted-foreground text-[10px] font-medium tracking-[0.15em] uppercase sm:text-xs">
               {unit.label}
             </span>
           </div>
         ))}
       </div>
-    </div>
+    </Reveal>
   );
 }

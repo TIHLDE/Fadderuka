@@ -121,6 +121,23 @@
       "rlig" 1,
       "calt" 1;
   }
+
+  /* Everything clickable gets a pointer cursor (native <button> defaults to
+     the arrow cursor otherwise). Disabled controls keep the default cursor. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"],
+  [role="menuitem"],
+  label[for],
+  summary,
+  a[href] {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: default;
+  }
 }
 
 .no-scrollbar {

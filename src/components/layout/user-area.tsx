@@ -41,7 +41,7 @@ export const UserArea = ({
 
   const signInButton = () => {
     setOpen(false);
-    router.push("/registrering");
+    router.push("/logg-inn");
   };
 
   const goToAdmin = () => {
