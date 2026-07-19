@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST as register } from "~/app/api/auth/register/route";
 import { SESSION_COOKIE } from "~/server/auth/config";
+import { verifyPassword } from "~/server/auth/password";
 
 import { createUser, db } from "../helpers/db";
 import { fetchMock, json, text } from "../helpers/fetch-mock";
@@ -54,6 +55,12 @@ describe("POST /api/auth/register", () => {
     expect(user.hasPaid).toBe(false);
     expect(user.isVerified).toBe(false);
     expect(user.isAdmin).toBe(false);
+
+    // Passordet lagres kun som hash, slik at brukeren kan logge inn igjen før
+    // kontoen godkjennes på tihlde.org.
+    expect(user.passwordHash).not.toContain(FORM.password);
+    await expect(verifyPassword(FORM.password, user.passwordHash)).resolves.toBe(true);
+    await expect(verifyPassword("feil-passord", user.passwordHash)).resolves.toBe(false);
 
     // Kontoen er ikke aktivert ennå, så sesjonen har ikke noe TIHLDE-token.
     const session = await db.session.findFirstOrThrow({ where: { userId: user.id } });

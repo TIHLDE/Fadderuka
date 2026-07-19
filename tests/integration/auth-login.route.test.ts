@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST as login } from "~/app/api/auth/login/route";
 import { SESSION_COOKIE } from "~/server/auth/config";
+import { hashPassword } from "~/server/auth/password";
 
 import { createUser, db } from "../helpers/db";
 import { fetchMock, json, text } from "../helpers/fetch-mock";
@@ -168,6 +169,56 @@ describe("POST /api/auth/login", () => {
     const user = await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } });
     expect(user.hasPaid).toBe(true);
     expect(user.isVerified).toBe(true);
+  });
+
+  it("slipper inn en betalende bruker som ikke er godkjent på tihlde.org ennå", async () => {
+    // Lepton avviser kontoer som venter på godkjenning – da faller vi tilbake
+    // på passordet brukeren satte under registreringen her.
+    await createUser({
+      tihldeUserId: "olanor",
+      hasPaid: true,
+      isVerified: true,
+      passwordHash: await hashPassword(CREDENTIALS.password),
+    });
+    fetchMock.on("POST", "/auth/login/", json({ detail: "Ikke aktivert." }, 401));
+
+    const response = await post(CREDENTIALS);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, verified: true });
+
+    const user = await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } });
+    const session = await db.session.findFirstOrThrow({ where: { userId: user.id } });
+    // Ingen TIHLDE-token finnes for en konto som ikke er aktivert.
+    expect(session.tihldeToken).toBeNull();
+    expect(lastSetCookie(SESSION_COOKIE)?.value).toBe(session.token);
+  });
+
+  it("avviser feil passord selv om brukeren har et lokalt passord", async () => {
+    await createUser({
+      tihldeUserId: "olanor",
+      passwordHash: await hashPassword("et-annet-passord"),
+    });
+    fetchMock.on("POST", "/auth/login/", json({ detail: "Feil passord." }, 401));
+
+    const response = await post(CREDENTIALS);
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: "Feil passord." });
+    expect(await db.session.count()).toBe(0);
+  });
+
+  it("sletter det lokale passordet når TIHLDE-innlogging først lykkes", async () => {
+    await createUser({
+      tihldeUserId: "olanor",
+      passwordHash: await hashPassword(CREDENTIALS.password),
+    });
+    stubTihldeLogin();
+
+    expect((await post(CREDENTIALS)).status).toBe(200);
+
+    const user = await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } });
+    expect(user.passwordHash).toBeNull();
   });
 
   it("videreformidler TIHLDEs feilmelding ved feil passord", async () => {

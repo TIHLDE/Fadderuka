@@ -62,6 +62,10 @@ model User {
     // TIHLDE on every login" (the default); `true`/`false` pins the user and
     // survives logins, so a manual grant or revocation is not overwritten.
     adminOverride Boolean?
+    // Set only for users who self-registered here while their TIHLDE account
+    // awaits approval, so they can log back in before tihlde.org activates
+    // them. Cleared on the first successful TIHLDE login.
+    passwordHash  String?
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
     sessions      Session[]

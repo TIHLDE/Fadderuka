@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { describe, expect, it } from "vitest";
 
 import { appRouter } from "~/server/api/root";
+import { verifyPassword } from "~/server/auth/password";
 import { PAYMENT_AMOUNT_ORE } from "~/server/payment/vipps";
 
 import { anonCaller, callerFor } from "../helpers/caller";
@@ -32,6 +33,7 @@ const ADMIN_PROCEDURE_INPUTS: Record<string, unknown> = {
   getUsers: undefined,
   setUserVerified: { userId: "x", isVerified: true },
   setUserAdmin: { userId: "x", isAdmin: true },
+  resetUserPassword: { userId: "x" },
   getGrupper: undefined,
   createGruppe: { name: "Gruppe" },
   updateGruppe: { gruppeId: "x", name: "Gruppe" },
@@ -93,6 +95,41 @@ describe("admin: brukere og grupper", () => {
     expect(
       (await db.user.findUniqueOrThrow({ where: { id: user.id } })).isVerified,
     ).toBe(true);
+  });
+
+  it("lager et engangspassord brukeren kan logge inn med", async () => {
+    const admin = await createAdmin();
+    const user = await createUser({ tihldeUserId: "olanor" });
+
+    const result = await callerFor(admin).admin.resetUserPassword({
+      userId: user.id,
+    });
+
+    expect(result.tihldeUserId).toBe("olanor");
+    expect(result.password).toHaveLength(12);
+
+    // Kun hashen lagres, og den skal matche passordet admin fikk utlevert.
+    const stored = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(stored.passwordHash).not.toContain(result.password);
+    await expect(verifyPassword(result.password, stored.passwordHash)).resolves.toBe(
+      true,
+    );
+  });
+
+  it("lager et nytt engangspassord hver gang", async () => {
+    const admin = await createAdmin();
+    const user = await createUser();
+    const caller = callerFor(admin);
+
+    const first = await caller.admin.resetUserPassword({ userId: user.id });
+    const second = await caller.admin.resetUserPassword({ userId: user.id });
+
+    expect(second.password).not.toBe(first.password);
+    // Det forrige passordet skal ikke lenger gjelde.
+    const stored = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    await expect(verifyPassword(first.password, stored.passwordHash)).resolves.toBe(
+      false,
+    );
   });
 
   it("nekter å slette verifiserte brukere", async () => {
