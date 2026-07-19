@@ -240,6 +240,14 @@ export const adminRouter = createTRPCRouter({
    */
   getRegistrations: adminProcedure.query(async ({ ctx }) => {
     const users = await ctx.db.user.findMany({
+      // Only fadderbarn pay. Admins and faddere would otherwise inflate both the
+      // sign-up count and the outstanding sum with people who never owed money.
+      // Users without a group are kept: an unassigned registration is a
+      // fadderbarn until proven otherwise, and they are exactly who to chase.
+      where: {
+        isAdmin: false,
+        memberships: { none: { role: "FADDER" } },
+      },
       select: {
         id: true,
         name: true,

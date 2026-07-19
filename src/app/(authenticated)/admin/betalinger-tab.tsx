@@ -346,7 +346,7 @@ export function BetalingerTab() {
 
     const today = toDateAndTime(new Date()).date;
     downloadCsv(
-      `fadderuka-pameldte-${suffix}-${today}.csv`,
+      `fadderuka-fadderbarn-${suffix}-${today}.csv`,
       toCsv(data, columns),
     );
   };
@@ -387,7 +387,11 @@ export function BetalingerTab() {
     <div className="!space-y-8">
       {/* Key figures — enough to follow sign-ups and the budget at a glance */}
       <section className="grid grid-cols-2 !gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Påmeldte" value={String(stats.total)} />
+        <StatCard
+          label="Påmeldte"
+          value={String(stats.total)}
+          hint="Fadderbarn"
+        />
         <StatCard label="Betalt" value={String(stats.paid)} />
         <StatCard
           label="Ikke betalt"
@@ -439,11 +443,16 @@ export function BetalingerTab() {
         )}
       </section>
 
-      {/* Combined, flat overview — one row per registered user */}
+      {/* Combined, flat overview — one row per paying registration */}
       <section className="!space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">
-          Samlet oversikt ({filtered.length})
-        </h3>
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">
+            Samlet oversikt ({filtered.length})
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Kun fadderbarn. Admin og faddere er utelatt siden de ikke betaler.
+          </p>
+        </div>
 
         <div className="flex flex-wrap items-center !gap-3">
           <input
