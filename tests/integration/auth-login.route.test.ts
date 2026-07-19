@@ -29,18 +29,12 @@ const PROFILE = {
   studyyear: { group: { name: "2026" } },
 };
 
-/** Stub the whole TIHLDE login chain: token, profile, permissions, memberships. */
+/** Stub the whole TIHLDE login chain: token, profile, memberships. */
 function stubTihldeLogin(opts: {
-  permissions?: Record<string, { read?: boolean; write?: boolean }>;
   memberships?: { group: { slug: string } }[];
 } = {}) {
   fetchMock.on("POST", "/auth/login/", json({ token: "tihlde-token" }));
   fetchMock.on("GET", "/users/me/", json(PROFILE));
-  fetchMock.on(
-    "GET",
-    "/users/me/permissions/",
-    json({ permissions: opts.permissions ?? { event: { read: true } } }),
-  );
   fetchMock.on(
     "GET",
     "/users/olanor/memberships/",
@@ -80,8 +74,8 @@ describe("POST /api/auth/login", () => {
     expect(cookie?.options).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
   });
 
-  it("gjør skrivetilgang i TIHLDE til app-admin, verifisert og betalt", async () => {
-    stubTihldeLogin({ permissions: { event: { read: true, write: true } } });
+  it("gjør FadderKom-medlemmer til admin, verifisert og betalt", async () => {
+    stubTihldeLogin({ memberships: [{ group: { slug: "fadderkom" } }] });
 
     await post(CREDENTIALS);
 
@@ -93,14 +87,41 @@ describe("POST /api/auth/login", () => {
     expect(user.hasPaid).toBe(true);
   });
 
-  it("gjør FadderKom-medlemmer til admin", async () => {
+  it("gjør IKKE medlemmer av andre komiteer til admin", async () => {
+    stubTihldeLogin({
+      memberships: [{ group: { slug: "index" } }, { group: { slug: "sosialen" } }],
+    });
+
+    await post(CREDENTIALS);
+
+    const user = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(user.isAdmin).toBe(false);
+    expect(user.hasPaid).toBe(false);
+  });
+
+  it("lar et manuelt satt admin-flagg overleve innlogging", async () => {
+    await createUser({ tihldeUserId: "olanor", isAdmin: true, adminOverride: true });
+    stubTihldeLogin();
+
+    await post(CREDENTIALS);
+
+    const user = await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } });
+    expect(user.isAdmin).toBe(true);
+    // Ingen grunn til å spørre TIHLDE når avgjørelsen allerede er tatt manuelt.
+    expect(fetchMock.callsTo("/users/olanor/memberships/")).toHaveLength(0);
+  });
+
+  it("lar en manuell fratakelse overleve innlogging som FadderKom-medlem", async () => {
+    await createUser({ tihldeUserId: "olanor", isAdmin: false, adminOverride: false });
     stubTihldeLogin({ memberships: [{ group: { slug: "fadderkom" } }] });
 
     await post(CREDENTIALS);
 
     expect(
       (await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } })).isAdmin,
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("fratar en vanlig innlogging admin-status", async () => {
@@ -118,7 +139,6 @@ describe("POST /api/auth/login", () => {
     await createUser({ tihldeUserId: "olanor", isAdmin: true, isVerified: true });
     fetchMock.on("POST", "/auth/login/", json({ token: "tihlde-token" }));
     fetchMock.on("GET", "/users/me/", json(PROFILE));
-    fetchMock.on("GET", "/users/me/permissions/", text("boom", 500));
     fetchMock.on("GET", "/users/olanor/memberships/", text("boom", 500));
 
     const response = await post(CREDENTIALS);

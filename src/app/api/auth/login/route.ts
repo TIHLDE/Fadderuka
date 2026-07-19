@@ -10,12 +10,10 @@ import {
 import { db } from "~/server/db";
 import {
   TihldeAuthError,
-  isAdminFromPermissions,
   isMemberOfGroup,
   mapProfile,
   tihldeGetMe,
   tihldeGetMemberships,
-  tihldeGetPermissions,
   tihldeLogin,
 } from "~/server/auth/tihlde";
 
@@ -42,30 +40,40 @@ export async function POST(request: Request) {
     const profile = await tihldeGetMe(token);
     const mapped = mapProfile(profile);
 
-    // 2. Derive admin status live from TIHLDE (as Kvark does). A user is an
-    //    app admin if they hold write permissions OR are a member of the
-    //    FadderKom committee. Admins are automatically app admins and skip
-    //    payment, so we also mark them verified/paid. A fetch failure must not
-    //    block login — and must not silently revoke an existing admin — so on
-    //    error we leave admin-related flags untouched.
+    // 2. Decide admin status. A manual decision in the admin panel
+    //    (`adminOverride`) always wins and survives every login; otherwise we
+    //    derive it live from TIHLDE, where the sole criterion is membership in
+    //    the FadderKom committee. Deliberately NOT based on TIHLDE write
+    //    permissions: those are handed out to every committee member, which
+    //    made anyone holding any verv an admin of this app.
+    //
+    //    Admins skip payment, so we also mark them verified/paid. A fetch
+    //    failure must not block login — and must not silently revoke an
+    //    existing admin — so on error we leave admin-related flags untouched.
+    const existing = await db.user.findUnique({
+      where: { tihldeUserId: mapped.tihldeUserId },
+      select: { adminOverride: true },
+    });
+
+    const grantFor = (isAdmin: boolean) =>
+      isAdmin
+        ? { isAdmin: true, isVerified: true, hasPaid: true }
+        : { isAdmin: false };
+
     let adminGrant: {
       isAdmin?: boolean;
       isVerified?: boolean;
       hasPaid?: boolean;
     } = {};
-    try {
-      const [perms, memberships] = await Promise.all([
-        tihldeGetPermissions(token),
-        tihldeGetMemberships(token, profile.user_id),
-      ]);
-      const isAdmin =
-        isAdminFromPermissions(perms) ||
-        isMemberOfGroup(memberships, ADMIN_GROUP_SLUG);
-      adminGrant = isAdmin
-        ? { isAdmin: true, isVerified: true, hasPaid: true }
-        : { isAdmin: false };
-    } catch (err) {
-      console.error("[auth/login] admin derivation failed", err);
+    if (existing?.adminOverride != null) {
+      adminGrant = grantFor(existing.adminOverride);
+    } else {
+      try {
+        const memberships = await tihldeGetMemberships(token, profile.user_id);
+        adminGrant = grantFor(isMemberOfGroup(memberships, ADMIN_GROUP_SLUG));
+      } catch (err) {
+        console.error("[auth/login] admin derivation failed", err);
+      }
     }
 
     // 3. Upsert the local user, keyed by TIHLDE user_id. Payment flags for

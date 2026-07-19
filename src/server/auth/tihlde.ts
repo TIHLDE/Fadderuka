@@ -170,77 +170,57 @@ export async function tihldeGetMe(token: string): Promise<TihldeProfile> {
   return (await res.json()) as TihldeProfile;
 }
 
-interface PermissionEntry {
-  read?: boolean;
-  write?: boolean;
-  write_all?: boolean;
-  destroy?: boolean;
-}
-
-interface TihldePermissions {
-  permissions: Record<string, PermissionEntry>;
-}
-
-/** Fetch the authenticated user's global TIHLDE permissions. */
-export async function tihldeGetPermissions(
-  token: string,
-): Promise<TihldePermissions> {
-  const res = await fetch(apiUrl("/users/me/permissions/"), {
-    headers: { [TOKEN_HEADER]: token },
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new TihldeAuthError(
-      await readDetail(res, "Kunne ikke hente brukerens tillatelser."),
-      res.status,
-    );
-  }
-
-  return (await res.json()) as TihldePermissions;
-}
-
-/**
- * Whether a TIHLDE user counts as an admin for this app.
- *
- * Mirrors Kvark's `hasWritePermission`: a user with `write` or `write_all` on
- * any permission app holds an elevated/backend role (board, committee, HS,
- * Index, …). Regular members get read-only permissions and are not admins.
- */
-export function isAdminFromPermissions(perms: TihldePermissions): boolean {
-  return Object.values(perms.permissions ?? {}).some(
-    (p) => p?.write === true || p?.write_all === true,
-  );
-}
-
 interface TihldeMembership {
   group: { slug?: string; name?: string } | null;
 }
 
+/** Safety net so a malformed `next` chain can never loop forever. */
+const MAX_MEMBERSHIP_PAGES = 20;
+
 /**
- * Fetch the user's group memberships. The endpoint is paginated (25 per page);
- * we read the first page, which is enough to detect committee membership.
+ * Fetch *all* of the user's group memberships.
+ *
+ * The endpoint is paginated (25 per page), and admin status hinges on finding
+ * one specific group, so we must follow every page: a user in many groups could
+ * otherwise have FadderKom on page 2 and silently lose admin.
  */
 export async function tihldeGetMemberships(
   token: string,
   userId: string,
 ): Promise<TihldeMembership[]> {
-  const res = await fetch(
-    apiUrl(`/users/${encodeURIComponent(userId)}/memberships/`),
-    { headers: { [TOKEN_HEADER]: token }, cache: "no-store" },
+  const all: TihldeMembership[] = [];
+  let url: string | null = apiUrl(
+    `/users/${encodeURIComponent(userId)}/memberships/`,
   );
 
-  if (!res.ok) {
-    throw new TihldeAuthError(
-      await readDetail(res, "Kunne ikke hente gruppemedlemskap."),
-      res.status,
-    );
+  for (let page = 0; url && page < MAX_MEMBERSHIP_PAGES; page++) {
+    const res: Response = await fetch(url, {
+      headers: { [TOKEN_HEADER]: token },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      throw new TihldeAuthError(
+        await readDetail(res, "Kunne ikke hente gruppemedlemskap."),
+        res.status,
+      );
+    }
+
+    const body = (await res.json()) as
+      | { results?: TihldeMembership[]; next?: string | null }
+      | TihldeMembership[];
+
+    if (Array.isArray(body)) {
+      // Unpaginated response — everything is already here.
+      all.push(...body);
+      break;
+    }
+
+    all.push(...(body.results ?? []));
+    url = body.next ?? null;
   }
 
-  const body = (await res.json()) as
-    | { results?: TihldeMembership[] }
-    | TihldeMembership[];
-  return Array.isArray(body) ? body : (body.results ?? []);
+  return all;
 }
 
 /** Whether the user is a member of the group with the given slug. */
