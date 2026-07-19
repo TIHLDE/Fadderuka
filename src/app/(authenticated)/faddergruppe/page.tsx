@@ -137,7 +137,7 @@ export default async function FaddergroupPage() {
             composerPlaceholder="Hva vil du si til gruppa?"
             emptyMessage={
               canPost
-                ? "Ingen meldinger enda. Skriv den forste meldingen til gruppa!"
+                ? "Ingen meldinger enda. Skriv den første meldingen til gruppa!"
                 : "Ingen meldinger enda."
             }
           />
@@ -148,10 +148,10 @@ export default async function FaddergroupPage() {
             currentUserName={session.user.name}
             channel="CHAT"
             title={`${gruppe.name} chat`}
-            composerTitle="Nytt sporsmal"
-            composerSubtitle="Still et sporsmal til resten av faddergruppa."
-            composerPlaceholder="Hva lurer du pa?"
-            emptyMessage="Ingen sporsmal enda. Vaer den forste til a spore!"
+            composerTitle="Nytt spørsmål"
+            composerSubtitle="Still et spørsmål til resten av faddergruppa."
+            composerPlaceholder="Hva lurer du på?"
+            emptyMessage="Ingen spørsmål enda. Vær den første til å spørre!"
           />
         </div>
       </div>
