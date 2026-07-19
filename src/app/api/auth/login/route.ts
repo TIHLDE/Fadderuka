@@ -10,15 +10,18 @@ import {
 import { db } from "~/server/db";
 import {
   TihldeAuthError,
-  isMemberOfGroup,
+  isMemberOfAnyGroup,
   mapProfile,
   tihldeGetMe,
   tihldeGetMemberships,
   tihldeLogin,
 } from "~/server/auth/tihlde";
 
-/** TIHLDE group whose members are always app admins. */
-const ADMIN_GROUP_SLUG = "fadderkom";
+/**
+ * TIHLDE groups whose members are always app admins: FadderKom runs Fadderuka,
+ * and Index drifter appen. Membership in any *other* committee grants nothing.
+ */
+const ADMIN_GROUP_SLUGS = ["fadderkom", "index"];
 
 const bodySchema = z.object({
   user_id: z.string().min(1, "Brukernavn er påkrevd."),
@@ -43,9 +46,9 @@ export async function POST(request: Request) {
     // 2. Decide admin status. A manual decision in the admin panel
     //    (`adminOverride`) always wins and survives every login; otherwise we
     //    derive it live from TIHLDE, where the sole criterion is membership in
-    //    the FadderKom committee. Deliberately NOT based on TIHLDE write
-    //    permissions: those are handed out to every committee member, which
-    //    made anyone holding any verv an admin of this app.
+    //    one of the committees that run the app. Deliberately NOT based on
+    //    TIHLDE write permissions: those are handed out to every committee
+    //    member, which made anyone holding any verv an admin of this app.
     //
     //    Admins skip payment, so we also mark them verified/paid. A fetch
     //    failure must not block login — and must not silently revoke an
@@ -70,7 +73,7 @@ export async function POST(request: Request) {
     } else {
       try {
         const memberships = await tihldeGetMemberships(token, profile.user_id);
-        adminGrant = grantFor(isMemberOfGroup(memberships, ADMIN_GROUP_SLUG));
+        adminGrant = grantFor(isMemberOfAnyGroup(memberships, ADMIN_GROUP_SLUGS));
       } catch (err) {
         console.error("[auth/login] admin derivation failed", err);
       }
@@ -112,7 +115,7 @@ export async function POST(request: Request) {
     });
 
     // `verified` lets the registration page skip straight to the app for users
-    // who don't owe a payment (admins/FadderKom are auto-verified above).
+    // who don't owe a payment (admins are auto-verified above).
     return NextResponse.json({ ok: true, verified: user.isVerified });
   } catch (err) {
     if (err instanceof TihldeAuthError) {

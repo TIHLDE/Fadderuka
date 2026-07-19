@@ -223,12 +223,14 @@ export async function tihldeGetMemberships(
   return all;
 }
 
-/** Whether the user is a member of the group with the given slug. */
-export function isMemberOfGroup(
+/** Whether the user is a member of any of the groups with the given slugs. */
+export function isMemberOfAnyGroup(
   memberships: TihldeMembership[],
-  slug: string,
+  slugs: readonly string[],
 ): boolean {
-  return memberships.some((m) => m.group?.slug === slug);
+  return memberships.some(
+    (m) => m.group?.slug != null && slugs.includes(m.group.slug),
+  );
 }
 
 /**

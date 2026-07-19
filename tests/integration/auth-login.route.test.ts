@@ -87,9 +87,19 @@ describe("POST /api/auth/login", () => {
     expect(user.hasPaid).toBe(true);
   });
 
+  it("gjør Index-medlemmer til admin", async () => {
+    stubTihldeLogin({ memberships: [{ group: { slug: "index" } }] });
+
+    await post(CREDENTIALS);
+
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } })).isAdmin,
+    ).toBe(true);
+  });
+
   it("gjør IKKE medlemmer av andre komiteer til admin", async () => {
     stubTihldeLogin({
-      memberships: [{ group: { slug: "index" } }, { group: { slug: "sosialen" } }],
+      memberships: [{ group: { slug: "sosialen" } }, { group: { slug: "promo" } }],
     });
 
     await post(CREDENTIALS);

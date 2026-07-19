@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   TihldeAuthError,
-  isMemberOfGroup,
+  isMemberOfAnyGroup,
   mapProfile,
   tihldeCreateUser,
   tihldeGetMe,
@@ -143,10 +143,12 @@ describe("profil og tilganger", () => {
     ]);
   });
 
-  it("gjenkjenner medlemskap i en gruppe på slug", () => {
+  it("gjenkjenner medlemskap i en av flere grupper på slug", () => {
     const memberships = [{ group: { slug: "fadderkom" } }, { group: null }];
-    expect(isMemberOfGroup(memberships, "fadderkom")).toBe(true);
-    expect(isMemberOfGroup(memberships, "index")).toBe(false);
+    expect(isMemberOfAnyGroup(memberships, ["fadderkom"])).toBe(true);
+    expect(isMemberOfAnyGroup(memberships, ["index"])).toBe(false);
+    expect(isMemberOfAnyGroup(memberships, ["index", "fadderkom"])).toBe(true);
+    expect(isMemberOfAnyGroup(memberships, [])).toBe(false);
   });
 
   it("følger pagineringen så medlemskap på side 2 ikke går tapt", async () => {
@@ -167,7 +169,7 @@ describe("profil og tilganger", () => {
     const memberships = await tihldeGetMemberships("t", "olanor");
 
     expect(memberships).toHaveLength(2);
-    expect(isMemberOfGroup(memberships, "fadderkom")).toBe(true);
+    expect(isMemberOfAnyGroup(memberships, ["fadderkom"])).toBe(true);
   });
 
   it("kaster med statuskoden når medlemskap ikke kan hentes", async () => {
