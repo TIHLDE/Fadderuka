@@ -90,13 +90,19 @@ export const adminRouter = createTRPCRouter({
       return { tihldeUserId: user.tihldeUserId, password };
     }),
 
-  /** Promote or demote admin status */
+  /**
+   * Promote or demote admin status.
+   *
+   * Also pins the decision via `adminOverride` so it survives the next login —
+   * without it, login would re-derive admin status from TIHLDE and overwrite
+   * whatever was set here.
+   */
   setUserAdmin: adminProcedure
     .input(z.object({ userId: z.string(), isAdmin: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.user.update({
         where: { id: input.userId },
-        data: { isAdmin: input.isAdmin },
+        data: { isAdmin: input.isAdmin, adminOverride: input.isAdmin },
       });
     }),
 

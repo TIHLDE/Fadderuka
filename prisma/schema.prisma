@@ -58,6 +58,10 @@ model User {
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)
+    // Manual admin decision from the admin panel. `null` means "derive from
+    // TIHLDE on every login" (the default); `true`/`false` pins the user and
+    // survives logins, so a manual grant or revocation is not overwritten.
+    adminOverride Boolean?
     // Set only for users who self-registered here while their TIHLDE account
     // awaits approval, so they can log back in before tihlde.org activates
     // them. Cleared on the first successful TIHLDE login.
