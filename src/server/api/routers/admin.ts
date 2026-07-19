@@ -11,6 +11,7 @@ import {
   VippsNotConfiguredError,
   fetchPaymentEvents,
   fetchPaymentSnapshot,
+  refundPayment,
   settlePayment,
 } from "~/server/payment/vipps";
 
@@ -337,6 +338,38 @@ export const adminRouter = createTRPCRouter({
           fetchPaymentEvents(input.orderId),
         ]);
         return { snapshot, events };
+      } catch (err) {
+        throw toTRPCError(err);
+      }
+    }),
+
+  /**
+   * Refund one order in full and unmark the user as paid. Irreversible — the
+   * money leaves the merchant account — so the client must confirm first.
+   * All the guards (nothing captured, already refunded) live in the Vipps
+   * layer, which reads the live payment before moving anything.
+   */
+  refundPayment: adminProcedure
+    .input(z.object({ orderId: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const order = await ctx.db.payment.findUnique({
+        where: { orderId: input.orderId },
+        select: { user: { select: { name: true } } },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Fant ingen betaling med denne referansen.",
+        });
+      }
+
+      try {
+        const { refunded } = await refundPayment(input.orderId);
+        console.warn(
+          `[admin] refunded ${refunded} øre for ${input.orderId} (${order.user.name}) by ${ctx.session.user.id}`,
+        );
+        return { refunded, name: order.user.name };
       } catch (err) {
         throw toTRPCError(err);
       }
