@@ -10,10 +10,34 @@
  * would destroy real data.
  */
 
-const DEFAULT_TEST_DATABASE_URL =
-  "postgresql://postgres:password@localhost:5432/fadderuke_test";
+/** Used when there is no `.env` to derive from (a bare checkout, like CI). */
+const FALLBACK_DATABASE_URL =
+  "postgresql://postgres:password@localhost:5432/fadderuke";
 
-const databaseUrl = process.env.TEST_DATABASE_URL ?? DEFAULT_TEST_DATABASE_URL;
+/** Suffix that turns the development database into its throwaway twin. */
+const TEST_DB_SUFFIX = "_test";
+
+/**
+ * Derive the test database from the development one: same server, same
+ * credentials, `_test` appended to the database name. That way a local `bun run
+ * test` works with no extra configuration whatever port or password the
+ * developer's Postgres runs on — and it can never be the development database
+ * itself, since the name always differs.
+ *
+ * `TEST_DATABASE_URL` overrides it (CI sets it explicitly).
+ */
+function deriveTestDatabaseUrl(): string {
+  const explicit = process.env.TEST_DATABASE_URL;
+  if (explicit) return explicit;
+
+  // Bun loads the repo's `.env`, so this is normally the development database.
+  const url = new URL(process.env.DATABASE_URL ?? FALLBACK_DATABASE_URL);
+  const name = url.pathname.replace(/^\//, "") || "fadderuke";
+  url.pathname = `/${name.endsWith(TEST_DB_SUFFIX) ? name : name + TEST_DB_SUFFIX}`;
+  return url.toString();
+}
+
+const databaseUrl = deriveTestDatabaseUrl();
 
 /**
  * Refuse to run against a non-local database unless explicitly allowed. The
