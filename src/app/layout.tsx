@@ -1,28 +1,48 @@
-import "~/styles/globals.css";
+import Header from "~/components/layout/header/header";
+import { ThemeProvider } from "~/components/ui/theme-provider";
+import { Toaster } from "~/components/ui/toaster";
 
-import { type Metadata } from "next";
-import { Geist } from "next/font/google";
-
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import React from "react";
+import { cn } from "~/lib/utils";
 import { TRPCReactProvider } from "~/trpc/react";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Fadderuke",
   description: "Nettside for fadderbarn og faddere under fadderuken",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
 };
 
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-});
-
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="no" className={`${geist.variable}`}>
-      <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={cn(
+          inter.className,
+          "text-foreground flex min-h-screen flex-col bg-[color:var(--page-bg)]",
+        )}
+        suppressHydrationWarning
+      >
+        <TRPCReactProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            storageKey="tihlde-theme"
+            disableTransitionOnChange
+          >
+            <Header className="hidden lg:flex" />
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </TRPCReactProvider>
       </body>
     </html>
   );

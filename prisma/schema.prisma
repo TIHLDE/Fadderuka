@@ -7,11 +7,27 @@ generator client {
 
 datasource db {
     provider = "postgresql"
-    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-    // Further reading:
-    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
-    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
     url      = env("DATABASE_URL")
+}
+
+enum MemberRole {
+    FADDER
+    FADDERBARN
+}
+
+enum MessageChannel {
+    ANNOUNCEMENT
+    CHAT
+}
+
+enum PaymentStatus {
+    CREATED
+    AUTHORIZED
+    CAPTURED
+    ABORTED
+    EXPIRED
+    TERMINATED
+    FAILED
 }
 
 model Post {
@@ -26,49 +42,121 @@ model Post {
     @@index([name])
 }
 
-// Necessary for Next auth
-model Account {
-    id                       String  @id @default(cuid())
-    userId                   String
-    type                     String
-    provider                 String
-    providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    refresh_token_expires_in Int?
+model User {
+    // tihldeUserId is the TIHLDE account identifier (Lepton `user_id`) and the
+    // stable link between a TIHLDE account and this app's user record.
+    id            String    @id @default(cuid())
+    tihldeUserId  String    @unique
+    name          String
+    email         String?   @unique
+    image         String?
+    phone         String?
+    klasse        String?
+    studieretning String?
+    isVerified    Boolean   @default(false)
+    hasPaid       Boolean   @default(false)
+    isAdmin       Boolean   @default(false)
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+    sessions      Session[]
+    posts         Post[]
+    memberships   FadderGruppeMember[]
+    groupMessages GroupMessage[]
+    notifications Notification[]
+    payments      Payment[]
+}
 
-    @@unique([provider, providerAccountId])
+model FadderGruppe {
+    id            String   @id @default(cuid())
+    name          String
+    createdAt     DateTime @default(now())
+    updatedAt     DateTime @updatedAt
+    members       FadderGruppeMember[]
+    messages      GroupMessage[]
+    notifications Notification[]
+}
+
+model FadderGruppeMember {
+    id        String      @id @default(cuid())
+    role      MemberRole
+    createdAt DateTime    @default(now())
+    userId    String
+    user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+    gruppeId  String
+    gruppe    FadderGruppe @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, gruppeId])
+}
+
+model Activity {
+    id          String   @id @default(cuid())
+    title       String
+    description String
+    location    String
+    imageUrl    String?
+    date        DateTime
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+}
+
+model GroupMessage {
+    id        String         @id @default(cuid())
+    content   String
+    channel   MessageChannel @default(ANNOUNCEMENT)
+    createdAt DateTime       @default(now())
+    authorId  String
+    author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    gruppeId  String
+    gruppe    FadderGruppe   @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+    id        String       @id @default(cuid())
+    message   String
+    read      Boolean      @default(false)
+    createdAt DateTime     @default(now())
+    userId    String
+    user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    gruppeId  String
+    gruppe    FadderGruppe @relation(fields: [gruppeId], references: [id], onDelete: Cascade)
+
+    @@index([userId, read])
+}
+
+model Payment {
+    // One row per initiated Vipps payment. `orderId` is the Vipps `reference`
+    // and the stable key both the return-URL callback and the webhook use to
+    // settle a payment. Persisting the order (instead of trusting a phone
+    // number) is what lets us mark a user paid only for *their own* verified
+    // Vipps payment.
+    id        String        @id @default(cuid())
+    orderId   String        @unique
+    phone     String? // set only if we prefilled a number; Vipps collects it otherwise
+    amount    Int // amount in øre
+    status    PaymentStatus @default(CREATED)
+    // When the money was actually captured. Distinct from `updatedAt`, which any
+    // later status write would move: this is what the admin overview reports as
+    // the payment time, so it must stay pinned to the capture itself.
+    capturedAt DateTime?
+    createdAt DateTime      @default(now())
+    updatedAt DateTime      @updatedAt
+    userId    String
+    user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
 }
 
 model Session {
-    id           String   @id @default(cuid())
-    sessionToken String   @unique
-    userId       String
-    expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    image         String?
-    accounts      Account[]
-    sessions      Session[]
-    posts         Post[]
-}
-
-model VerificationToken {
-    identifier String
-    token      String   @unique
-    expires    DateTime
-
-    @@unique([identifier, token])
+    // Opaque app session. `tihldeToken` stores the TIHLDE API token so we can
+    // call Lepton on the user's behalf (e.g. refresh their profile).
+    id          String   @id @default(cuid())
+    expiresAt   DateTime
+    token       String   @unique
+    tihldeToken String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    ipAddress   String?
+    userAgent   String?
+    userId      String
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

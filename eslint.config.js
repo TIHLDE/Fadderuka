@@ -7,7 +7,8 @@ const compat = new FlatCompat({
 
 export default tseslint.config(
   {
-    ignores: [".next"],
+    // `.claude/` is agent tooling scratch (e.g. isolated worktrees) — never source to lint.
+    ignores: [".next", ".claude/**"],
   },
   ...compat.extends("next/core-web-vitals"),
   {
