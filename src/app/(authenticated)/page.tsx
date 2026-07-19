@@ -35,9 +35,7 @@ export default async function Home() {
       <Hero />
 
       <div className="mt-auto">
-        {upcoming[0] ? (
-          <Countdown title={upcoming[0].title} target={upcoming[0].date} />
-        ) : null}
+        {events[0] ? <Countdown activity={events[0]} /> : null}
 
         <Reveal className="max-w-page mx-auto flex w-full items-end justify-between px-4 pt-10 md:px-6">
           <h2 className="font-heading text-foreground text-2xl font-semibold tracking-tight">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { MapPin, X } from "lucide-react";
 
 import Markdown from "~/components/ui/markdown";
@@ -21,6 +22,13 @@ export default function ActivityModal({
   activity: ModalActivity | null;
   onClose: () => void;
 }) {
+  // Rendered into `document.body` via a portal: an ancestor with a transform,
+  // filter or `will-change` (e.g. the `Reveal` wrappers the lists sit inside)
+  // becomes the containing block for `position: fixed`, which offsets the modal
+  // and shrinks its backdrop so clicks outside it stop closing.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!activity) return;
 
@@ -36,7 +44,7 @@ export default function ActivityModal({
     };
   }, [activity, onClose]);
 
-  if (!activity) return null;
+  if (!activity || !mounted) return null;
 
   const date = new Date(activity.date);
   const dateStr = date.toLocaleDateString("no-NO", {
@@ -50,13 +58,13 @@ export default function ActivityModal({
     minute: "2-digit",
   });
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 supports-[backdrop-filter]:backdrop-blur-xs animate-in fade-in-0 duration-100 ease-out"
       onClick={onClose}
     >
       <div
-        className="relative flex h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-xl bg-popover text-popover-foreground ring-1 ring-foreground/10 animate-in fade-in-0 zoom-in-95 duration-100"
+        className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-xl bg-popover text-popover-foreground ring-1 ring-foreground/10 animate-in fade-in-0 zoom-in-95 duration-100"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -114,6 +122,7 @@ export default function ActivityModal({
           </Markdown>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
