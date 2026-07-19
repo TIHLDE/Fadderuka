@@ -6,6 +6,7 @@ import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
 import { cn } from "~/lib/utils";
 import { auth } from "~/server/auth/config";
 import { NotificationBell } from "./notification-bell";
+import { NAV_LINKS, getGroupLink } from "./nav-links";
 import { UserArea } from "../user-area";
 
 const HeaderButtonsWrapper = async ({
@@ -32,32 +33,16 @@ const HeaderButtonsWrapper = async ({
         >
           <Logo />
         </HeaderLink>
-        <HeaderLink
-          className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
-          href="/informasjon"
-        >
-          Informasjon/FAQ
-        </HeaderLink>
-        <HeaderLink
-          className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
-          href="/aktiviteter"
-        >
-          Aktiviteter
-        </HeaderLink>
-        {session?.user?.isAdmin ? (
-          <HeaderLink
-            className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
-            href="/admin"
-          >
-            Adminpanel
-          </HeaderLink>
-        ) : (
-          <HeaderLink
-            className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
-            href="/faddergruppe"
-          >
-            Min faddergruppe
-          </HeaderLink>
+        {[...NAV_LINKS, getGroupLink(session?.user?.isAdmin)].map(
+          ({ href, label }) => (
+            <HeaderLink
+              key={href}
+              className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
+              href={href}
+            >
+              {label}
+            </HeaderLink>
+          ),
         )}
       </nav>
 

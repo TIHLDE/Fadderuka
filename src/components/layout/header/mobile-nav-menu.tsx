@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Info, Menu, Users } from "lucide-react";
+import { Menu } from "lucide-react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -8,16 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-
-const links = [
-  { href: "/informasjon", label: "Informasjon/FAQ", icon: Info },
-  { href: "/aktiviteter", label: "Aktiviteter", icon: CalendarDays },
-] as const;
+import { NAV_LINKS, getGroupLink } from "./nav-links";
 
 export function MobileNavMenu({ isAdmin }: { isAdmin?: boolean }) {
-  const groupLink = isAdmin
-    ? { href: "/admin", label: "Adminpanel", icon: Users }
-    : { href: "/faddergruppe", label: "Min faddergruppe", icon: Users };
+  const links = [...NAV_LINKS, getGroupLink(isAdmin)];
 
   return (
     <DropdownMenu>
@@ -31,7 +25,7 @@ export function MobileNavMenu({ isAdmin }: { isAdmin?: boolean }) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
-        {[...links, groupLink].map(({ href, label, icon: Icon }) => (
+        {links.map(({ href, label, icon: Icon }) => (
           <DropdownMenuItem key={href} asChild>
             <Link href={href} className="flex items-center gap-2">
               <Icon className="h-4 w-4" />

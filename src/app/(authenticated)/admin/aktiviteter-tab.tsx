@@ -5,6 +5,7 @@ import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
 import { DateTimePicker } from "~/components/ui/date-time-picker";
+import { stripMarkdown } from "~/lib/utils";
 
 type FormState = {
   title: string;
@@ -188,7 +189,9 @@ export function AktiviteterTab() {
           </div>
 
           <div className="flex flex-col !gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Beskrivelse *</label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Beskrivelse * <span className="font-normal">(støtter Markdown)</span>
+            </label>
             <textarea
               required
               rows={3}
@@ -257,7 +260,7 @@ export function AktiviteterTab() {
                     <MapPin className="h-3 w-3" />
                     <span className="max-w-xs truncate">{activity.location}</span>
                   </div>
-                  <p className="max-w-sm text-xs text-muted-foreground line-clamp-2">{activity.description}</p>
+                  <p className="max-w-sm text-xs text-muted-foreground line-clamp-2">{stripMarkdown(activity.description)}</p>
                 </div>
               </div>
 
