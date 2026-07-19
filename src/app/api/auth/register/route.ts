@@ -11,6 +11,7 @@ import {
   SESSION_MAX_AGE,
   createSession,
 } from "~/server/auth/config";
+import { hashPassword } from "~/server/auth/password";
 import { TihldeAuthError, tihldeCreateUser } from "~/server/auth/tihlde";
 import { db } from "~/server/db";
 
@@ -20,8 +21,12 @@ import { db } from "~/server/db";
  * Creates a REAL (but pending-approval) TIHLDE account via Lepton's public
  * `POST /users/`, mirrors it into our local user table, and mints our own
  * session so the user gets straight into the app. Payment (Vipps) is handled
- * separately by the client after this succeeds. The password is forwarded to
- * TIHLDE and never stored or logged here.
+ * separately by the client after this succeeds.
+ *
+ * The password is forwarded to TIHLDE; we additionally keep a local scrypt hash
+ * of it so the user can log back in here while their TIHLDE account still
+ * awaits admin approval (Lepton rejects logins for pending accounts). The
+ * plaintext is never stored or logged.
  */
 
 const bodySchema = z.object({
@@ -79,7 +84,9 @@ export async function POST(request: Request) {
     });
 
     // 2. Mirror into our local user table, keyed by the TIHLDE user_id. Payment
-    //    flags are ours (earned via Vipps) and start false.
+    //    flags are ours (earned via Vipps) and start false. The password hash
+    //    lets them log back in before tihlde.org approves the account.
+    const passwordHash = await hashPassword(password);
     const user = await db.user.upsert({
       where: { tihldeUserId: userId },
       create: {
@@ -90,11 +97,13 @@ export async function POST(request: Request) {
         isVerified: false,
         hasPaid: false,
         isAdmin: false,
+        passwordHash,
       },
       update: {
         name: full_name,
         email,
         studieretning,
+        passwordHash,
       },
     });
 
