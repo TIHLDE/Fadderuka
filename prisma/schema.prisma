@@ -28,6 +28,8 @@ enum PaymentStatus {
     EXPIRED
     TERMINATED
     FAILED
+    // Money was captured and then paid back in full via the admin panel.
+    REFUNDED
 }
 
 model Post {

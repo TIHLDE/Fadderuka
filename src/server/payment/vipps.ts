@@ -279,8 +279,111 @@ async function capture(
   }
 }
 
+/**
+ * Refund a captured payment in full.
+ *
+ * Vipps only refunds money that has actually been captured, so the caller must
+ * check the snapshot first — this function assumes that has happened. The
+ * idempotency key is derived from the orderId, so a double-click or a retry
+ * refunds once, not twice.
+ */
+async function refund(
+  cfg: VippsConfig,
+  accessToken: string,
+  orderId: string,
+  amountOre: number,
+): Promise<void> {
+  const response = await fetch(
+    `${cfg.apiUrl}/epayment/v1/payments/${orderId}/refund`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "Ocp-Apim-Subscription-Key": cfg.subscriptionKey,
+        "Merchant-Serial-Number": cfg.merchantSerialNumber,
+        "Idempotency-Key": idempotencyKey(orderId, "refund"),
+      },
+      body: JSON.stringify({
+        modificationAmount: { currency: "NOK", value: amountOre },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    console.error("Vipps refund error:", response.status, body);
+    // 403 here almost always means the API key lacks refund permission on the
+    // merchant account — say so, since no amount of retrying will fix it.
+    if (response.status === 403) {
+      throw new VippsError(
+        "Vipps avviste refusjonen (403). Sjekk at API-nøkkelen har refusjonstilgang på salgsstedet.",
+      );
+    }
+    throw new VippsError("Kunne ikke refundere betalingen i Vipps");
+  }
+}
+
+/**
+ * Refund a payment in full and unmark the owning user as paid.
+ *
+ * Vipps is the source of truth: we read the live payment first and refuse if
+ * there is nothing left to refund, so a double submit can't move money twice.
+ * `isVerified` is deliberately left alone — it also gates account access that
+ * an admin may have granted for other reasons, and revoking it here would be a
+ * surprising side effect of a payment action.
+ */
+export async function refundPayment(
+  orderId: string,
+): Promise<{ refunded: number }> {
+  const cfg = requireConfig();
+  const accessToken = await getAccessToken(cfg);
+  const payment = await getPayment(cfg, accessToken, orderId);
+
+  const { capturedAmount, refundedAmount } = payment.aggregate;
+  const refundable = capturedAmount.value - refundedAmount.value;
+
+  if (capturedAmount.value <= 0) {
+    throw new VippsError(
+      "Betalingen er ikke trukket i Vipps, så det finnes ingenting å refundere.",
+    );
+  }
+  if (refundable <= 0) {
+    throw new VippsError("Betalingen er allerede refundert i sin helhet.");
+  }
+
+  await refund(cfg, accessToken, orderId, refundable);
+
+  const order = await db.payment.findUnique({
+    where: { orderId },
+    select: { userId: true },
+  });
+  const userId = order?.userId ?? parseUserIdFromOrderId(orderId);
+
+  await db.payment.updateMany({
+    where: { orderId },
+    data: { status: "REFUNDED" },
+  });
+
+  if (userId) {
+    await db.user.update({ where: { id: userId }, data: { hasPaid: false } });
+  }
+
+  return { refunded: refundable };
+}
+
 /** Map a live Vipps payment to our stored status. */
 function toStatus(payment: VippsPayment): PaymentStatus {
+  // Checked before the capture branch: a fully refunded order still reports a
+  // non-zero `capturedAmount`, so without this a later sync would flip it back
+  // to CAPTURED and re-mark the user as paid.
+  if (
+    payment.aggregate.refundedAmount.value > 0 &&
+    payment.aggregate.refundedAmount.value >=
+      payment.aggregate.capturedAmount.value
+  ) {
+    return "REFUNDED";
+  }
   if (payment.aggregate.capturedAmount.value >= PAYMENT_AMOUNT_ORE) {
     return "CAPTURED";
   }
