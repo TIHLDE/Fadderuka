@@ -80,6 +80,23 @@ export async function deleteSession(token: string) {
 }
 
 /**
+ * True when the signed-in user has no way back in once this session expires.
+ *
+ * Applies to accounts that registered here before we stored a password hash:
+ * TIHLDE rejects them until an admin approves the account (so the session has
+ * no TIHLDE token), and we have nothing local to check either. They are asked
+ * to choose a password while the session still proves who they are.
+ *
+ * Derived rather than a hardcoded list of usernames, so it stays correct as
+ * accounts get approved and as new ones appear.
+ */
+export function needsLocalPassword(
+  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
+): boolean {
+  return !session.user.passwordHash && !session.session.tihldeToken;
+}
+
+/**
  * Mirrors the better-auth `auth.api.getSession` interface the app relies on.
  * Returns `{ user, session } | null`.
  */
