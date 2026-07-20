@@ -68,6 +68,25 @@ describe("POST /api/auth/set-password", () => {
     ).toBeNull();
   });
 
+  it("lar en bruker bytte ut et admin-utstedt engangspassord", async () => {
+    // Poenget med engangspassordet: det skal ikke bli det de sitter med.
+    const user = await createUser({
+      passwordHash: await hashPassword("engangspassord"),
+      passwordIsTemporary: true,
+    });
+    await signIn(user.id, null);
+
+    const response = await post({ password: "mitt-egne-passord" });
+
+    expect(response.status).toBe(200);
+    const stored = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    await expect(verifyPassword("mitt-egne-passord", stored.passwordHash)).resolves.toBe(true);
+    // Det gamle engangspassordet skal ikke lenger gjelde ...
+    await expect(verifyPassword("engangspassord", stored.passwordHash)).resolves.toBe(false);
+    // ... og passordet er ikke midlertidig lenger, så de slipper å velge igjen.
+    expect(stored.passwordIsTemporary).toBe(false);
+  });
+
   it("avviser en bruker som allerede har et lokalt passord", async () => {
     // Ellers ville ruta vært en vei til å overskrive passordet uten å kunne det
     // gamle, for den som skulle få tak i en sesjon.

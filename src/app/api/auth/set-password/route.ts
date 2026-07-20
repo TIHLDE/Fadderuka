@@ -48,7 +48,10 @@ export async function POST(request: Request) {
 
   await db.user.update({
     where: { id: session.user.id },
-    data: { passwordHash: await hashPassword(parsed.data.password) },
+    data: {
+      passwordHash: await hashPassword(parsed.data.password),
+      passwordIsTemporary: false,
+    },
   });
 
   return NextResponse.json({ ok: true });
