@@ -602,7 +602,6 @@ export function BetalingerTab() {
                 {sortableHeader("gruppe", "Faddergruppe")}
                 <th className="!px-4 !py-3 font-medium">Rolle</th>
                 {sortableHeader("status", "Betaling")}
-                <th className="!px-4 !py-3 font-medium">Beløp</th>
                 {sortableHeader("registrert", "Påmeldt")}
                 {sortableHeader("betalt", "Betalt")}
               </tr>
@@ -641,9 +640,6 @@ export function BetalingerTab() {
                     <td className="!px-4 !py-3">
                       <StatusBadge status={r.paymentStatus} hasPaid={r.hasPaid} />
                     </td>
-                    <td className="!px-4 !py-3 text-muted-foreground">
-                      {r.amountPaid > 0 ? kr(r.amountPaid) : "—"}
-                    </td>
                     <td className="!px-4 !py-3 whitespace-nowrap text-muted-foreground">
                       {formatDateTime(r.registeredAt)}
                     </td>
@@ -653,7 +649,7 @@ export function BetalingerTab() {
                   </tr>
                   {expandedId === r.id && (
                     <tr className="border-b border-border">
-                      <td colSpan={10} className="bg-muted/30 !px-4 !py-4">
+                      <td colSpan={9} className="bg-muted/30 !px-4 !py-4">
                         {r.orderId ? (
                           <div className="!space-y-2">
                             <p className="font-mono text-xs text-muted-foreground">
@@ -676,7 +672,7 @@ export function BetalingerTab() {
               {filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={10}
+                    colSpan={9}
                     className="!px-4 !py-8 text-center text-muted-foreground"
                   >
                     Ingen påmeldte funnet
