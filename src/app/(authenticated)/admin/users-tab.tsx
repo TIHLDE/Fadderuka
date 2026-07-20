@@ -1,6 +1,7 @@
 "use client";
 
-import { KeyRound, Shield, ShieldOff, Trash2, UserCheck } from "lucide-react";
+import { ChevronDown, KeyRound, Shield, ShieldOff, Trash2, UserCheck } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
@@ -102,25 +103,25 @@ export function UsersTab() {
 
   return (
     <div className="!space-y-8">
-      {/* Unverified users section */}
-      <section className="!space-y-4">
-        <div className="flex items-center !gap-3">
-          <h3 className="text-lg font-semibold text-foreground">
+      {/* Unverified users — nedtonet, men fortsatt lett å komme til */}
+      <section className="!space-y-3">
+        <div className="flex items-center !gap-2">
+          <h3 className="text-sm font-medium text-muted-foreground">
             Nye uverifiserte brukere
           </h3>
           {unverifiedUsers.length > 0 && (
-            <span className="rounded-full bg-amber-500/20 !px-2.5 !py-0.5 text-xs font-semibold text-amber-400">
+            <span className="rounded-full bg-muted !px-2 !py-0.5 text-xs font-medium text-muted-foreground">
               {unverifiedUsers.length}
             </span>
           )}
         </div>
 
         {unverifiedUsers.length > 0 ? (
-          <div className="!space-y-3">
+          <div className="!space-y-2">
             {unverifiedUsers.map((user) => (
               <div
                 key={user.id}
-                className="flex flex-col !gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 !p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col !gap-3 rounded-xl border border-border bg-card !p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
                   <p className="font-medium text-foreground">{user.name}</p>
@@ -264,7 +265,7 @@ export function UsersTab() {
             ))}
           </div>
         ) : (
-          <p className="rounded-xl border border-border bg-card !px-4 !py-6 text-center text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Ingen uverifiserte brukere
           </p>
         )}
@@ -284,18 +285,14 @@ export function UsersTab() {
           className="w-full max-w-sm rounded-xl border border-border bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
 
-        <div className="grid grid-cols-1 !gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="!space-y-4">
           {studieretninger.map((studieretning) => {
             const usersInGroup = verifiedByStudieretning.get(studieretning) ?? [];
             const isExpanded = expandedMajor === studieretning;
             return (
               <div
                 key={studieretning}
-                className={`rounded-xl border bg-card transition ${
-                  isExpanded
-                    ? "border-border sm:col-span-2 lg:col-span-3"
-                    : "border-border"
-                }`}
+                className="overflow-hidden rounded-xl border border-border bg-card"
               >
                 <button
                   type="button"
@@ -311,13 +308,34 @@ export function UsersTab() {
                       {usersInGroup.length === 1 ? "bruker" : "brukere"}
                     </p>
                   </div>
-                  <span className="rounded-full bg-primary/10 !px-2.5 !py-0.5 text-sm font-semibold text-primary">
-                    {usersInGroup.length}
+                  <span className="flex items-center !gap-2">
+                    <span className="rounded-full bg-primary/10 !px-2.5 !py-0.5 text-sm font-semibold text-primary">
+                      {usersInGroup.length}
+                    </span>
+                    <motion.span
+                      animate={{ rotate: isExpanded ? 180 : 0 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="text-muted-foreground"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </motion.span>
                   </span>
                 </button>
 
+                <AnimatePresence initial={false}>
                 {isExpanded && (
-                  <div className="overflow-x-auto border-t border-border">
+                  <motion.div
+                    key="content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{
+                      height: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
+                      opacity: { duration: 0.15 },
+                    }}
+                    className="overflow-hidden border-t border-border"
+                  >
+                    <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm">
                       <thead>
                         <tr className="border-b border-border text-muted-foreground">
@@ -465,8 +483,10 @@ export function UsersTab() {
                         )}
                       </tbody>
                     </table>
-                  </div>
+                    </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
             );
           })}

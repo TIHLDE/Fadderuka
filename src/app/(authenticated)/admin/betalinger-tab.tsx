@@ -522,38 +522,6 @@ export function BetalingerTab() {
         />
       </section>
 
-      {/* Actions */}
-      <section className="flex flex-wrap !gap-2">
-        <button
-          type="button"
-          onClick={() => syncMutation.mutate()}
-          disabled={syncMutation.isPending}
-          className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
-        >
-          <RefreshCw
-            className={`h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`}
-          />
-          {syncMutation.isPending ? "Synkroniserer..." : "Synk mot Vipps"}
-        </button>
-        <button
-          type="button"
-          onClick={() => exportCsv(filtered, "utvalg")}
-          className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
-        >
-          <Download className="h-4 w-4" />
-          Last ned CSV ({filtered.length})
-        </button>
-        {filtered.length !== rows.length && (
-          <button
-            type="button"
-            onClick={() => exportCsv(rows, "alle")}
-            className="inline-flex items-center !gap-2 rounded-xl !px-3 !py-2 text-sm text-muted-foreground transition hover:text-foreground"
-          >
-            Last ned alle ({rows.length})
-          </button>
-        )}
-      </section>
-
       {/* Combined, flat overview — one row per paying registration */}
       <section className="!space-y-4">
         <div>
@@ -588,6 +556,38 @@ export function BetalingerTab() {
                 {f.label}
               </button>
             ))}
+          </div>
+
+          {/* Handlinger på linje med søk og filtre, til høyre over tabellen */}
+          <div className="flex flex-wrap items-center !gap-2 sm:!ml-auto">
+            <button
+              type="button"
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-3 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`}
+              />
+              {syncMutation.isPending ? "Synkroniserer..." : "Synk mot Vipps"}
+            </button>
+            <button
+              type="button"
+              onClick={() => exportCsv(filtered, "utvalg")}
+              className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-3 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
+            >
+              <Download className="h-4 w-4" />
+              CSV ({filtered.length})
+            </button>
+            {filtered.length !== rows.length && (
+              <button
+                type="button"
+                onClick={() => exportCsv(rows, "alle")}
+                className="inline-flex items-center !gap-2 rounded-xl !px-2 !py-2 text-sm text-muted-foreground transition hover:text-foreground"
+              >
+                Alle ({rows.length})
+              </button>
+            )}
           </div>
         </div>
 
