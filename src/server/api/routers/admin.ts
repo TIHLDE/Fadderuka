@@ -84,7 +84,11 @@ export const adminRouter = createTRPCRouter({
       const password = generateTempPassword();
       const user = await ctx.db.user.update({
         where: { id: input.userId },
-        data: { passwordHash: await hashPassword(password) },
+        data: {
+          passwordHash: await hashPassword(password),
+          // Brukeren blir bedt om å bytte det ut ved neste sidelast.
+          passwordIsTemporary: true,
+        },
         select: { tihldeUserId: true },
       });
       return { tihldeUserId: user.tihldeUserId, password };

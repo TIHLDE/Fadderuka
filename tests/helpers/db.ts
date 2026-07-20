@@ -41,6 +41,7 @@ export async function createUser(
     studieretning: string | null;
     klasse: string | null;
     passwordHash: string | null;
+    passwordIsTemporary: boolean;
     createdAt: Date;
   }> = {},
 ) {
@@ -57,6 +58,7 @@ export async function createUser(
       studieretning: overrides.studieretning ?? null,
       klasse: overrides.klasse ?? null,
       passwordHash: overrides.passwordHash ?? null,
+      passwordIsTemporary: overrides.passwordIsTemporary ?? false,
       ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
     },
   });

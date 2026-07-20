@@ -114,6 +114,8 @@ describe("admin: brukere og grupper", () => {
     await expect(verifyPassword(result.password, stored.passwordHash)).resolves.toBe(
       true,
     );
+    // Merket som midlertidig, så brukeren blir bedt om å velge sitt eget.
+    expect(stored.passwordIsTemporary).toBe(true);
   });
 
   it("lager et nytt engangspassord hver gang", async () => {
