@@ -66,6 +66,9 @@ model User {
     // awaits approval, so they can log back in before tihlde.org activates
     // them. Cleared on the first successful TIHLDE login.
     passwordHash  String?
+    // True when passwordHash is an admin-issued one-time password. The user is
+    // asked to replace it with one of their own on the next page load.
+    passwordIsTemporary Boolean @default(false)
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
     sessions      Session[]
