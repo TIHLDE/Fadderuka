@@ -8,6 +8,11 @@ import {
   createSession,
 } from "~/server/auth/config";
 import { verifyPassword } from "~/server/auth/password";
+import {
+  checkLoginRateLimit,
+  clearLoginFailures,
+  recordFailedLogin,
+} from "~/server/auth/rate-limit";
 import { db } from "~/server/db";
 import {
   TihldeAuthError,
@@ -29,13 +34,19 @@ const bodySchema = z.object({
   password: z.string().min(1, "Passord er påkrevd."),
 });
 
+/** The caller's IP, taken from the first hop in x-forwarded-for. */
+async function clientIp(): Promise<string | null> {
+  const hdrs = await headers();
+  return hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+}
+
 /** Mint our own session for `userId` and set the httpOnly cookie. */
 async function issueSession(userId: string, tihldeToken: string | null) {
   const hdrs = await headers();
   const { token: sessionToken, expiresAt } = await createSession({
     userId,
     tihldeToken,
-    ipAddress: hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    ipAddress: await clientIp(),
     userAgent: hdrs.get("user-agent"),
   });
 
@@ -74,6 +85,21 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Fyll inn brukernavn og passord." },
       { status: 400 },
+    );
+  }
+
+  const ip = await clientIp();
+
+  // 0. Spend-the-budget check before anything else, so a blocked attempt costs
+  //    neither us nor TIHLDE a round trip. The message is the same whether or
+  //    not the username exists — otherwise this would answer that question.
+  const limit = await checkLoginRateLimit(parsed.data.user_id, ip);
+  if (limit.blocked) {
+    return NextResponse.json(
+      {
+        error: `For mange innloggingsforsøk. Prøv igjen om ${limit.retryAfterMinutes} minutter.`,
+      },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterMinutes * 60) } },
     );
   }
 
@@ -137,8 +163,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // 4. Mint our own session and set the httpOnly cookie.
+    // 4. Mint our own session and set the httpOnly cookie. Proving they know
+    //    the password also clears whatever failures came before.
     await issueSession(user.id, token);
+    await clearLoginFailures(parsed.data.user_id, ip);
 
     // `verified` lets the registration page skip straight to the app for users
     // who don't owe a payment (admins are auto-verified above).
@@ -152,7 +180,12 @@ export async function POST(request: Request) {
           parsed.data.user_id,
           parsed.data.password,
         );
-        if (local) return local;
+        if (local) {
+          await clearLoginFailures(parsed.data.user_id, ip);
+          return local;
+        }
+        // Wrong on both counts — this is the attempt worth counting.
+        await recordFailedLogin(parsed.data.user_id, ip);
         return NextResponse.json({ error: err.message }, { status: 401 });
       }
       return NextResponse.json({ error: err.message }, { status: 502 });
