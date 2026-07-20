@@ -327,6 +327,7 @@ export function UsersTab() {
                           <th className="!px-4 !py-3 font-medium">Gruppe</th>
                           <th className="!px-4 !py-3 font-medium">Rolle</th>
                           <th className="!px-4 !py-3 font-medium text-center">Admin</th>
+                          <th className="!px-4 !py-3 font-medium">Passord</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -412,13 +413,50 @@ export function UsersTab() {
                                   )}
                                 </button>
                               </td>
+                              {/* Betaling setter isVerified, så brukere som er
+                                  låst ute i påvente av godkjenning på
+                                  tihlde.org havner her og ikke i lista over
+                                  uverifiserte. Knappen må derfor finnes begge
+                                  steder. */}
+                              <td className="!px-4 !py-3">
+                                {tempPassword?.userId === user.id ? (
+                                  <div className="flex flex-col !gap-1">
+                                    <code className="rounded-lg border border-border bg-background !px-2 !py-1 text-xs font-semibold text-foreground">
+                                      {tempPassword.tihldeUserId} /{" "}
+                                      {tempPassword.password}
+                                    </code>
+                                    <button
+                                      type="button"
+                                      onClick={() => setTempPassword(null)}
+                                      className="self-start text-xs text-muted-foreground transition hover:text-foreground"
+                                    >
+                                      Lukk
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      resetPasswordMutation.mutate({
+                                        userId: user.id,
+                                      })
+                                    }
+                                    disabled={resetPasswordMutation.isPending}
+                                    title="Lag et engangspassord for innlogging her, i påvente av godkjenning på tihlde.org"
+                                    className="inline-flex items-center !gap-1.5 rounded-lg border border-border bg-secondary !px-2.5 !py-1 text-xs font-medium text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
+                                  >
+                                    <KeyRound className="h-3.5 w-3.5" />
+                                    Engangspassord
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
                         {usersInGroup.length === 0 && (
                           <tr>
                             <td
-                              colSpan={6}
+                              colSpan={7}
                               className="!px-4 !py-6 text-center text-muted-foreground"
                             >
                               Ingen brukere funnet
