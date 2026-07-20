@@ -1,56 +1,44 @@
 "use client";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { useState } from "react";
+import {
+  AnimatedTabPanel,
+  SlideTabsBar,
+  type SlideTab,
+} from "~/components/ui/slide-tabs";
 import { UsersTab } from "./users-tab";
 import { GrupperTab } from "./grupper-tab";
 import { AktiviteterTab } from "./aktiviteter-tab";
 import { BetalingerTab } from "./betalinger-tab";
 
+type TabValue = "users" | "grupper" | "aktiviteter" | "betalinger";
+
+const TABS: readonly SlideTab<TabValue>[] = [
+  { value: "users", label: "Brukere" },
+  { value: "grupper", label: "Faddergrupper" },
+  { value: "aktiviteter", label: "Aktiviteter" },
+  { value: "betalinger", label: "Betalinger" },
+];
+
 export function AdminPanel() {
+  const [tab, setTab] = useState<TabValue>("users");
+
   return (
-    <Tabs defaultValue="users" className="w-full">
-      <TabsList className="grid w-full max-w-2xl grid-cols-4 bg-secondary border border-border">
-        <TabsTrigger
-          value="users"
-          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground"
-        >
-          Brukere
-        </TabsTrigger>
-        <TabsTrigger
-          value="grupper"
-          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground"
-        >
-          Faddergrupper
-        </TabsTrigger>
-        <TabsTrigger
-          value="aktiviteter"
-          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground"
-        >
-          Aktiviteter
-        </TabsTrigger>
-        <TabsTrigger
-          value="betalinger"
-          className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-muted-foreground"
-        >
-          Betalinger
-        </TabsTrigger>
-      </TabsList>
+    <div className="w-full">
+      <SlideTabsBar
+        tabs={TABS}
+        value={tab}
+        onValueChange={setTab}
+        stretch
+        className="max-w-2xl"
+      />
 
-      <TabsContent value="users" className="!mt-6">
-        <UsersTab />
-      </TabsContent>
-
-      <TabsContent value="grupper" className="!mt-6">
-        <GrupperTab />
-      </TabsContent>
-
-      <TabsContent value="aktiviteter" className="!mt-6">
-        <AktiviteterTab />
-      </TabsContent>
-
-      <TabsContent value="betalinger" className="!mt-6">
-        <BetalingerTab />
-      </TabsContent>
-    </Tabs>
+      <AnimatedTabPanel activeKey={tab} className="!mt-6">
+        {tab === "users" && <UsersTab />}
+        {tab === "grupper" && <GrupperTab />}
+        {tab === "aktiviteter" && <AktiviteterTab />}
+        {tab === "betalinger" && <BetalingerTab />}
+      </AnimatedTabPanel>
+    </div>
   );
 }
