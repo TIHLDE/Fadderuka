@@ -170,3 +170,14 @@ model Session {
     userId      String
     user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model LoginAttempt {
+    // One row per failed login, keyed by "user:<username>" or "ip:<address>".
+    // Deliberately not linked to User: most failures are for usernames that
+    // don't exist here, and the whole point is to count them before we know.
+    id        String   @id @default(cuid())
+    key       String
+    createdAt DateTime @default(now())
+
+    @@index([key, createdAt])
+}
