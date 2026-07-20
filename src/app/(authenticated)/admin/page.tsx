@@ -23,12 +23,12 @@ export default async function AdminPage() {
     >
 
       <div className="max-w-page relative mx-auto flex w-full flex-1 flex-col !px-4 !pt-24 !pb-16 md:!px-6">
-        <div className="mx-auto flex w-full flex-col !gap-8">
-          <section className="!space-y-3">
-            <h1 className="font-heading text-4xl leading-[1.15] font-semibold tracking-tight text-foreground md:text-5xl">
+        <div className="mx-auto flex w-full flex-col !gap-6">
+          <section className="!space-y-1">
+            <h1 className="font-heading text-2xl leading-tight font-semibold tracking-tight text-foreground">
               Adminpanel
             </h1>
-            <p className="text-muted-foreground max-w-3xl text-base sm:text-lg">
+            <p className="text-muted-foreground max-w-3xl text-sm">
               Administrer brukere, faddergrupper og aktiviteter.
             </p>
           </section>

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { MapPin, X } from "lucide-react";
 
 import Markdown from "~/components/ui/markdown";
+import { ActivityImage } from "~/components/ui/activity-image";
 
 export interface ModalActivity {
   id: string;
@@ -76,19 +77,11 @@ export default function ActivityModal({
           <X className="h-5 w-5" />
         </button>
 
-        {activity.imageUrl ? (
-          <img
-            src={activity.imageUrl}
-            alt={activity.title}
-            className="h-64 w-full shrink-0 object-cover sm:h-80"
-          />
-        ) : (
-          <div className="flex h-64 w-full shrink-0 items-center justify-center bg-muted sm:h-80">
-            <span className="font-heading px-6 text-center text-3xl font-semibold tracking-tight text-foreground">
-              {activity.title}
-            </span>
-          </div>
-        )}
+        <ActivityImage
+          src={activity.imageUrl}
+          alt={activity.title}
+          className="h-64 w-full shrink-0 object-cover sm:h-80"
+        />
 
         <div className="flex-1 space-y-6 p-6 sm:p-10">
           <h2 className="font-heading text-3xl font-semibold tracking-tight capitalize text-foreground sm:text-4xl">

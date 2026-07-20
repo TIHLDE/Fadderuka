@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MapPin } from "lucide-react";
 import ActivityModal, { type ModalActivity } from "~/components/ui/activity-modal";
+import { ActivityImage } from "~/components/ui/activity-image";
 import { stripMarkdown } from "~/lib/utils";
 
 export default function AktiviteterList({
@@ -41,19 +42,11 @@ export default function AktiviteterList({
                     onClick={() => setSelected(activity)}
                     className="rounded-xl bg-card text-card-foreground p-6 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
                   >
-                    {activity.imageUrl ? (
-                      <img
-                        src={activity.imageUrl}
-                        alt={activity.title}
-                        className="h-44 w-full rounded-lg object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-44 w-full items-center justify-center rounded-lg bg-muted">
-                        <span className="text-2xl font-extrabold tracking-wide text-white">
-                          {activity.title}
-                        </span>
-                      </div>
-                    )}
+                    <ActivityImage
+                      src={activity.imageUrl}
+                      alt={activity.title}
+                      className="h-44 w-full rounded-lg object-cover"
+                    />
                     <div className="mt-6 space-y-3">
                       <h3 className="text-2xl font-semibold text-foreground">
                         {activity.title}

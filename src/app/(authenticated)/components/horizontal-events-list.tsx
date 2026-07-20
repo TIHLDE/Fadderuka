@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import ActivityModal, { type ModalActivity } from "~/components/ui/activity-modal";
+import {
+  ActivityImage,
+  DEFAULT_ACTIVITY_IMAGE,
+} from "~/components/ui/activity-image";
 
-export const PLACEHOLDER_IMAGE =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='79'%3E%3Crect width='140' height='79' fill='%231D448C'/%3E%3C/svg%3E";
+export const PLACEHOLDER_IMAGE = DEFAULT_ACTIVITY_IMAGE;
 
 interface Event extends ModalActivity {
   type: "Nyh." | "Arr.";
@@ -40,7 +43,7 @@ export default function HorizontalEventsList({ events }: { events: Event[] }) {
             className="group w-[135px] shrink-0 text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 active:translate-y-0"
           >
             <div className="ring-foreground/10 group-hover:ring-primary/40 relative aspect-video overflow-hidden rounded-xl ring-1 transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
-              <img
+              <ActivityImage
                 src={event.imageUrl}
                 alt=""
                 className="h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
