@@ -6,6 +6,7 @@ import { db } from "~/server/db";
  * model that isn't added here will show up as leaked rows between tests.
  */
 const TABLES = [
+  "LoginAttempt",
   "Payment",
   "Notification",
   "GroupMessage",
