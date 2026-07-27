@@ -161,7 +161,10 @@ export default function RegistreringPage() {
 
                 <div className="grid gap-2">
                   <Label htmlFor="reg-user-id">
-                    Feide-brukernavn <span className="text-destructive">*</span>
+                    Brukernavn <span className="text-destructive">*</span>{" "}
+                    <span className="text-muted-foreground font-normal">
+                      (helst Feide)
+                    </span>
                   </Label>
                   <Input
                     id="reg-user-id"
@@ -170,12 +173,14 @@ export default function RegistreringPage() {
                     autoComplete="username"
                     required
                     maxLength={15}
-                    placeholder="Skriv her..."
+                    placeholder="olanord"
                     aria-invalid={errorField === "user_id"}
                     className="h-12"
                   />
                   <p className="text-muted-foreground text-xs">
-                    Ditt brukernavn på NTNU
+                    Bruk helst Feide-brukernavnet ditt (student-e-post uten
+                    @stud.ntnu.no). Har du ikke fått det ennå, kan du velge et
+                    annet brukernavn.
                   </p>
                 </div>
 
