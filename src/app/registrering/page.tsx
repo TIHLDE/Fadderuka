@@ -1,7 +1,9 @@
 "use client";
 
+import { TRPCClientError } from "@trpc/client";
 import Link from "next/link";
 import { useState } from "react";
+import type { AppRouter } from "~/server/api/root";
 import Footer from "~/components/layout/footer/footer";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
@@ -73,6 +75,16 @@ export default function RegistreringPage() {
       const { redirectUrl } = await initiatePayment.mutateAsync();
       window.location.href = redirectUrl;
     } catch (err) {
+      // The server refuses to charge anyone who owes nothing. Someone who
+      // turns out to be a fadder is simply let into the app instead of being
+      // shown a payment error for a bill that doesn't exist.
+      if (
+        err instanceof TRPCClientError &&
+        (err as TRPCClientError<AppRouter>).data?.code === "FORBIDDEN"
+      ) {
+        window.location.href = "/";
+        return;
+      }
       setError(
         err instanceof Error
           ? err.message

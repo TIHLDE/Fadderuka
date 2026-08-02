@@ -14,6 +14,7 @@ import {
   recordFailedLogin,
 } from "~/server/auth/rate-limit";
 import { db } from "~/server/db";
+import { deriveIsFadder } from "~/server/fadder";
 import {
   TihldeAuthError,
   isMemberOfAnyGroup,
@@ -116,42 +117,58 @@ export async function POST(request: Request) {
     //    TIHLDE write permissions: those are handed out to every committee
     //    member, which made anyone holding any verv an admin of this app.
     //
-    //    Admins skip payment, so we also mark them verified/paid. A fetch
-    //    failure must not block login — and must not silently revoke an
-    //    existing admin — so on error we leave admin-related flags untouched.
+    //    Admins run the app rather than attend as fadderbarn, so being one is
+    //    an exemption from payment. Note it grants access (`isVerified`) but
+    //    never `hasPaid`: that field means "money actually changed hands", and
+    //    faking it here is what previously left demoted admins looking paid
+    //    forever. A fetch failure must not block login — and must not silently
+    //    revoke an existing admin — so on error we leave the flag untouched.
     const existing = await db.user.findUnique({
       where: { tihldeUserId: mapped.tihldeUserId },
-      select: { adminOverride: true },
+      select: {
+        adminOverride: true,
+        fadderOverride: true,
+        memberships: { where: { role: "FADDER" }, select: { id: true } },
+      },
     });
 
-    const grantFor = (isAdmin: boolean) =>
-      isAdmin
-        ? { isAdmin: true, isVerified: true, hasPaid: true }
-        : { isAdmin: false };
-
-    let adminGrant: {
-      isAdmin?: boolean;
-      isVerified?: boolean;
-      hasPaid?: boolean;
-    } = {};
+    let adminGrant: { isAdmin?: boolean } = {};
     if (existing?.adminOverride != null) {
-      adminGrant = grantFor(existing.adminOverride);
+      adminGrant = { isAdmin: existing.adminOverride };
     } else {
       try {
         const memberships = await tihldeGetMemberships(token, profile.user_id);
-        adminGrant = grantFor(isMemberOfAnyGroup(memberships, ADMIN_GROUP_SLUGS));
+        adminGrant = {
+          isAdmin: isMemberOfAnyGroup(memberships, ADMIN_GROUP_SLUGS),
+        };
       } catch (err) {
         console.error("[auth/login] admin derivation failed", err);
       }
     }
 
-    // 3. Upsert the local user, keyed by TIHLDE user_id. Payment flags for
-    //    non-admins are owned by us (earned via Vipps) and left untouched.
-    //    TIHLDE now authenticates this account, so the local registration
-    //    password hash has served its purpose and is dropped.
+    // 3. Decide whether this user owes anything at all. Only fadderbarn pay,
+    //    and a fadder is by definition in 2. klasse or higher — so the study
+    //    cohort we just read from TIHLDE settles it without anyone having to
+    //    be assigned to a group first. That is what keeps a fadder from ever
+    //    seeing a payment prompt, including on their very first login.
+    const isFadder = deriveIsFadder({
+      fadderOverride: existing?.fadderOverride,
+      klasse: mapped.klasse,
+      hasFadderMembership: (existing?.memberships.length ?? 0) > 0,
+    });
+
+    // Exempt users get access outright; everyone else keeps whatever
+    // verification they have earned by paying.
+    const isExempt = isFadder || adminGrant.isAdmin === true;
+    const accessGrant = isExempt ? { isVerified: true } : {};
+
+    // 4. Upsert the local user, keyed by TIHLDE user_id. Payment flags for
+    //    non-exempt users are owned by us (earned via Vipps) and left
+    //    untouched. TIHLDE now authenticates this account, so the local
+    //    registration password hash has served its purpose and is dropped.
     const user = await db.user.upsert({
       where: { tihldeUserId: mapped.tihldeUserId },
-      create: { ...mapped, ...adminGrant },
+      create: { ...mapped, ...adminGrant, ...accessGrant, isFadder },
       update: {
         name: mapped.name,
         email: mapped.email,
@@ -160,11 +177,13 @@ export async function POST(request: Request) {
         klasse: mapped.klasse,
         passwordHash: null,
         passwordIsTemporary: false,
+        isFadder,
         ...adminGrant,
+        ...accessGrant,
       },
     });
 
-    // 4. Mint our own session and set the httpOnly cookie. Proving they know
+    // 5. Mint our own session and set the httpOnly cookie. Proving they know
     //    the password also clears whatever failures came before.
     await issueSession(user.id, token);
     await clearLoginFailures(parsed.data.user_id, ip);

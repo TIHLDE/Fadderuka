@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, verifiedProcedure } from "~/server/api/trpc";
 
 export const notificationRouter = createTRPCRouter({
-  list: protectedProcedure.query(async ({ ctx }) => {
+  list: verifiedProcedure.query(async ({ ctx }) => {
     return ctx.db.notification.findMany({
       where: { userId: ctx.session.user.id },
       orderBy: { createdAt: "desc" },
@@ -10,13 +10,13 @@ export const notificationRouter = createTRPCRouter({
     });
   }),
 
-  unreadCount: protectedProcedure.query(async ({ ctx }) => {
+  unreadCount: verifiedProcedure.query(async ({ ctx }) => {
     return ctx.db.notification.count({
       where: { userId: ctx.session.user.id, read: false },
     });
   }),
 
-  markRead: protectedProcedure
+  markRead: verifiedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.notification.updateMany({
@@ -25,7 +25,7 @@ export const notificationRouter = createTRPCRouter({
       });
     }),
 
-  markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+  markAllRead: verifiedProcedure.mutation(async ({ ctx }) => {
     return ctx.db.notification.updateMany({
       where: { userId: ctx.session.user.id, read: false },
       data: { read: true },

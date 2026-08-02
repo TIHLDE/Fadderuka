@@ -13,6 +13,7 @@ import { ZodError } from "zod";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import { hasAppAccess } from "~/server/fadder";
 
 /**
  * 1. CONTEXT
@@ -131,6 +132,37 @@ export const protectedProcedure = t.procedure
     return next({
       ctx: {
         // infers the `session` as non-nullable
+        session: { ...ctx.session, user: ctx.session.user },
+      },
+    });
+  });
+
+/**
+ * Verified (paid-or-exempt) procedure
+ *
+ * The server-side half of the paywall. The Vipps overlay is a client component
+ * layered over the page, so on its own it hides nothing: the data behind it is
+ * fetched and rendered regardless, and dismissing the overlay in devtools was
+ * enough to use the app without paying. Anything that serves fadderuka content
+ * belongs on this procedure, not on `protectedProcedure`.
+ *
+ * Access means the user has paid (`isVerified`) or owes nothing at all —
+ * faddere and admins. See `hasAppAccess`.
+ */
+export const verifiedProcedure = t.procedure
+  .use(timingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.session?.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    if (!hasAppAccess(ctx.session.user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Du må fullføre registreringen for å se dette.",
+      });
+    }
+    return next({
+      ctx: {
         session: { ...ctx.session, user: ctx.session.user },
       },
     });

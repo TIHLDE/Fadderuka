@@ -74,4 +74,14 @@ process.env.VIPPS_CLIENT_SECRET = "test-client-secret";
 process.env.VIPPS_MERCHANT_SERIAL_NUMBER = "123456";
 process.env.VIPPS_SUBSCRIPTION_KEY = "test-subscription-key";
 
+// Pin the fadderuke cohort so "who pays" never depends on the day the suite
+// runs. Without it the year is derived from the calendar, and every
+// cohort-based assertion would start failing on its own in January.
+process.env.FADDERUKE_COHORT_YEAR = "2026";
+
+// A throwaway key so the tests exercise the same encrypt-at-rest path
+// production uses. Without it, TIHLDE tokens are simply not stored, and the
+// session tests would be checking a code path no deployment runs.
+process.env.SESSION_ENCRYPTION_KEY = "0".repeat(64);
+
 export const TEST_DATABASE_URL = databaseUrl;

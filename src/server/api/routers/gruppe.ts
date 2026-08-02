@@ -2,14 +2,14 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
   createTRPCRouter,
-  protectedProcedure,
+  verifiedProcedure,
 } from "~/server/api/trpc";
 
 const channelSchema = z.enum(["ANNOUNCEMENT", "CHAT"]);
 
 export const gruppeRouter = createTRPCRouter({
   /** Get the current user's faddergruppe membership(s) */
-  getMyGruppe: protectedProcedure.query(async ({ ctx }) => {
+  getMyGruppe: verifiedProcedure.query(async ({ ctx }) => {
     const membership = await ctx.db.fadderGruppeMember.findFirst({
       where: { userId: ctx.session.user.id },
       include: {
@@ -29,7 +29,7 @@ export const gruppeRouter = createTRPCRouter({
   }),
 
   /** Get messages for a group (user must be a member or admin) */
-  getMessages: protectedProcedure
+  getMessages: verifiedProcedure
     .input(z.object({ gruppeId: z.string(), channel: channelSchema }))
     .query(async ({ ctx, input }) => {
       // Check access: must be admin or member of the group
@@ -65,7 +65,7 @@ export const gruppeRouter = createTRPCRouter({
    * ANNOUNCEMENT channel: only FADDER role or admin.
    * CHAT channel: any member (FADDER or FADDERBARN) or admin.
    */
-  postMessage: protectedProcedure
+  postMessage: verifiedProcedure
     .input(
       z.object({
         gruppeId: z.string(),
@@ -135,7 +135,7 @@ export const gruppeRouter = createTRPCRouter({
     }),
 
   /** Delete a message (author or admin only) */
-  deleteMessage: protectedProcedure
+  deleteMessage: verifiedProcedure
     .input(z.object({ messageId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const message = await ctx.db.groupMessage.findUnique({

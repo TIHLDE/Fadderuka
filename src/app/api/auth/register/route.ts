@@ -12,6 +12,10 @@ import {
   createSession,
 } from "~/server/auth/config";
 import { hashPassword } from "~/server/auth/password";
+import {
+  checkRegisterRateLimit,
+  recordRegisterAttempt,
+} from "~/server/auth/rate-limit";
 import { TihldeAuthError, tihldeCreateUser } from "~/server/auth/tihlde";
 import { db } from "~/server/db";
 
@@ -70,6 +74,26 @@ export async function POST(request: Request) {
   const { first, last } = splitName(full_name);
   const studieretning = studyLabelForSlug(study);
 
+  // This route creates real TIHLDE accounts, so an unthrottled one is an open
+  // account-creation proxy for tihlde.org running under our IP. Checked before
+  // we call Lepton, so a blocked attempt costs neither side anything.
+  const hdrs = await headers();
+  const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  const limit = await checkRegisterRateLimit(ip);
+  if (limit.blocked) {
+    return NextResponse.json(
+      {
+        error: `For mange registreringer herfra. Prøv igjen om ${limit.retryAfterMinutes} minutter.`,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfterMinutes * 60) },
+      },
+    );
+  }
+  await recordRegisterAttempt(ip);
+
   try {
     // 1. Create the real TIHLDE account (pending admin approval). class:null —
     //    the study membership is enough; the year group may not exist yet.
@@ -109,11 +133,10 @@ export async function POST(request: Request) {
 
     // 3. Mint our own session (no TIHLDE token — the account isn't activated
     //    yet) and set the httpOnly cookie so they're logged into the app.
-    const hdrs = await headers();
     const { token: sessionToken, expiresAt } = await createSession({
       userId: user.id,
       tihldeToken: null,
-      ipAddress: hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+      ipAddress: ip,
       userAgent: hdrs.get("user-agent"),
     });
 
