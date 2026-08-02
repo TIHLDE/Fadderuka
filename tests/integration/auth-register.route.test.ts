@@ -131,15 +131,84 @@ describe("POST /api/auth/register", () => {
     expect(await db.user.count()).toBe(0);
   });
 
-  it("oppdaterer en eksisterende lokal bruker i stedet for å duplisere", async () => {
-    await createUser({ tihldeUserId: "olanor", name: "Gammelt Navn", email: null });
-    fetchMock.on("POST", "/users/", json({}, 201));
+  /**
+   * Den vanligste måten å feile på: en student som ikke fullførte Vipps kommer
+   * tilbake og registrerer seg på nytt. Før ga det «Noe gikk galt», som leses
+   * som «du gjorde noe feil» — og hun ble stående fast på stand.
+   */
+  describe("når brukeren allerede er registrert", () => {
+    it("sier hvem de er, i stedet for å duplisere", async () => {
+      await createUser({ tihldeUserId: "olanor", name: "Gammelt Navn", email: null });
 
-    await post(FORM);
+      const response = await post(FORM);
+      const body = (await response.json()) as {
+        error: string;
+        field?: string;
+        existingUserId?: string;
+      };
 
-    expect(await db.user.count()).toBe(1);
-    expect(
-      (await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } })).name,
-    ).toBe("Ola Nordmann");
+      expect(response.status).toBe(409);
+      expect(body.error).toContain("olanor");
+      expect(body.existingUserId).toBe("olanor");
+      expect(body.field).toBe("user_id");
+      // Ingen ny TIHLDE-konto, og ingen ny lokal rad.
+      expect(fetchMock.calls).toHaveLength(0);
+      expect(await db.user.count()).toBe(1);
+    });
+
+    it("fanger e-postkollisjonen og peker på riktig bruker", async () => {
+      // Nøyaktig hendelsen fra 2. august: samme person, nytt brukernavn.
+      await createUser({ tihldeUserId: "ambea001", email: "ambea001@outlook.com" });
+
+      const response = await post({
+        ...FORM,
+        user_id: "Aminabh",
+        email: "Ambea001@outlook.com",
+      });
+      const body = (await response.json()) as {
+        error: string;
+        field?: string;
+        existingUserId?: string;
+      };
+
+      expect(response.status).toBe(409);
+      // Må matche uavhengig av store og små bokstaver.
+      expect(body.existingUserId).toBe("ambea001");
+      expect(body.field).toBe("email");
+      expect(body.error).toContain("ambea001");
+      // Og aller viktigst: ingen foreldreløs TIHLDE-konto ble opprettet.
+      expect(fetchMock.calls).toHaveLength(0);
+      expect(await db.user.count()).toBe(1);
+    });
+  });
+
+  it("ruller tilbake den lokale raden når TIHLDE avviser opprettelsen", async () => {
+    // Vår rad opprettes først nettopp fordi den er den vi kan angre.
+    fetchMock.on("POST", "/users/", json({ detail: "Nei" }, 400));
+
+    const response = await post(FORM);
+
+    expect(response.status).toBe(400);
+    expect(await db.user.count()).toBe(0);
+    expect(await db.session.count()).toBe(0);
+  });
+
+  it("sier at TIHLDE er nede når kallet ikke går gjennom", async () => {
+    // Nettverksfeil, ikke et HTTP-svar — 192 av disse traff 11 brukere den
+    // første uka, og alle fikk «Noe gikk galt».
+    fetchMock.on("POST", "/users/", () => {
+      throw new TypeError("fetch failed");
+    });
+
+    const response = await post(FORM);
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("30");
+    expect(body.error).toContain("TIHLDE");
+    // Meldingen må frita brukeren for skyld.
+    expect(body.error).toContain("ikke noe galt med det du fylte inn");
+    // Ingen halvferdig lokal bruker igjen.
+    expect(await db.user.count()).toBe(0);
   });
 });

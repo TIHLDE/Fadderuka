@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as login } from "~/app/api/auth/login/route";
 import { SESSION_COOKIE } from "~/server/auth/config";
 import { hashPassword } from "~/server/auth/password";
+import { decryptToken } from "~/server/auth/token-crypto";
 
 import { createUser, db } from "../helpers/db";
 import { fetchMock, json, text } from "../helpers/fetch-mock";
@@ -33,9 +34,11 @@ const PROFILE = {
 /** Stub the whole TIHLDE login chain: token, profile, memberships. */
 function stubTihldeLogin(opts: {
   memberships?: { group: { slug: string } }[];
+  /** Overrides merged into the default profile, e.g. a different `studyyear`. */
+  profile?: Partial<typeof PROFILE>;
 } = {}) {
   fetchMock.on("POST", "/auth/login/", json({ token: "tihlde-token" }));
-  fetchMock.on("GET", "/users/me/", json(PROFILE));
+  fetchMock.on("GET", "/users/me/", json({ ...PROFILE, ...opts.profile }));
   fetchMock.on(
     "GET",
     "/users/olanor/memberships/",
@@ -65,7 +68,10 @@ describe("POST /api/auth/login", () => {
     expect(user.isAdmin).toBe(false);
 
     const session = await db.session.findFirstOrThrow({ where: { userId: user.id } });
-    expect(session.tihldeToken).toBe("tihlde-token");
+    // TIHLDE-tokenet er en levende nøkkel til brukerens ekte konto, så det
+    // skal aldri ligge lesbart i databasen — men må komme uskadd tilbake.
+    expect(session.tihldeToken).not.toBe("tihlde-token");
+    expect(decryptToken(session.tihldeToken)).toBe("tihlde-token");
     // Kun første ledd av x-forwarded-for skal lagres.
     expect(session.ipAddress).toBe("10.0.0.1");
     expect(session.userAgent).toBe("vitest");
@@ -75,7 +81,7 @@ describe("POST /api/auth/login", () => {
     expect(cookie?.options).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
   });
 
-  it("gjør FadderKom-medlemmer til admin, verifisert og betalt", async () => {
+  it("gjør FadderKom-medlemmer til admin og gir dem tilgang uten å betale", async () => {
     stubTihldeLogin({ memberships: [{ group: { slug: "fadderkom" } }] });
 
     await post(CREDENTIALS);
@@ -85,7 +91,71 @@ describe("POST /api/auth/login", () => {
     });
     expect(user.isAdmin).toBe(true);
     expect(user.isVerified).toBe(true);
-    expect(user.hasPaid).toBe(true);
+    // `hasPaid` betyr at penger faktisk har skiftet hender. Å sette det her
+    // gjorde at en admin som senere ble degradert så betalt ut for alltid.
+    expect(user.hasPaid).toBe(false);
+  });
+
+  // Faddere går per definisjon i 2. klasse eller mer, så kullet på
+  // TIHLDE-profilen avgjør dette alene — før noen har lagt dem i en gruppe.
+  it("fritar en student i 2. klasse eller høyere fra betaling", async () => {
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2025" } } } });
+
+    await post(CREDENTIALS);
+
+    const user = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(user.isFadder).toBe(true);
+    // Får tilgang med én gang: det kommer ingen betaling som ville verifisert dem.
+    expect(user.isVerified).toBe(true);
+    expect(user.hasPaid).toBe(false);
+  });
+
+  it("lar årets kull betale", async () => {
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2026" } } } });
+
+    await post(CREDENTIALS);
+
+    const user = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(user.isFadder).toBe(false);
+    expect(user.isVerified).toBe(false);
+  });
+
+  it("lar en manuell fadder-fritakelse overleve innlogging", async () => {
+    await createUser({
+      tihldeUserId: "olanor",
+      email: null,
+      fadderOverride: true,
+    });
+    // Kullet sier 1. klasse, men admin har bestemt noe annet.
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2026" } } } });
+
+    await post(CREDENTIALS);
+
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } }))
+        .isFadder,
+    ).toBe(true);
+  });
+
+  it("lar en manuell betalingsplikt overleve innlogging", async () => {
+    // 2.-klassingen som faktisk går som fadderbarn.
+    await createUser({
+      tihldeUserId: "olanor",
+      email: null,
+      fadderOverride: false,
+    });
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2019" } } } });
+
+    await post(CREDENTIALS);
+
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } }))
+        .isFadder,
+    ).toBe(false);
   });
 
   it("gjør Index-medlemmer til admin", async () => {
@@ -235,6 +305,36 @@ describe("POST /api/auth/login", () => {
       error: "Brukernavnet eller passordet ditt var feil.",
     });
     expect(await db.session.count()).toBe(0);
+  });
+
+  it("sier at TIHLDE er nede når kallet ikke går gjennom", async () => {
+    fetchMock.on("POST", "/auth/login/", () => {
+      throw new TypeError("fetch failed");
+    });
+
+    const response = await post(CREDENTIALS);
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(503);
+    expect(body.error).toContain("ikke noe galt med det du fylte inn");
+  });
+
+  // Det lokale passordet finnes nettopp for å holde folk inne når TIHLDE ikke
+  // svarer — da skal det også brukes, ikke bare når Lepton sier 401.
+  it("slipper inn på lokalt passord når TIHLDE er utilgjengelig", async () => {
+    await createUser({
+      tihldeUserId: "olanor",
+      email: null,
+      passwordHash: await hashPassword(CREDENTIALS.password),
+    });
+    fetchMock.on("POST", "/auth/login/", () => {
+      throw new TypeError("fetch failed");
+    });
+
+    const response = await post(CREDENTIALS);
+
+    expect(response.status).toBe(200);
+    expect(lastSetCookie(SESSION_COOKIE)?.value).toBeTruthy();
   });
 
   it("gir 502 når TIHLDE svarer med en serverfeil", async () => {

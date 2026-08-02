@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { describe, expect, it } from "vitest";
 
 import { anonCaller, callerFor } from "../helpers/caller";
-import { createAdmin, createUser, db } from "../helpers/db";
+import { createAdmin, createMember, createUser, db } from "../helpers/db";
 import { fetchMock, json, text } from "../helpers/fetch-mock";
 
 async function expectCode(promise: Promise<unknown>, code: string) {
@@ -64,7 +64,7 @@ describe("activity.getUpcoming", () => {
       { id: 2, title: "Annet", start_date: "2026-08-08T18:00:00Z", category: "Bedpres" },
     ]);
 
-    const events = await anonCaller().activity.getUpcoming();
+    const events = await callerFor(await createMember()).activity.getUpcoming();
 
     // Kun Fadderuka-kategorien fra TIHLDE, og lokal aktivitet sist (senest dato).
     expect(events.map((e) => e.title)).toEqual(["Fadderuka-event", "Lokal"]);
@@ -77,7 +77,7 @@ describe("activity.getUpcoming", () => {
     await db.activity.create({ data: localActivity({ title: "Lokal" }) });
     fetchMock.on("GET", "/events/", text("service unavailable", 503));
 
-    const events = await anonCaller().activity.getUpcoming();
+    const events = await callerFor(await createMember()).activity.getUpcoming();
 
     expect(events.map((e) => e.title)).toEqual(["Lokal"]);
   });
@@ -105,7 +105,9 @@ describe("activity.getUpcoming", () => {
     );
     fetchMock.on("GET", "/events/1/", text("boom", 500));
 
-    await expect(anonCaller().activity.getUpcoming()).resolves.toEqual([]);
+    await expect(
+      callerFor(await createMember()).activity.getUpcoming(),
+    ).resolves.toEqual([]);
   });
 });
 
@@ -178,7 +180,8 @@ describe("activity: adminmutasjoner", () => {
     );
   });
 
-  it("getAll er åpen og sorterer på dato", async () => {
+  it("getAll sorterer på dato", async () => {
+    const member = await createMember();
     await db.activity.create({
       data: localActivity({ title: "Sen", date: new Date("2026-08-20T18:00:00Z") }),
     });
@@ -186,8 +189,35 @@ describe("activity: adminmutasjoner", () => {
       data: localActivity({ title: "Tidlig", date: new Date("2026-08-01T18:00:00Z") }),
     });
 
-    const activities = await anonCaller().activity.getAll();
+    const activities = await callerFor(member).activity.getAll();
 
     expect(activities.map((a) => a.title)).toEqual(["Tidlig", "Sen"]);
+  });
+});
+
+/**
+ * Betalingsmuren var tidligere bare et overlegg i klienten: innholdet lå
+ * server-rendret under, og disse endepunktene var åpne. Det holdt å fjerne
+ * ett element i devtools for å bruke appen uten å betale.
+ */
+describe("aktiviteter er bak betalingsmuren", () => {
+  it("avviser uinnloggede", async () => {
+    await expectCode(anonCaller().activity.getUpcoming(), "UNAUTHORIZED");
+    await expectCode(anonCaller().activity.getAll(), "UNAUTHORIZED");
+  });
+
+  it("avviser en innlogget bruker som ikke har betalt", async () => {
+    const unpaid = await createUser();
+
+    await expectCode(callerFor(unpaid).activity.getUpcoming(), "FORBIDDEN");
+    await expectCode(callerFor(unpaid).activity.getAll(), "FORBIDDEN");
+  });
+
+  it("slipper inn faddere, som aldri betaler", async () => {
+    const fadder = await createUser({ isFadder: true, isVerified: false });
+
+    await expect(
+      callerFor(fadder).activity.getAll(),
+    ).resolves.toEqual([]);
   });
 });

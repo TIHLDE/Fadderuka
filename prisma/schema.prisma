@@ -69,6 +69,14 @@ model User {
     // True when passwordHash is an admin-issued one-time password. The user is
     // asked to replace it with one of their own on the next page load.
     passwordIsTemporary Boolean @default(false)
+    // Whether this user is a fadder — i.e. someone who never owes money for
+    // fadderuka. Derived on every login from the study cohort and any FADDER
+    // group membership (see `src/server/fadder.ts`), and persisted so every
+    // payment guard reads one field instead of re-deriving it.
+    isFadder      Boolean   @default(false)
+    // Manual fadder decision from the admin panel, same contract as
+    // `adminOverride`: `null` derives, `true`/`false` pins and survives logins.
+    fadderOverride Boolean?
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
     sessions      Session[]

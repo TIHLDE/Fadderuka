@@ -64,6 +64,28 @@ export function UsersTab() {
     },
   });
 
+  const fadderMutation = api.admin.setUserFadder.useMutation({
+    onSuccess: (result) => {
+      void utils.admin.getUsers.invalidate();
+      void utils.admin.getRegistrations.invalidate();
+      // A fadder who paid before being marked is owed the money back, and the
+      // admin is the only one who can start that — so say it here rather than
+      // leaving it to be noticed in the payment overview.
+      toast({
+        title: result.needsRefund
+          ? `${result.name} er fritatt — men har allerede betalt`
+          : "Betalingsstatus oppdatert",
+        description: result.needsRefund
+          ? "Refunder betalingen fra Betalinger-fanen."
+          : undefined,
+        variant: result.needsRefund ? "destructive" : undefined,
+      });
+    },
+    onError: (error) => {
+      toast({ title: "Feil", description: error.message, variant: "destructive" });
+    },
+  });
+
   const updateRoleMutation = api.admin.updateMemberRole.useMutation({
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
@@ -344,6 +366,7 @@ export function UsersTab() {
                           <th className="!px-4 !py-3 font-medium">Klasse</th>
                           <th className="!px-4 !py-3 font-medium">Gruppe</th>
                           <th className="!px-4 !py-3 font-medium">Rolle</th>
+                          <th className="!px-4 !py-3 font-medium">Betaling</th>
                           <th className="!px-4 !py-3 font-medium text-center">Admin</th>
                           <th className="!px-4 !py-3 font-medium">Passord</th>
                         </tr>
@@ -406,6 +429,33 @@ export function UsersTab() {
                                 ) : (
                                   <span className="text-muted-foreground">—</span>
                                 )}
+                              </td>
+                              {/* Faddere betaler ikke. Utledes fra kullet, så
+                                  denne bryteren er unntaket for tilfellene
+                                  regelen ikke ser — og den låser valget. */}
+                              <td className="!px-4 !py-3">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    fadderMutation.mutate({
+                                      userId: user.id,
+                                      isFadder: !user.isFadder,
+                                    })
+                                  }
+                                  disabled={fadderMutation.isPending}
+                                  className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${
+                                    user.isFadder
+                                      ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                                      : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                                  }`}
+                                  title={
+                                    user.isFadder
+                                      ? "Fritatt for betaling. Klikk for å markere som betalende."
+                                      : "Skal betale. Klikk for å markere som fadder."
+                                  }
+                                >
+                                  {user.isFadder ? "Fritatt" : "Skal betale"}
+                                </button>
                               </td>
                               <td className="!px-4 !py-3 text-center">
                                 <button

@@ -12,8 +12,17 @@ import {
   createSession,
 } from "~/server/auth/config";
 import { hashPassword } from "~/server/auth/password";
-import { TihldeAuthError, tihldeCreateUser } from "~/server/auth/tihlde";
+import {
+  checkRegisterRateLimit,
+  recordRegisterAttempt,
+} from "~/server/auth/rate-limit";
+import {
+  TihldeAuthError,
+  TihldeUnavailableError,
+  tihldeCreateUser,
+} from "~/server/auth/tihlde";
 import { db } from "~/server/db";
+import { isUniqueConstraintError, uniqueConstraintField } from "~/server/db-errors";
 
 /**
  * Self-registration for brand-new students during fadderuka.
@@ -70,26 +79,70 @@ export async function POST(request: Request) {
   const { first, last } = splitName(full_name);
   const studieretning = studyLabelForSlug(study);
 
-  try {
-    // 1. Create the real TIHLDE account (pending admin approval). class:null —
-    //    the study membership is enough; the year group may not exist yet.
-    await tihldeCreateUser({
-      user_id: userId,
-      password,
-      first_name: first,
-      last_name: last,
-      email,
-      study,
-      class: null,
-    });
+  // This route creates real TIHLDE accounts, so an unthrottled one is an open
+  // account-creation proxy for tihlde.org running under our IP. Checked before
+  // we call Lepton, so a blocked attempt costs neither side anything.
+  const hdrs = await headers();
+  const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
-    // 2. Mirror into our local user table, keyed by the TIHLDE user_id. Payment
-    //    flags are ours (earned via Vipps) and start false. The password hash
-    //    lets them log back in before tihlde.org approves the account.
+  const limit = await checkRegisterRateLimit(ip);
+  if (limit.blocked) {
+    return NextResponse.json(
+      {
+        error: `For mange registreringer herfra. Prøv igjen om ${limit.retryAfterMinutes} minutter.`,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(limit.retryAfterMinutes * 60) },
+      },
+    );
+  }
+  await recordRegisterAttempt(ip);
+
+  // 1. Refuse a duplicate before anything irreversible happens, and say who
+  //    they already are. Registering twice is the single most common way to
+  //    fail here: a student whose Vipps payment didn't complete comes back and
+  //    signs up again, often with a different username. Their own first
+  //    registration then owns the email, and the unique constraint used to
+  //    surface as "Noe gikk galt" — which reads as "you did something wrong"
+  //    rather than "you already have an account".
+  const clash = await db.user.findFirst({
+    where: {
+      OR: [
+        { tihldeUserId: userId },
+        { email: { equals: email, mode: "insensitive" } },
+      ],
+    },
+    select: { tihldeUserId: true, email: true },
+  });
+
+  if (clash) {
+    const sameUsername = clash.tihldeUserId === userId;
+    return NextResponse.json(
+      {
+        error: sameUsername
+          ? `Du er allerede registrert som «${clash.tihldeUserId}». Logg inn i stedet — har du glemt passordet, spør en fadder om å nullstille det.`
+          : `E-posten er allerede brukt av brukeren «${clash.tihldeUserId}». Logg inn som «${clash.tihldeUserId}», eller registrer deg med en annen e-post.`,
+        field: sameUsername ? "user_id" : "email",
+        // The client sends them to the login page rather than making them
+        // guess what to change.
+        existingUserId: clash.tihldeUserId,
+      },
+      { status: 409 },
+    );
+  }
+
+  try {
+    // 2. Create OUR row first, because it is the one we can undo.
+    //
+    //    This used to run after `tihldeCreateUser`, and the ordering was the
+    //    real damage in the incident above: the TIHLDE account was already
+    //    created on tihlde.org by the time the local insert failed, leaving
+    //    orphaned accounts nobody could clean up from here. A local row, by
+    //    contrast, is ours to delete — see the rollback below.
     const passwordHash = await hashPassword(password);
-    const user = await db.user.upsert({
-      where: { tihldeUserId: userId },
-      create: {
+    const user = await db.user.create({
+      data: {
         tihldeUserId: userId,
         name: full_name,
         email,
@@ -99,21 +152,37 @@ export async function POST(request: Request) {
         isAdmin: false,
         passwordHash,
       },
-      update: {
-        name: full_name,
-        email,
-        studieretning,
-        passwordHash,
-      },
     });
 
-    // 3. Mint our own session (no TIHLDE token — the account isn't activated
+    // 3. Create the real TIHLDE account (pending admin approval). class:null —
+    //    the study membership is enough; the year group may not exist yet.
+    //    On failure the local row is rolled back, so a retry starts clean
+    //    instead of hitting the duplicate check above.
+    try {
+      await tihldeCreateUser({
+        user_id: userId,
+        password,
+        first_name: first,
+        last_name: last,
+        email,
+        study,
+        class: null,
+      });
+    } catch (err) {
+      await db.user
+        .delete({ where: { id: user.id } })
+        .catch((cleanupErr) =>
+          console.error("[auth/register] rollback failed", cleanupErr),
+        );
+      throw err;
+    }
+
+    // 4. Mint our own session (no TIHLDE token — the account isn't activated
     //    yet) and set the httpOnly cookie so they're logged into the app.
-    const hdrs = await headers();
     const { token: sessionToken, expiresAt } = await createSession({
       userId: user.id,
       tihldeToken: null,
-      ipAddress: hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+      ipAddress: ip,
       userAgent: hdrs.get("user-agent"),
     });
 
@@ -129,6 +198,16 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
+    // TIHLDE unreachable — nothing to do with what they typed, so say that
+    // plainly instead of sending them back to re-check the form.
+    if (err instanceof TihldeUnavailableError) {
+      console.error("[auth/register] TIHLDE unreachable", err.cause);
+      return NextResponse.json(
+        { error: err.message },
+        { status: 503, headers: { "Retry-After": "30" } },
+      );
+    }
+
     if (err instanceof TihldeAuthError) {
       // 400 from Lepton (duplicate username, bad email, …) → show the message
       // and hint the client which field it belongs to when we can tell.
@@ -140,9 +219,26 @@ export async function POST(request: Request) {
           : undefined;
       return NextResponse.json({ error: err.message, field }, { status });
     }
+
+    // A duplicate that slipped past the check above — two submits racing each
+    // other. Same advice as the pre-flight case, since it is the same problem.
+    if (isUniqueConstraintError(err)) {
+      return NextResponse.json(
+        {
+          error:
+            "Du er allerede registrert. Prøv å logge inn i stedet — har du glemt passordet, spør en fadder om å nullstille det.",
+          field: uniqueConstraintField(err),
+        },
+        { status: 409 },
+      );
+    }
+
     console.error("[auth/register] unexpected error", err);
     return NextResponse.json(
-      { error: "Noe gikk galt ved registreringen." },
+      {
+        error:
+          "Noe gikk galt hos oss under registreringen. Prøv igjen — går det ikke, si fra til en fadder.",
+      },
       { status: 500 },
     );
   }

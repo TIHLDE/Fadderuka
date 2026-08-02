@@ -6,7 +6,7 @@ import {
   addMember,
   createAdmin,
   createGruppe,
-  createUser,
+  createMember,
   db,
 } from "../helpers/db";
 
@@ -20,8 +20,8 @@ async function expectCode(promise: Promise<unknown>, code: string) {
 describe("gruppe.getMyGruppe", () => {
   it("gir medlemskapet med alle gruppemedlemmene", async () => {
     const gruppe = await createGruppe("Gruppe 1");
-    const fadder = await createUser({ name: "Fadder" });
-    const barn = await createUser({ name: "Barn" });
+    const fadder = await createMember({ name: "Fadder" });
+    const barn = await createMember({ name: "Barn" });
     await addMember(fadder.id, gruppe.id, "FADDER");
     await addMember(barn.id, gruppe.id, "FADDERBARN");
 
@@ -36,7 +36,7 @@ describe("gruppe.getMyGruppe", () => {
   });
 
   it("gir null for en bruker uten gruppe", async () => {
-    const user = await createUser();
+    const user = await createMember();
     await expect(callerFor(user).gruppe.getMyGruppe()).resolves.toBeNull();
   });
 
@@ -48,7 +48,7 @@ describe("gruppe.getMyGruppe", () => {
 describe("gruppe.getMessages", () => {
   it("gir bare meldingene i den valgte kanalen", async () => {
     const gruppe = await createGruppe();
-    const fadder = await createUser();
+    const fadder = await createMember();
     await addMember(fadder.id, gruppe.id, "FADDER");
     await db.groupMessage.createMany({
       data: [
@@ -67,7 +67,7 @@ describe("gruppe.getMessages", () => {
 
   it("stenger ute brukere som ikke er medlem", async () => {
     const gruppe = await createGruppe();
-    const outsider = await createUser();
+    const outsider = await createMember();
 
     await expectCode(
       callerFor(outsider).gruppe.getMessages({
@@ -94,7 +94,7 @@ describe("gruppe.getMessages", () => {
 describe("gruppe.postMessage", () => {
   it("lar en fadder poste kunngjøringer", async () => {
     const gruppe = await createGruppe();
-    const fadder = await createUser();
+    const fadder = await createMember();
     await addMember(fadder.id, gruppe.id, "FADDER");
 
     const created = await callerFor(fadder).gruppe.postMessage({
@@ -109,7 +109,7 @@ describe("gruppe.postMessage", () => {
 
   it("lar et fadderbarn chatte, men ikke kunngjøre", async () => {
     const gruppe = await createGruppe();
-    const barn = await createUser();
+    const barn = await createMember();
     await addMember(barn.id, gruppe.id, "FADDERBARN");
     const caller = callerFor(barn);
 
@@ -133,7 +133,7 @@ describe("gruppe.postMessage", () => {
 
   it("stenger ute brukere som ikke er medlem", async () => {
     const gruppe = await createGruppe();
-    const outsider = await createUser();
+    const outsider = await createMember();
 
     await expectCode(
       callerFor(outsider).gruppe.postMessage({
@@ -148,9 +148,9 @@ describe("gruppe.postMessage", () => {
 
   it("varsler de andre medlemmene, men ikke avsenderen", async () => {
     const gruppe = await createGruppe();
-    const fadder = await createUser({ name: "Kari" });
-    const barn1 = await createUser();
-    const barn2 = await createUser();
+    const fadder = await createMember({ name: "Kari" });
+    const barn1 = await createMember();
+    const barn2 = await createMember();
     await addMember(fadder.id, gruppe.id, "FADDER");
     await addMember(barn1.id, gruppe.id, "FADDERBARN");
     await addMember(barn2.id, gruppe.id, "FADDERBARN");
@@ -172,8 +172,8 @@ describe("gruppe.postMessage", () => {
 
   it("merker chat-varsler som melding", async () => {
     const gruppe = await createGruppe();
-    const fadder = await createUser();
-    const barn = await createUser();
+    const fadder = await createMember();
+    const barn = await createMember();
     await addMember(fadder.id, gruppe.id, "FADDER");
     await addMember(barn.id, gruppe.id, "FADDERBARN");
 
@@ -189,7 +189,7 @@ describe("gruppe.postMessage", () => {
 
   it("avviser tomme og altfor lange meldinger", async () => {
     const gruppe = await createGruppe();
-    const fadder = await createUser();
+    const fadder = await createMember();
     await addMember(fadder.id, gruppe.id, "FADDER");
     const caller = callerFor(fadder);
 
@@ -207,7 +207,7 @@ describe("gruppe.postMessage", () => {
 describe("gruppe.deleteMessage", () => {
   it("lar forfatteren slette sin egen melding", async () => {
     const gruppe = await createGruppe();
-    const fadder = await createUser();
+    const fadder = await createMember();
     await addMember(fadder.id, gruppe.id, "FADDER");
     const message = await db.groupMessage.create({
       data: { content: "hei", authorId: fadder.id, gruppeId: gruppe.id },
@@ -220,7 +220,7 @@ describe("gruppe.deleteMessage", () => {
 
   it("lar admin slette andres meldinger", async () => {
     const gruppe = await createGruppe();
-    const fadder = await createUser();
+    const fadder = await createMember();
     const admin = await createAdmin();
     await addMember(fadder.id, gruppe.id, "FADDER");
     const message = await db.groupMessage.create({
@@ -234,8 +234,8 @@ describe("gruppe.deleteMessage", () => {
 
   it("nekter andre medlemmer å slette", async () => {
     const gruppe = await createGruppe();
-    const fadder = await createUser();
-    const barn = await createUser();
+    const fadder = await createMember();
+    const barn = await createMember();
     await addMember(fadder.id, gruppe.id, "FADDER");
     await addMember(barn.id, gruppe.id, "FADDERBARN");
     const message = await db.groupMessage.create({
@@ -250,7 +250,7 @@ describe("gruppe.deleteMessage", () => {
   });
 
   it("gir NOT_FOUND for en melding som ikke finnes", async () => {
-    const user = await createUser();
+    const user = await createMember();
     await expectCode(
       callerFor(user).gruppe.deleteMessage({ messageId: "finnes-ikke" }),
       "NOT_FOUND",

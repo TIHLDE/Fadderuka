@@ -1,7 +1,9 @@
 "use client";
 
+import { TRPCClientError } from "@trpc/client";
 import Link from "next/link";
 import { useState } from "react";
+import type { AppRouter } from "~/server/api/root";
 import Footer from "~/components/layout/footer/footer";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
@@ -15,6 +17,8 @@ import { api } from "~/trpc/react";
 export default function RegistreringPage() {
   const [error, setError] = useState<string | null>(null);
   const [errorField, setErrorField] = useState<string | null>(null);
+  /** Set when they already have an account, so we can link straight to login. */
+  const [existingUserId, setExistingUserId] = useState<string | null>(null);
   const [study, setStudy] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +30,7 @@ export default function RegistreringPage() {
     e.preventDefault();
     setError(null);
     setErrorField(null);
+    setExistingUserId(null);
 
     const formData = new FormData(e.currentTarget);
     const full_name = (formData.get("full_name") as string)?.trim();
@@ -42,7 +47,11 @@ export default function RegistreringPage() {
 
     setLoading(true);
 
-    const { error: registerError, field } = await authClient.register({
+    const {
+      error: registerError,
+      field,
+      existingUserId: existing,
+    } = await authClient.register({
       full_name,
       email,
       user_id,
@@ -53,6 +62,7 @@ export default function RegistreringPage() {
     if (registerError) {
       setError(registerError);
       setErrorField(field ?? null);
+      setExistingUserId(existing ?? null);
       setLoading(false);
       return;
     }
@@ -73,6 +83,16 @@ export default function RegistreringPage() {
       const { redirectUrl } = await initiatePayment.mutateAsync();
       window.location.href = redirectUrl;
     } catch (err) {
+      // The server refuses to charge anyone who owes nothing. Someone who
+      // turns out to be a fadder is simply let into the app instead of being
+      // shown a payment error for a bill that doesn't exist.
+      if (
+        err instanceof TRPCClientError &&
+        (err as TRPCClientError<AppRouter>).data?.code === "FORBIDDEN"
+      ) {
+        window.location.href = "/";
+        return;
+      }
       setError(
         err instanceof Error
           ? err.message
@@ -115,8 +135,20 @@ export default function RegistreringPage() {
                 <div
                   className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm"
                   style={{ marginBottom: "1.5rem" }}
+                  role="alert"
                 >
                   {error}
+                  {/* Når feilen er "du har alt en bruker", er innlogging det
+                      eneste som hjelper — så vi tilbyr veien dit i stedet for
+                      å la dem gjette hvilket felt de skal endre. */}
+                  {existingUserId && (
+                    <Link
+                      href={`/logg-inn?user_id=${encodeURIComponent(existingUserId)}`}
+                      className="mt-2 block font-semibold underline"
+                    >
+                      Gå til innlogging som «{existingUserId}»
+                    </Link>
+                  )}
                 </div>
               )}
 
