@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import Footer from "~/components/layout/footer/footer";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
@@ -10,10 +10,13 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { authClient } from "~/lib/auth-client";
 
-export default function LoggInnPage() {
+function LoggInnSkjema() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  // Registreringssiden sender hit med brukernavnet når noen prøvde å
+  // registrere seg på nytt — da slipper de å huske hva de valgte.
+  const prefilledUserId = useSearchParams().get("user_id") ?? "";
 
   const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -89,6 +92,7 @@ export default function LoggInnPage() {
                     type="text"
                     autoComplete="username"
                     required
+                    defaultValue={prefilledUserId}
                     placeholder="ditt TIHLDE-brukernavn"
                     className="h-12"
                   />
@@ -136,5 +140,18 @@ export default function LoggInnPage() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+/**
+ * `useSearchParams` opts the tree into client-side rendering, so Next requires
+ * a Suspense boundary around it. Without one the whole page would have to be
+ * dynamic.
+ */
+export default function LoggInnPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoggInnSkjema />
+    </Suspense>
   );
 }

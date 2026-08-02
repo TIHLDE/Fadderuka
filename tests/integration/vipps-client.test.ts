@@ -368,8 +368,10 @@ describe("createPayment", () => {
   it("kaster VippsError når tilgangstokenet ikke kan hentes", async () => {
     fetchMock.on("POST", "/accesstoken/get", text("unauthorized", 401));
 
+    // Meldingen er studentens, ikke utviklerens: den nevner ikke
+    // «tilgangstoken», men sier hva de skal gjøre. Detaljene ligger i loggen.
     await expect(createPayment("fadderuka-bruker1-123")).rejects.toThrow(
-      /tilgangstoken/i,
+      /Får ikke kontakt med Vipps/i,
     );
   });
 });

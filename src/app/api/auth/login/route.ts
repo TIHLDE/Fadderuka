@@ -17,6 +17,7 @@ import { db } from "~/server/db";
 import { deriveIsFadder } from "~/server/fadder";
 import {
   TihldeAuthError,
+  TihldeUnavailableError,
   isMemberOfAnyGroup,
   mapProfile,
   tihldeGetMe,
@@ -192,6 +193,27 @@ export async function POST(request: Request) {
     // who don't owe a payment (admins are auto-verified above).
     return NextResponse.json({ ok: true, verified: user.isVerified });
   } catch (err) {
+    // TIHLDE unreachable. A self-registered student may still have a local
+    // password, so try that before giving up — it is exactly the situation the
+    // local hash exists for, and it keeps people in the app during an outage.
+    if (err instanceof TihldeUnavailableError) {
+      console.error("[auth/login] TIHLDE unreachable", err.cause);
+
+      const local = await tryLocalLogin(
+        parsed.data.user_id,
+        parsed.data.password,
+      );
+      if (local) {
+        await clearLoginFailures(parsed.data.user_id, ip);
+        return local;
+      }
+
+      return NextResponse.json(
+        { error: err.message },
+        { status: 503, headers: { "Retry-After": "30" } },
+      );
+    }
+
     if (err instanceof TihldeAuthError) {
       // 401/403 from TIHLDE → the account may simply not be approved on
       // tihlde.org yet, so try the local registration password first.
@@ -212,7 +234,10 @@ export async function POST(request: Request) {
     }
     console.error("[auth/login] unexpected error", err);
     return NextResponse.json(
-      { error: "Noe gikk galt ved innlogging." },
+      {
+        error:
+          "Noe gikk galt hos oss under innloggingen. Prøv igjen — går det ikke, si fra til en fadder.",
+      },
       { status: 500 },
     );
   }

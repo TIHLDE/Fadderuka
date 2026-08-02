@@ -29,6 +29,59 @@ export class TihldeAuthError extends Error {
   }
 }
 
+/**
+ * Raised when TIHLDE could not be reached at all — a timeout, a dropped TLS
+ * handshake, DNS failure.
+ *
+ * Distinct from `TihldeAuthError` because it says nothing about the user's
+ * credentials, and the advice is the opposite: wait and retry rather than
+ * check what you typed. These are not rare — Lepton timed out on 192 requests
+ * across 11 users in the week before this was written, and every one of them
+ * surfaced to the student as "Noe gikk galt", which reads as "you did
+ * something wrong".
+ */
+export class TihldeUnavailableError extends TihldeAuthError {
+  constructor(readonly cause?: unknown) {
+    super(
+      "Får ikke kontakt med TIHLDE akkurat nå. Vent litt og prøv igjen — det er ikke noe galt med det du fylte inn.",
+      503,
+    );
+    this.name = "TihldeUnavailableError";
+  }
+}
+
+/**
+ * How long we wait for TIHLDE before giving up.
+ *
+ * Vercel's serverless functions have their own ceiling, and hitting that gives
+ * the user a blank platform error instead of ours. Failing first means we can
+ * say something useful.
+ */
+const TIHLDE_TIMEOUT_MS = 10_000;
+
+/**
+ * `fetch` against TIHLDE that turns transport failures into
+ * `TihldeUnavailableError` instead of letting a raw `TypeError: fetch failed`
+ * escape into a route's catch-all. Every call to Lepton goes through here.
+ */
+async function tihldeFetch(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  try {
+    return await fetch(url, {
+      ...init,
+      // Never cache auth or profile requests.
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIHLDE_TIMEOUT_MS),
+    });
+  } catch (err) {
+    // AbortError (our timeout) and TypeError (DNS, TLS, ECONNRESET) both mean
+    // the same thing to the person waiting: TIHLDE is not answering.
+    throw new TihldeUnavailableError(err);
+  }
+}
+
 /** The subset of `GET /users/me/` we map onto our local user. */
 export interface TihldeProfile {
   user_id: string;
@@ -54,7 +107,7 @@ export async function tihldeLogin(
   userId: string,
   password: string,
 ): Promise<string> {
-  const res = await fetch(apiUrl("/auth/login/"), {
+  const res = await tihldeFetch(apiUrl("/auth/login/"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ user_id: userId, password }),
@@ -138,7 +191,7 @@ async function readCreateError(res: Response, fallback: string): Promise<string>
 export async function tihldeCreateUser(
   input: TihldeCreateUserInput,
 ): Promise<void> {
-  const res = await fetch(apiUrl("/users/"), {
+  const res = await tihldeFetch(apiUrl("/users/"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -155,7 +208,7 @@ export async function tihldeCreateUser(
 
 /** Fetch the authenticated user's TIHLDE profile. */
 export async function tihldeGetMe(token: string): Promise<TihldeProfile> {
-  const res = await fetch(apiUrl("/users/me/"), {
+  const res = await tihldeFetch(apiUrl("/users/me/"), {
     headers: { [TOKEN_HEADER]: token },
     cache: "no-store",
   });
@@ -194,7 +247,7 @@ export async function tihldeGetMemberships(
   );
 
   for (let page = 0; url && page < MAX_MEMBERSHIP_PAGES; page++) {
-    const res: Response = await fetch(url, {
+    const res: Response = await tihldeFetch(url, {
       headers: { [TOKEN_HEADER]: token },
       cache: "no-store",
     });
@@ -247,7 +300,7 @@ export async function tihldeUpdateAllergy(
   userId: string,
   allergy: string,
 ): Promise<void> {
-  const res = await fetch(apiUrl(`/users/${encodeURIComponent(userId)}/`), {
+  const res = await tihldeFetch(apiUrl(`/users/${encodeURIComponent(userId)}/`), {
     method: "PATCH",
     headers: {
       [TOKEN_HEADER]: token,

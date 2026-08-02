@@ -26,7 +26,9 @@ export class VippsError extends Error {
 /** Raised when the server is missing the Vipps credentials it needs. */
 export class VippsNotConfiguredError extends VippsError {
   constructor() {
-    super("Vipps er ikke konfigurert på serveren");
+    super(
+      "Betaling er midlertidig utilgjengelig. Si fra til en fadder — det er ikke noe galt med Vipps-en din.",
+    );
     this.name = "VippsNotConfiguredError";
   }
 }
@@ -116,7 +118,9 @@ async function getAccessToken(cfg: VippsConfig): Promise<string> {
       response.status,
       await response.text(),
     );
-    throw new VippsError("Kunne ikke hente Vipps tilgangstoken");
+    throw new VippsError(
+            "Får ikke kontakt med Vipps akkurat nå. Vent litt og prøv igjen.",
+        );
   }
 
   const data = (await response.json()) as { access_token: string };
@@ -199,7 +203,9 @@ export async function createPayment(
       response.status,
       await response.text(),
     );
-    throw new VippsError("Kunne ikke opprette Vipps betaling");
+    throw new VippsError(
+            "Klarte ikke å starte betalingen i Vipps. Vent litt og prøv igjen.",
+        );
   }
 
   const data = (await response.json()) as { redirectUrl: string };

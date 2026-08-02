@@ -307,6 +307,36 @@ describe("POST /api/auth/login", () => {
     expect(await db.session.count()).toBe(0);
   });
 
+  it("sier at TIHLDE er nede når kallet ikke går gjennom", async () => {
+    fetchMock.on("POST", "/auth/login/", () => {
+      throw new TypeError("fetch failed");
+    });
+
+    const response = await post(CREDENTIALS);
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(503);
+    expect(body.error).toContain("ikke noe galt med det du fylte inn");
+  });
+
+  // Det lokale passordet finnes nettopp for å holde folk inne når TIHLDE ikke
+  // svarer — da skal det også brukes, ikke bare når Lepton sier 401.
+  it("slipper inn på lokalt passord når TIHLDE er utilgjengelig", async () => {
+    await createUser({
+      tihldeUserId: "olanor",
+      email: null,
+      passwordHash: await hashPassword(CREDENTIALS.password),
+    });
+    fetchMock.on("POST", "/auth/login/", () => {
+      throw new TypeError("fetch failed");
+    });
+
+    const response = await post(CREDENTIALS);
+
+    expect(response.status).toBe(200);
+    expect(lastSetCookie(SESSION_COOKIE)?.value).toBeTruthy();
+  });
+
   it("gir 502 når TIHLDE svarer med en serverfeil", async () => {
     fetchMock.on("POST", "/auth/login/", text("boom", 500));
 
