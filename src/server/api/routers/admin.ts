@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type { PaymentStatus, PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { MAJORS } from "~/lib/majors";
 import { deriveIsFadder } from "~/server/fadder";
 import {
   adminProcedure,
@@ -79,6 +80,7 @@ export const adminRouter = createTRPCRouter({
         email: true,
         klasse: true,
         studieretning: true,
+        studieretningOverride: true,
         isVerified: true,
         isAdmin: true,
         hasPaid: true,
@@ -191,6 +193,42 @@ export const adminRouter = createTRPCRouter({
       // Surfaced by the client so a fadder who paid before being marked is
       // never quietly left out of pocket.
       return { ...user, needsRefund: input.isFadder && user.hasPaid };
+    }),
+
+  /**
+   * Correct which programme a user is on.
+   *
+   * TIHLDE owns this field by default, and for almost everyone that is right.
+   * The exception is anyone whose profile has fallen behind reality — Digital
+   * transformasjon being the standing case, since its students keep the
+   * bachelor STUDY group they came from. Users can say so themselves at login,
+   * and this is the same decision from the admin side: for the ones who never
+   * did, and for undoing a mis-click.
+   *
+   * Passing `null` hands the field back to TIHLDE. The stored value is left
+   * alone rather than blanked, so the user stays grouped where they are until
+   * their next login refreshes it from the profile.
+   *
+   * Deliberately does NOT touch payment status. Being on DT does not by itself
+   * make someone a fadderbarn — a second-year DT student is a fadder — so that
+   * stays the separate, explicit decision `setUserFadder` makes.
+   */
+  setUserStudieretning: adminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        studieretning: z.enum(MAJORS).nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.user.update({
+        where: { id: input.userId },
+        data: {
+          studieretningOverride: input.studieretning,
+          ...(input.studieretning ? { studieretning: input.studieretning } : {}),
+        },
+        select: { id: true, name: true, studieretning: true },
+      });
     }),
 
   /** List all faddergrupper with member counts */

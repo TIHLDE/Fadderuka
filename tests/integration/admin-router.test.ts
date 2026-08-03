@@ -34,6 +34,7 @@ const ADMIN_PROCEDURE_INPUTS: Record<string, unknown> = {
   setUserVerified: { userId: "x", isVerified: true },
   setUserAdmin: { userId: "x", isAdmin: true },
   setUserFadder: { userId: "x", isFadder: true },
+  setUserStudieretning: { userId: "x", studieretning: "Dataingeniør" },
   resetUserPassword: { userId: "x" },
   getGrupper: undefined,
   createGruppe: { name: "Gruppe" },
@@ -297,6 +298,60 @@ describe("fadder-fritak fra adminpanelet", () => {
     expect(
       (await db.user.findUniqueOrThrow({ where: { id: user.id } })).hasPaid,
     ).toBe(true);
+  });
+
+  it("lar admin sette studieretningen, og pinner valget", async () => {
+    const admin = await createAdmin();
+    const user = await createUser({
+      name: "Kari",
+      studieretning: "Dataingeniør",
+      isFadder: true,
+    });
+
+    await callerFor(admin).admin.setUserStudieretning({
+      userId: user.id,
+      studieretning: "Digital transformasjon",
+    });
+
+    const after = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.studieretning).toBe("Digital transformasjon");
+    // Pinnet, ellers ville neste innlogging hentet bachelorlinja tilbake.
+    expect(after.studieretningOverride).toBe("Digital transformasjon");
+    // Studieretning og betalingsplikt er to avgjørelser: en DT-student på 2.
+    // året er fortsatt fadder.
+    expect(after.isFadder).toBe(true);
+  });
+
+  it("gir studieretningen tilbake til TIHLDE uten å tømme feltet", async () => {
+    const admin = await createAdmin();
+    const user = await createUser({
+      studieretning: "Digital transformasjon",
+      studieretningOverride: "Digital transformasjon",
+    });
+
+    await callerFor(admin).admin.setUserStudieretning({
+      userId: user.id,
+      studieretning: null,
+    });
+
+    const after = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.studieretningOverride).toBeNull();
+    // Verdien blir stående til neste innlogging henter profilen på nytt —
+    // ellers ville brukeren falt ut av gruppperingen sin med en gang.
+    expect(after.studieretning).toBe("Digital transformasjon");
+  });
+
+  it("avviser en studieretning som ikke finnes", async () => {
+    const admin = await createAdmin();
+    const user = await createUser();
+
+    await expectCode(
+      callerFor(admin).admin.setUserStudieretning({
+        userId: user.id,
+        studieretning: "Kokkelinja" as never,
+      }),
+      "BAD_REQUEST",
+    );
   });
 
   it("lar en manuell avgjørelse overleve en senere rolleendring", async () => {

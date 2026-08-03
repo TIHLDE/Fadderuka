@@ -5,7 +5,7 @@ import { SESSION_COOKIE } from "~/server/auth/config";
 import { hashPassword } from "~/server/auth/password";
 import { decryptToken } from "~/server/auth/token-crypto";
 
-import { createUser, db } from "../helpers/db";
+import { addMember, createGruppe, createUser, db } from "../helpers/db";
 import { fetchMock, json, text } from "../helpers/fetch-mock";
 import { lastSetCookie, resetNextHeaders } from "../helpers/next-headers";
 
@@ -156,6 +156,102 @@ describe("POST /api/auth/login", () => {
       (await db.user.findUniqueOrThrow({ where: { tihldeUserId: "olanor" } }))
         .isFadder,
     ).toBe(false);
+  });
+
+  // Digital transformasjon er et 2-årig påbygg: de som begynner har allerede
+  // en TIHLDE-bruker fra bacheloren, og profilen der viser fortsatt gammel
+  // linje og gammelt kull. Uten at de sier fra leses de som 2. klassing.
+  it("gjør en som begynner på nytt studium til fadderbarn, tross gammelt kull", async () => {
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2023" } } } });
+
+    await post({ ...CREDENTIALS, study: "digital-samhandling" });
+
+    const user = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(user.isFadder).toBe(false);
+    expect(user.fadderOverride).toBe(false);
+    expect(user.isVerified).toBe(false);
+    expect(user.studieretning).toBe("Digital transformasjon");
+    // Kullet fra TIHLDE lagres uendret — det er tolkningen vi overstyrer.
+    expect(user.klasse).toBe("2023");
+  });
+
+  it("lar det nye studiet overleve neste innlogging", async () => {
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2023" } } } });
+    await post({ ...CREDENTIALS, study: "digital-samhandling" });
+
+    // Neste innlogging sender ingen linje, og TIHLDE svarer fortsatt med
+    // bacheloren. Uten at valget er pinnet ville de blitt fadder igjen her.
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2023" } } } });
+    await post(CREDENTIALS);
+
+    const user = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(user.studieretning).toBe("Digital transformasjon");
+    expect(user.isFadder).toBe(false);
+  });
+
+  it("tar fritaket fra en som allerede var auto-fritatt som fadder", async () => {
+    await createUser({
+      tihldeUserId: "olanor",
+      email: null,
+      isFadder: true,
+      isVerified: true,
+    });
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2023" } } } });
+
+    await post({ ...CREDENTIALS, study: "digital-samhandling" });
+
+    const user = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(user.isFadder).toBe(false);
+    // Tilgangen kom fra fritaket, så den følger med når fritaket faller bort.
+    expect(user.isVerified).toBe(false);
+  });
+
+  it("beholder tilgangen til en som faktisk har betalt", async () => {
+    await createUser({
+      tihldeUserId: "olanor",
+      email: null,
+      isFadder: true,
+      isVerified: true,
+      hasPaid: true,
+    });
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2023" } } } });
+
+    await post({ ...CREDENTIALS, study: "digital-samhandling" });
+
+    const user = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(user.isFadder).toBe(false);
+    expect(user.isVerified).toBe(true);
+  });
+
+  it("lar ikke en med fadderverv melde seg som fadderbarn", async () => {
+    const user = await createUser({ tihldeUserId: "olanor", email: null });
+    await addMember(user.id, (await createGruppe()).id, "FADDER");
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2023" } } } });
+
+    await post({ ...CREDENTIALS, study: "digital-samhandling" });
+
+    const after = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(after.isFadder).toBe(true);
+    expect(after.studieretning).toBe("Dataingeniør");
+  });
+
+  it("avviser en ukjent linje i stedet for å logge inn", async () => {
+    stubTihldeLogin();
+
+    const response = await post({ ...CREDENTIALS, study: "finnes-ikke" });
+
+    expect(response.status).toBe(400);
+    expect(await db.user.count()).toBe(0);
   });
 
   it("gjør Index-medlemmer til admin", async () => {

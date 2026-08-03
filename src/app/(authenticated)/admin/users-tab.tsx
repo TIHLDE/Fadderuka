@@ -7,10 +7,51 @@ import { api } from "~/trpc/react";
 import { toast } from "~/components/ui/use-toast";
 import {
   MAJORS,
+  type Major,
   UKJENT_STUDIERETNING,
   compareMajorLabels,
   findMajor,
 } from "~/lib/majors";
+
+/**
+ * Correct the programme TIHLDE reports for a user.
+ *
+ * Shows the pinned choice when there is one, and otherwise "Følg TIHLDE" with
+ * whatever the profile currently says — so it is visible at a glance whether a
+ * row is being overridden, and clearing it is one option away.
+ */
+function StudieVelger({
+  studieretning,
+  studieretningOverride,
+  disabled,
+  onChange,
+}: {
+  studieretning: string | null;
+  studieretningOverride: string | null;
+  disabled: boolean;
+  onChange: (studieretning: Major | null) => void;
+}) {
+  return (
+    <select
+      value={studieretningOverride ?? ""}
+      disabled={disabled}
+      onChange={(e) =>
+        onChange(e.target.value === "" ? null : (e.target.value as Major))
+      }
+      title="Overstyr studieretningen TIHLDE oppgir, f.eks. for en som begynner på Digital transformasjon"
+      className="max-w-[13rem] rounded-lg border border-border bg-background !px-2 !py-1 text-xs text-foreground transition focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+    >
+      <option value="">
+        Følg TIHLDE{studieretning ? ` (${studieretning})` : ""}
+      </option>
+      {MAJORS.map((major) => (
+        <option key={major} value={major}>
+          {major}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export function UsersTab() {
   const [search, setSearch] = useState("");
@@ -79,6 +120,24 @@ export function UsersTab() {
           ? "Refunder betalingen fra Betalinger-fanen."
           : undefined,
         variant: result.needsRefund ? "destructive" : undefined,
+      });
+    },
+    onError: (error) => {
+      toast({ title: "Feil", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const studieMutation = api.admin.setUserStudieretning.useMutation({
+    onSuccess: (result, variables) => {
+      void utils.admin.getUsers.invalidate();
+      void utils.admin.getRegistrations.invalidate();
+      toast({
+        title: variables.studieretning
+          ? `${result.name} står nå på ${variables.studieretning}`
+          : `${result.name} følger TIHLDE igjen`,
+        description: variables.studieretning
+          ? "Valget overlever innlogging. Betalingsstatus er ikke endret."
+          : "Studieretningen hentes fra TIHLDE-profilen ved neste innlogging.",
       });
     },
     onError: (error) => {
@@ -163,7 +222,17 @@ export function UsersTab() {
                       <span className="text-xs text-muted-foreground">Ingen klasse/retning oppgitt</span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="!mt-2">
+                    <StudieVelger
+                      studieretning={user.studieretning}
+                      studieretningOverride={user.studieretningOverride}
+                      disabled={studieMutation.isPending}
+                      onChange={(studieretning) =>
+                        studieMutation.mutate({ userId: user.id, studieretning })
+                      }
+                    />
+                  </div>
+                  <p className="!mt-2 text-xs text-muted-foreground">
                     Registrert{" "}
                     {new Date(user.createdAt).toLocaleDateString("no-NO", {
                       day: "numeric",
@@ -364,6 +433,7 @@ export function UsersTab() {
                           <th className="!px-4 !py-3 font-medium">Navn</th>
                           <th className="!px-4 !py-3 font-medium">E-post</th>
                           <th className="!px-4 !py-3 font-medium">Klasse</th>
+                          <th className="!px-4 !py-3 font-medium">Studie</th>
                           <th className="!px-4 !py-3 font-medium">Gruppe</th>
                           <th className="!px-4 !py-3 font-medium">Rolle</th>
                           <th className="!px-4 !py-3 font-medium">Betaling</th>
@@ -393,6 +463,22 @@ export function UsersTab() {
                                 ) : (
                                   <span className="text-muted-foreground">—</span>
                                 )}
+                              </td>
+                              {/* TIHLDE eier studieretningen, men henger etter
+                                  for den som begynner på et påbygg som Digital
+                                  transformasjon. Da er dette veien inn. */}
+                              <td className="!px-4 !py-3">
+                                <StudieVelger
+                                  studieretning={user.studieretning}
+                                  studieretningOverride={user.studieretningOverride}
+                                  disabled={studieMutation.isPending}
+                                  onChange={(studieretning) =>
+                                    studieMutation.mutate({
+                                      userId: user.id,
+                                      studieretning,
+                                    })
+                                  }
+                                />
                               </td>
                               <td className="!px-4 !py-3 text-muted-foreground">
                                 {membership ? membership.gruppe.name : "—"}
@@ -524,7 +610,7 @@ export function UsersTab() {
                         {usersInGroup.length === 0 && (
                           <tr>
                             <td
-                              colSpan={7}
+                              colSpan={9}
                               className="!px-4 !py-6 text-center text-muted-foreground"
                             >
                               Ingen brukere funnet

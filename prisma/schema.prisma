@@ -55,6 +55,13 @@ model User {
     phone         String?
     klasse        String?
     studieretning String?
+    // The programme the user told us they are STARTING, when TIHLDE's profile
+    // still shows the one they came from. Digital transformasjon is the case
+    // this exists for: it is a 2-year continuation of a bachelor, so its new
+    // students keep their old STUDY group (and old cohort) on tihlde.org.
+    // `null` means "trust TIHLDE"; a value pins `studieretning` and survives
+    // every later login instead of being overwritten by the profile.
+    studieretningOverride String?
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)
