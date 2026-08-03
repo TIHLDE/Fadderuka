@@ -39,6 +39,7 @@ export async function createUser(
     isVerified: boolean;
     hasPaid: boolean;
     studieretning: string | null;
+    studieretningOverride: string | null;
     klasse: string | null;
     passwordHash: string | null;
     passwordIsTemporary: boolean;
@@ -58,6 +59,7 @@ export async function createUser(
       isVerified: overrides.isVerified ?? false,
       hasPaid: overrides.hasPaid ?? false,
       studieretning: overrides.studieretning ?? null,
+      studieretningOverride: overrides.studieretningOverride ?? null,
       klasse: overrides.klasse ?? null,
       passwordHash: overrides.passwordHash ?? null,
       passwordIsTemporary: overrides.passwordIsTemporary ?? false,

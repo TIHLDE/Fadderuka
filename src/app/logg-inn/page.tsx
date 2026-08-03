@@ -9,10 +9,16 @@ import { Card, CardDescription, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { authClient } from "~/lib/auth-client";
+import { REGISTRATION_STUDIES } from "~/lib/majors";
 
 function LoggInnSkjema() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Den som begynner på et nytt studium i høst må si fra selv: TIHLDE-profilen
+  // deres viser fortsatt bachelorlinja og bachelorkullet, så uten dette valget
+  // leses de som 2. klassing — altså fadder — og slipper å betale.
+  const [nyttStudium, setNyttStudium] = useState(false);
+  const [study, setStudy] = useState("");
   const router = useRouter();
   // Registreringssiden sender hit med brukernavnet når noen prøvde å
   // registrere seg på nytt — da slipper de å huske hva de valgte.
@@ -21,13 +27,23 @@ function LoggInnSkjema() {
   const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
+
+    if (nyttStudium && !study) {
+      setError("Velg hvilken linje du begynner på.");
+      return;
+    }
+
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const userId = (formData.get("user_id") as string)?.trim();
     const password = formData.get("password") as string;
 
-    const { error } = await authClient.signIn(userId, password);
+    const { error } = await authClient.signIn(
+      userId,
+      password,
+      nyttStudium ? study : undefined,
+    );
 
     if (error) {
       setError(error);
@@ -110,6 +126,59 @@ function LoggInnSkjema() {
                     placeholder="••••••••"
                     className="h-12"
                   />
+                </div>
+
+                <div className="grid gap-3 rounded-md border border-input px-4 py-3">
+                  <label className="flex cursor-pointer items-start gap-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={nyttStudium}
+                      onChange={(e) => {
+                        setNyttStudium(e.target.checked);
+                        setError(null);
+                      }}
+                      className="mt-0.5 h-4 w-4"
+                    />
+                    <span>
+                      <span className="font-medium">
+                        Jeg begynner på et nytt studium i høst
+                      </span>
+                      <span className="text-muted-foreground block">
+                        For eksempel Digital transformasjon etter fullført
+                        bachelor. TIHLDE-profilen din viser fortsatt den gamle
+                        linja, så uten dette blir du registrert som fadder i
+                        stedet for fadderbarn.
+                      </span>
+                    </span>
+                  </label>
+
+                  {nyttStudium && (
+                    <div
+                      className="grid gap-2"
+                      role="radiogroup"
+                      aria-label="Ny linje"
+                    >
+                      {REGISTRATION_STUDIES.map((option) => (
+                        <label
+                          key={option.slug}
+                          className="flex cursor-pointer items-center gap-3 rounded-md border border-input px-4 py-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                        >
+                          <input
+                            type="radio"
+                            name="study"
+                            value={option.slug}
+                            checked={study === option.slug}
+                            onChange={(e) => {
+                              setStudy(e.target.value);
+                              setError(null);
+                            }}
+                            className="h-4 w-4"
+                          />
+                          {option.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

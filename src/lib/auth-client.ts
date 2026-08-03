@@ -42,12 +42,22 @@ async function readError(res: Response, fallback: string): Promise<string> {
 }
 
 export const authClient = {
-  /** Log in with a TIHLDE username + password. */
-  async signIn(userId: string, password: string): Promise<SignInResult> {
+  /**
+   * Log in with a TIHLDE username + password.
+   *
+   * `study` is the slug of a programme the user is STARTING this autumn, for
+   * the case where TIHLDE's profile still shows the one they came from (see
+   * /api/auth/login). Omitted for everyone else, which is almost everyone.
+   */
+  async signIn(
+    userId: string,
+    password: string,
+    study?: string,
+  ): Promise<SignInResult> {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, password }),
+      body: JSON.stringify({ user_id: userId, password, study }),
     });
 
     if (!res.ok) {

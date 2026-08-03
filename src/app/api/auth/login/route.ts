@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { REGISTRATION_STUDY_SLUGS, studyLabelForSlug } from "~/lib/majors";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
@@ -34,6 +35,12 @@ const ADMIN_GROUP_SLUGS = ["fadderkom", "index"];
 const bodySchema = z.object({
   user_id: z.string().min(1, "Brukernavn er påkrevd."),
   password: z.string().min(1, "Passord er påkrevd."),
+  /**
+   * Optional: the programme the user is STARTING this autumn, when it isn't the
+   * one their TIHLDE profile shows. Sent from the "nytt studium i år" option on
+   * the login page — see the handling in step 3.
+   */
+  study: z.enum(REGISTRATION_STUDY_SLUGS).optional(),
 });
 
 /** The caller's IP, taken from the first hop in x-forwarded-for. */
@@ -129,6 +136,9 @@ export async function POST(request: Request) {
       select: {
         adminOverride: true,
         fadderOverride: true,
+        studieretningOverride: true,
+        isFadder: true,
+        hasPaid: true,
         memberships: { where: { role: "FADDER" }, select: { id: true } },
       },
     });
@@ -147,44 +157,100 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Decide whether this user owes anything at all. Only fadderbarn pay,
+    const hasFadderMembership = (existing?.memberships.length ?? 0) > 0;
+
+    // 3. Handle a user who is starting a NEW programme this autumn.
+    //
+    //    Digital transformasjon is the reason this exists: it is a 2-year
+    //    continuation of a 3-year bachelor, so nearly everyone starting it
+    //    already has a TIHLDE account from their bachelor — and tihlde.org
+    //    keeps them in the OLD study group and the OLD cohort. Read literally,
+    //    that profile says "admitted in 2023", which the cohort rule below
+    //    correctly reads as "2. klasse or later" and therefore a fadder. They
+    //    are in fact in their 4th year of study but their 1st year on DT: a
+    //    fadderbarn, who should pay and be placed in a faddergruppe.
+    //
+    //    Nothing in the profile distinguishes DT year 1 from DT year 2, so the
+    //    user tells us, and we pin both facts the way the admin panel pins its
+    //    decisions — they must survive every later login, or the next one would
+    //    silently restore the bachelor and the exemption.
+    //
+    //    A declaration only ever moves someone onto the PAYING side, so it is
+    //    not worth abusing. It is still refused for anyone holding a FADDER
+    //    role in a faddergruppe: they demonstrably are a fadder, and a
+    //    mis-click should not hand them a payment prompt.
+    const declaredStudy =
+      parsed.data.study && !hasFadderMembership
+        ? studyLabelForSlug(parsed.data.study)
+        : null;
+
+    // 4. Decide whether this user owes anything at all. Only fadderbarn pay,
     //    and a fadder is by definition in 2. klasse or higher — so the study
     //    cohort we just read from TIHLDE settles it without anyone having to
     //    be assigned to a group first. That is what keeps a fadder from ever
     //    seeing a payment prompt, including on their very first login.
     const isFadder = deriveIsFadder({
-      fadderOverride: existing?.fadderOverride,
+      fadderOverride: declaredStudy ? false : existing?.fadderOverride,
       klasse: mapped.klasse,
-      hasFadderMembership: (existing?.memberships.length ?? 0) > 0,
+      hasFadderMembership,
     });
 
-    // Exempt users get access outright; everyone else keeps whatever
-    // verification they have earned by paying.
-    const isExempt = isFadder || adminGrant.isAdmin === true;
-    const accessGrant = isExempt ? { isVerified: true } : {};
+    // The programme we show and group by: a declaration wins, then any earlier
+    // declaration, and otherwise TIHLDE owns the field as before.
+    const studieretning =
+      declaredStudy ?? existing?.studieretningOverride ?? mapped.studieretning;
 
-    // 4. Upsert the local user, keyed by TIHLDE user_id. Payment flags for
+    // Exempt users get access outright; everyone else keeps whatever
+    // verification they have earned by paying. The one case where access is
+    // taken away is a user who was auto-exempted as a fadder and has now told
+    // us they are a fadderbarn — that access came from the exemption, so it
+    // leaves with it, unless real money has already changed hands.
+    const isExempt = isFadder || adminGrant.isAdmin === true;
+    const losesStaleExemption =
+      declaredStudy !== null &&
+      existing?.isFadder === true &&
+      existing.hasPaid !== true;
+
+    const accessGrant = isExempt
+      ? { isVerified: true }
+      : losesStaleExemption
+        ? { isVerified: false }
+        : {};
+
+    const studyGrant = declaredStudy
+      ? { studieretningOverride: declaredStudy, fadderOverride: false }
+      : {};
+
+    // 5. Upsert the local user, keyed by TIHLDE user_id. Payment flags for
     //    non-exempt users are owned by us (earned via Vipps) and left
     //    untouched. TIHLDE now authenticates this account, so the local
     //    registration password hash has served its purpose and is dropped.
     const user = await db.user.upsert({
       where: { tihldeUserId: mapped.tihldeUserId },
-      create: { ...mapped, ...adminGrant, ...accessGrant, isFadder },
+      create: {
+        ...mapped,
+        studieretning,
+        ...studyGrant,
+        ...adminGrant,
+        ...accessGrant,
+        isFadder,
+      },
       update: {
         name: mapped.name,
         email: mapped.email,
         image: mapped.image,
-        studieretning: mapped.studieretning,
+        studieretning,
         klasse: mapped.klasse,
         passwordHash: null,
         passwordIsTemporary: false,
         isFadder,
+        ...studyGrant,
         ...adminGrant,
         ...accessGrant,
       },
     });
 
-    // 5. Mint our own session and set the httpOnly cookie. Proving they know
+    // 6. Mint our own session and set the httpOnly cookie. Proving they know
     //    the password also clears whatever failures came before.
     await issueSession(user.id, token);
     await clearLoginFailures(parsed.data.user_id, ip);
