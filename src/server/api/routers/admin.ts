@@ -52,6 +52,7 @@ async function resyncFadderStatus(
     select: {
       fadderOverride: true,
       klasse: true,
+      hasPaid: true,
       memberships: { where: { role: "FADDER" }, select: { id: true } },
     },
   });
@@ -60,6 +61,7 @@ async function resyncFadderStatus(
   const isFadder = deriveIsFadder({
     fadderOverride: user.fadderOverride,
     klasse: user.klasse,
+    hasPaid: user.hasPaid,
     hasFadderMembership: user.memberships.length > 0,
   });
 

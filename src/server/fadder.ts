@@ -8,11 +8,15 @@
  * user admitted before the current fadderuke cohort is therefore in 2. klasse
  * or higher and can never be a fadderbarn.
  *
- * Three signals feed the decision, in priority order:
+ * Four signals feed the decision, in priority order:
  *   1. `fadderOverride` — a manual admin decision, which always wins.
  *   2. A FADDER role in a faddergruppe — explicit, and covers the rare fadder
  *      whose cohort data is missing or wrong.
- *   3. The study cohort — the automatic path, which is what makes a fadder
+ *   3. A captured payment — proof, not a guess. `payment.initiatePayment`
+ *      refuses exempt users outright, so money having changed hands means this
+ *      user was on the paying side when it did. That outranks the cohort,
+ *      which is only ever an inference from an admission year.
+ *   4. The study cohort — the automatic path, which is what makes a fadder
  *      exempt from their very first login, before any admin has touched them.
  *
  * Deliberately fails towards "pays" when the cohort is unknown: a brand-new
@@ -105,18 +109,28 @@ export interface DeriveFadderInput {
   klasse?: string | null;
   /** Whether the user holds a FADDER role in any faddergruppe. */
   hasFadderMembership?: boolean;
+  /** Whether money has actually changed hands for this user. */
+  hasPaid?: boolean;
   cohortYear?: number;
 }
 
-/** Resolve the three signals into the single `isFadder` fact we persist. */
+/** Resolve the four signals into the single `isFadder` fact we persist. */
 export function deriveIsFadder({
   fadderOverride = null,
   klasse = null,
   hasFadderMembership = false,
+  hasPaid = false,
   cohortYear = currentCohortYear(),
 }: DeriveFadderInput): boolean {
   if (fadderOverride != null) return fadderOverride;
   if (hasFadderMembership) return true;
+  // Someone who paid was demonstrably a fadderbarn. Letting the cohort
+  // override that is how a paying student gets silently reclassified as
+  // exempt — and then looks, to an admin reading the payment overview, like a
+  // fadder owed a refund. This is the concrete case: a student starting a
+  // 2-year continuation like Digital transformasjon keeps their bachelor
+  // admission year, so the cohort insists they are in 2. klasse or later.
+  if (hasPaid) return false;
   return isSecondYearOrLater(klasse, cohortYear);
 }
 
