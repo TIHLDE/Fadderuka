@@ -192,6 +192,7 @@ export async function POST(request: Request) {
     const isFadder = deriveIsFadder({
       fadderOverride: declaredStudy ? false : existing?.fadderOverride,
       klasse: mapped.klasse,
+      hasPaid: existing?.hasPaid === true,
       hasFadderMembership,
     });
 

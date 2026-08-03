@@ -145,9 +145,7 @@ function LoggInnSkjema() {
                       </span>
                       <span className="text-muted-foreground block">
                         For eksempel Digital transformasjon etter fullført
-                        bachelor. TIHLDE-profilen din viser fortsatt den gamle
-                        linja, så uten dette blir du registrert som fadder i
-                        stedet for fadderbarn.
+                        bachelor.
                       </span>
                     </span>
                   </label>

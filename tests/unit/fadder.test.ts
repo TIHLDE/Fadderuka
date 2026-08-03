@@ -82,6 +82,28 @@ describe("deriveIsFadder", () => {
     ).toBe(true);
   });
 
+  // Den som begynner på et 2-årig påbygg som Digital transformasjon beholder
+  // opptaksåret fra bacheloren, så kullet insisterer på at hen er 2. klassing.
+  // Betalingen er bevis på det motsatte: fritatte får ikke betale i det hele
+  // tatt, så pengene kunne ikke ha gått gjennom om hen var fadder.
+  it("lar ikke kullet omgjøre en som faktisk har betalt", () => {
+    expect(
+      deriveIsFadder({ klasse: "2023", hasPaid: true, cohortYear: 2026 }),
+    ).toBe(false);
+  });
+
+  it("lar fadderverv veie tyngre enn en betaling gjort ved en feil", () => {
+    // Da skal admin få refusjonsvarselet, ikke en stille omklassifisering.
+    expect(
+      deriveIsFadder({
+        klasse: "2023",
+        hasPaid: true,
+        hasFadderMembership: true,
+        cohortYear: 2026,
+      }),
+    ).toBe(true);
+  });
+
   it("lar en manuell avgjørelse overstyre alt annet", () => {
     // En 2.-klassing som faktisk er fadderbarn skal kunne settes til å betale.
     expect(
