@@ -124,6 +124,28 @@ describe("POST /api/auth/login", () => {
     expect(user.isVerified).toBe(false);
   });
 
+  // De som begynte på Digital transformasjon rakk å betale før fadder-fritaket
+  // gikk live. Uten dette ville neste innlogging gjort dem om til faddere som
+  // "har betalt" — og noen kunne refundert dem i god tro.
+  it("gjør ikke om en som har betalt til fadder, uansett kull", async () => {
+    await createUser({
+      tihldeUserId: "olanor",
+      email: null,
+      hasPaid: true,
+      isVerified: true,
+    });
+    stubTihldeLogin({ profile: { studyyear: { group: { name: "2023" } } } });
+
+    await post(CREDENTIALS);
+
+    const user = await db.user.findUniqueOrThrow({
+      where: { tihldeUserId: "olanor" },
+    });
+    expect(user.isFadder).toBe(false);
+    expect(user.hasPaid).toBe(true);
+    expect(user.isVerified).toBe(true);
+  });
+
   it("lar en manuell fadder-fritakelse overleve innlogging", async () => {
     await createUser({
       tihldeUserId: "olanor",
