@@ -33,6 +33,8 @@ const ADMIN_PROCEDURE_INPUTS: Record<string, unknown> = {
   getUsers: undefined,
   setUserVerified: { userId: "x", isVerified: true },
   setUserAdmin: { userId: "x", isAdmin: true },
+  setUserFadder: { userId: "x", isFadder: true },
+  setUserStudieretning: { userId: "x", studieretning: "Dataingeniør" },
   resetUserPassword: { userId: "x" },
   getGrupper: undefined,
   createGruppe: { name: "Gruppe" },
@@ -225,11 +227,163 @@ describe("admin: brukere og grupper", () => {
   });
 });
 
+describe("fadder-fritak fra adminpanelet", () => {
+  it("fritar brukeren når de får FADDER-rollen i en gruppe", async () => {
+    const admin = await createAdmin();
+    const gruppe = await createGruppe();
+    const user = await createUser();
+
+    await callerFor(admin).admin.addMember({
+      userId: user.id,
+      gruppeId: gruppe.id,
+      role: "FADDER",
+    });
+
+    const after = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.isFadder).toBe(true);
+    // Får tilgang med det samme — det kommer ingen betaling som verifiserer dem.
+    expect(after.isVerified).toBe(true);
+  });
+
+  it("setter brukeren tilbake til betalende når FADDER-rollen fjernes", async () => {
+    const admin = await createAdmin();
+    const gruppe = await createGruppe();
+    // 1. klasse, så kullet fritar dem ikke.
+    const user = await createUser({ klasse: "2026" });
+
+    const membership = await callerFor(admin).admin.addMember({
+      userId: user.id,
+      gruppeId: gruppe.id,
+      role: "FADDER",
+    });
+    await callerFor(admin).admin.updateMemberRole({
+      membershipId: membership.id,
+      role: "FADDERBARN",
+    });
+
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: user.id } })).isFadder,
+    ).toBe(false);
+  });
+
+  it("beholder fritaket når kullet sier 2. klasse, selv uten FADDER-rolle", async () => {
+    const admin = await createAdmin();
+    const gruppe = await createGruppe();
+    const user = await createUser({ klasse: "2024" });
+
+    const membership = await callerFor(admin).admin.addMember({
+      userId: user.id,
+      gruppeId: gruppe.id,
+      role: "FADDER",
+    });
+    await callerFor(admin).admin.removeMember({ membershipId: membership.id });
+
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: user.id } })).isFadder,
+    ).toBe(true);
+  });
+
+  it("varsler admin når en fadder allerede har betalt", async () => {
+    const admin = await createAdmin();
+    const user = await createUser({ name: "Kari", hasPaid: true });
+
+    const result = await callerFor(admin).admin.setUserFadder({
+      userId: user.id,
+      isFadder: true,
+    });
+
+    // Pengene skal tilbake, og admin er den eneste som kan starte det.
+    expect(result.needsRefund).toBe(true);
+    // hasPaid røres ikke: den beskriver at penger faktisk har skiftet hender.
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: user.id } })).hasPaid,
+    ).toBe(true);
+  });
+
+  it("lar admin sette studieretningen, og pinner valget", async () => {
+    const admin = await createAdmin();
+    const user = await createUser({
+      name: "Kari",
+      studieretning: "Dataingeniør",
+      isFadder: true,
+    });
+
+    await callerFor(admin).admin.setUserStudieretning({
+      userId: user.id,
+      studieretning: "Digital transformasjon",
+    });
+
+    const after = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.studieretning).toBe("Digital transformasjon");
+    // Pinnet, ellers ville neste innlogging hentet bachelorlinja tilbake.
+    expect(after.studieretningOverride).toBe("Digital transformasjon");
+    // Studieretning og betalingsplikt er to avgjørelser: en DT-student på 2.
+    // året er fortsatt fadder.
+    expect(after.isFadder).toBe(true);
+  });
+
+  it("gir studieretningen tilbake til TIHLDE uten å tømme feltet", async () => {
+    const admin = await createAdmin();
+    const user = await createUser({
+      studieretning: "Digital transformasjon",
+      studieretningOverride: "Digital transformasjon",
+    });
+
+    await callerFor(admin).admin.setUserStudieretning({
+      userId: user.id,
+      studieretning: null,
+    });
+
+    const after = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(after.studieretningOverride).toBeNull();
+    // Verdien blir stående til neste innlogging henter profilen på nytt —
+    // ellers ville brukeren falt ut av gruppperingen sin med en gang.
+    expect(after.studieretning).toBe("Digital transformasjon");
+  });
+
+  it("avviser en studieretning som ikke finnes", async () => {
+    const admin = await createAdmin();
+    const user = await createUser();
+
+    await expectCode(
+      callerFor(admin).admin.setUserStudieretning({
+        userId: user.id,
+        studieretning: "Kokkelinja" as never,
+      }),
+      "BAD_REQUEST",
+    );
+  });
+
+  it("lar en manuell avgjørelse overleve en senere rolleendring", async () => {
+    const admin = await createAdmin();
+    const gruppe = await createGruppe();
+    const user = await createUser({ klasse: "2024" });
+
+    // En 2.-klassing som faktisk går som fadderbarn.
+    await callerFor(admin).admin.setUserFadder({
+      userId: user.id,
+      isFadder: false,
+    });
+    await callerFor(admin).admin.addMember({
+      userId: user.id,
+      gruppeId: gruppe.id,
+      role: "FADDERBARN",
+    });
+
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: user.id } })).isFadder,
+    ).toBe(false);
+  });
+});
+
 describe("admin.getRegistrations", () => {
   it("teller kun fadderbarn — admins og faddere holdes utenfor", async () => {
     const admin = await createAdmin();
     const gruppe = await createGruppe();
-    const fadder = await createUser({ name: "Fadder" });
+    // `isFadder` er fasiten på hvem som skylder penger, og er det oversikten
+    // filtrerer på. `addMember` her er en rå seeder som ikke går gjennom
+    // adminruteren, så flagget settes eksplisitt.
+    const fadder = await createUser({ name: "Fadder", isFadder: true });
     await addMember(fadder.id, gruppe.id, "FADDER");
     const fadderbarn = await createUser({ name: "Fadderbarn" });
     await addMember(fadderbarn.id, gruppe.id, "FADDERBARN");

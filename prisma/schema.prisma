@@ -55,6 +55,13 @@ model User {
     phone         String?
     klasse        String?
     studieretning String?
+    // The programme the user told us they are STARTING, when TIHLDE's profile
+    // still shows the one they came from. Digital transformasjon is the case
+    // this exists for: it is a 2-year continuation of a bachelor, so its new
+    // students keep their old STUDY group (and old cohort) on tihlde.org.
+    // `null` means "trust TIHLDE"; a value pins `studieretning` and survives
+    // every later login instead of being overwritten by the profile.
+    studieretningOverride String?
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)
@@ -69,6 +76,14 @@ model User {
     // True when passwordHash is an admin-issued one-time password. The user is
     // asked to replace it with one of their own on the next page load.
     passwordIsTemporary Boolean @default(false)
+    // Whether this user is a fadder — i.e. someone who never owes money for
+    // fadderuka. Derived on every login from the study cohort and any FADDER
+    // group membership (see `src/server/fadder.ts`), and persisted so every
+    // payment guard reads one field instead of re-deriving it.
+    isFadder      Boolean   @default(false)
+    // Manual fadder decision from the admin panel, same contract as
+    // `adminOverride`: `null` derives, `true`/`false` pins and survives logins.
+    fadderOverride Boolean?
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
     sessions      Session[]

@@ -24,6 +24,12 @@ export interface RegisterInput {
 interface RegisterResult extends Result {
   /** Which form field the error belongs to, when the server could tell. */
   field?: string;
+  /**
+   * Set when the failure was "you already have an account": the username they
+   * should log in as. Lets the form offer the way out instead of leaving them
+   * to guess which field to change.
+   */
+  existingUserId?: string;
 }
 
 async function readError(res: Response, fallback: string): Promise<string> {
@@ -36,12 +42,22 @@ async function readError(res: Response, fallback: string): Promise<string> {
 }
 
 export const authClient = {
-  /** Log in with a TIHLDE username + password. */
-  async signIn(userId: string, password: string): Promise<SignInResult> {
+  /**
+   * Log in with a TIHLDE username + password.
+   *
+   * `study` is the slug of a programme the user is STARTING this autumn, for
+   * the case where TIHLDE's profile still shows the one they came from (see
+   * /api/auth/login). Omitted for everyone else, which is almost everyone.
+   */
+  async signIn(
+    userId: string,
+    password: string,
+    study?: string,
+  ): Promise<SignInResult> {
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, password }),
+      body: JSON.stringify({ user_id: userId, password, study }),
     });
 
     if (!res.ok) {
@@ -67,15 +83,23 @@ export const authClient = {
 
     if (!res.ok) {
       let field: string | undefined;
-      let error = "Noe gikk galt ved registreringen.";
+      let existingUserId: string | undefined;
+      // Only used if the server sent nothing parseable at all — every real
+      // failure carries its own message.
+      let error = "Fikk ikke svar fra serveren. Sjekk nettet og prøv igjen.";
       try {
-        const body = (await res.json()) as { error?: string; field?: string };
+        const body = (await res.json()) as {
+          error?: string;
+          field?: string;
+          existingUserId?: string;
+        };
         error = body?.error ?? error;
         field = body?.field;
+        existingUserId = body?.existingUserId;
       } catch {
         // keep defaults
       }
-      return { error, field };
+      return { error, field, existingUserId };
     }
     return { error: null };
   },

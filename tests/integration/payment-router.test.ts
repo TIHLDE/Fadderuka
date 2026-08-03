@@ -22,6 +22,14 @@ describe("payment.getStatus", () => {
     await expect(callerFor(user).payment.getStatus()).resolves.toEqual({
       hasPaid: true,
       isVerified: true,
+      isExempt: false,
+    });
+  });
+
+  it("melder fra at faddere er fritatt, så klienten aldri viser betalingsvinduet", async () => {
+    const fadder = await createUser({ isFadder: true, isVerified: true });
+    await expect(callerFor(fadder).payment.getStatus()).resolves.toMatchObject({
+      isExempt: true,
     });
   });
 
@@ -60,6 +68,49 @@ describe("payment.initiatePayment", () => {
     const user = await createUser({ hasPaid: true });
     await expectCode(callerFor(user).payment.initiatePayment(), "BAD_REQUEST");
     expect(await db.payment.count()).toBe(0);
+  });
+
+  // Kjernen i "faddere skal ikke betale": å skjule knappen i UI-et holder ikke,
+  // for mutasjonen er fortsatt kallbar. Serveren må nekte å ta imot pengene.
+  it("nekter å ta betalt av en fadder", async () => {
+    const fadder = await createUser({ isFadder: true });
+
+    await expectCode(callerFor(fadder).payment.initiatePayment(), "FORBIDDEN");
+
+    // Ingen ordre opprettet, og Vipps ble aldri kontaktet i det hele tatt.
+    expect(await db.payment.count()).toBe(0);
+    expect(fetchMock.calls).toHaveLength(0);
+  });
+
+  it("nekter å ta betalt av en admin", async () => {
+    const admin = await createUser({ isAdmin: true });
+
+    await expectCode(callerFor(admin).payment.initiatePayment(), "FORBIDDEN");
+    expect(await db.payment.count()).toBe(0);
+  });
+
+  // To faner eller et utålmodig dobbeltklikk ga tidligere to live Vipps-ordrer,
+  // og begge kunne trekkes — brukeren betalte dobbelt.
+  it("gjenbruker en åpen ordre i stedet for å opprette en ny", async () => {
+    const user = await createUser();
+    stubVippsToken();
+    fetchMock.on(
+      "POST",
+      "/epayment/v1/payments",
+      json({ redirectUrl: "https://vipps.test/checkout/abc" }),
+    );
+
+    await callerFor(user).payment.initiatePayment();
+    await callerFor(user).payment.initiatePayment();
+
+    const orders = await db.payment.findMany({ where: { userId: user.id } });
+    expect(orders).toHaveLength(1);
+
+    // Begge forsøkene må peke på samme Vipps-referanse.
+    const references = fetchMock
+      .callsTo("/epayment/v1/payments")
+      .map((call) => (call.body as { reference: string }).reference);
+    expect(references).toEqual([orders[0]!.orderId, orders[0]!.orderId]);
   });
 
   it("gir BAD_GATEWAY når Vipps svarer med feil", async () => {

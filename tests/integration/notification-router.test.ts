@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { describe, expect, it } from "vitest";
 
 import { anonCaller, callerFor } from "../helpers/caller";
-import { createGruppe, createUser, db } from "../helpers/db";
+import { createGruppe, createMember, db } from "../helpers/db";
 
 async function expectCode(promise: Promise<unknown>, code: string) {
   await expect(promise).rejects.toSatisfy(
@@ -18,8 +18,8 @@ async function notify(userId: string, gruppeId: string, message: string, read = 
 describe("notification", () => {
   it("lister bare brukerens egne varsler, nyeste først", async () => {
     const gruppe = await createGruppe();
-    const user = await createUser();
-    const other = await createUser();
+    const user = await createMember();
+    const other = await createMember();
     await notify(user.id, gruppe.id, "første");
     await notify(user.id, gruppe.id, "andre");
     await notify(other.id, gruppe.id, "andres");
@@ -31,7 +31,7 @@ describe("notification", () => {
 
   it("teller bare uleste varsler", async () => {
     const gruppe = await createGruppe();
-    const user = await createUser();
+    const user = await createMember();
     await notify(user.id, gruppe.id, "ulest");
     await notify(user.id, gruppe.id, "lest", true);
 
@@ -40,7 +40,7 @@ describe("notification", () => {
 
   it("markerer ett varsel som lest", async () => {
     const gruppe = await createGruppe();
-    const user = await createUser();
+    const user = await createMember();
     const notification = await notify(user.id, gruppe.id, "hei");
 
     await callerFor(user).notification.markRead({ id: notification.id });
@@ -52,8 +52,8 @@ describe("notification", () => {
 
   it("kan ikke markere en annens varsel som lest", async () => {
     const gruppe = await createGruppe();
-    const user = await createUser();
-    const other = await createUser();
+    const user = await createMember();
+    const other = await createMember();
     const notification = await notify(other.id, gruppe.id, "hei");
 
     // updateMany er scopet på userId, så kallet lykkes men treffer ingenting.
@@ -67,8 +67,8 @@ describe("notification", () => {
 
   it("markerer alle egne varsler som lest, og ingen andres", async () => {
     const gruppe = await createGruppe();
-    const user = await createUser();
-    const other = await createUser();
+    const user = await createMember();
+    const other = await createMember();
     await notify(user.id, gruppe.id, "a");
     await notify(user.id, gruppe.id, "b");
     await notify(other.id, gruppe.id, "c");

@@ -39,9 +39,12 @@ export async function createUser(
     isVerified: boolean;
     hasPaid: boolean;
     studieretning: string | null;
+    studieretningOverride: string | null;
     klasse: string | null;
     passwordHash: string | null;
     passwordIsTemporary: boolean;
+    isFadder: boolean;
+    fadderOverride: boolean | null;
     createdAt: Date;
   }> = {},
 ) {
@@ -56,12 +59,27 @@ export async function createUser(
       isVerified: overrides.isVerified ?? false,
       hasPaid: overrides.hasPaid ?? false,
       studieretning: overrides.studieretning ?? null,
+      studieretningOverride: overrides.studieretningOverride ?? null,
       klasse: overrides.klasse ?? null,
       passwordHash: overrides.passwordHash ?? null,
       passwordIsTemporary: overrides.passwordIsTemporary ?? false,
+      isFadder: overrides.isFadder ?? false,
+      fadderOverride: overrides.fadderOverride ?? null,
       ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
     },
   });
+}
+
+/**
+ * A user who has completed registration and therefore has access to the app —
+ * what almost every content test means by "a user". `createUser` deliberately
+ * defaults to unverified, because that models a fresh sign-up sitting behind
+ * the paywall, and the procedures serving fadderuka content reject those.
+ */
+export async function createMember(
+  overrides: Parameters<typeof createUser>[0] = {},
+) {
+  return createUser({ isVerified: true, ...overrides });
 }
 
 export async function createAdmin(

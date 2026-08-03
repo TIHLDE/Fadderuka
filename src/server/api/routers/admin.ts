@@ -1,6 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import type { PaymentStatus } from "@prisma/client";
+import type { PaymentStatus, PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { MAJORS } from "~/lib/majors";
+import { deriveIsFadder } from "~/server/fadder";
 import {
   adminProcedure,
   createTRPCRouter,
@@ -32,6 +34,41 @@ function toTRPCError(err: unknown): TRPCError {
   });
 }
 
+/**
+ * Recompute a user's `isFadder` from their current state and store it.
+ *
+ * Called after anything that changes a group membership, so giving someone the
+ * FADDER role exempts them from payment immediately instead of only at their
+ * next login — and taking it away puts them back on the paying side unless the
+ * study cohort or a manual override says otherwise. Grants access alongside the
+ * exemption, since no payment is coming to verify them.
+ */
+async function resyncFadderStatus(
+  db: PrismaClient,
+  userId: string,
+): Promise<void> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      fadderOverride: true,
+      klasse: true,
+      memberships: { where: { role: "FADDER" }, select: { id: true } },
+    },
+  });
+  if (!user) return;
+
+  const isFadder = deriveIsFadder({
+    fadderOverride: user.fadderOverride,
+    klasse: user.klasse,
+    hasFadderMembership: user.memberships.length > 0,
+  });
+
+  await db.user.update({
+    where: { id: userId },
+    data: { isFadder, ...(isFadder ? { isVerified: true } : {}) },
+  });
+}
+
 export const adminRouter = createTRPCRouter({
   /** List all users with their verification/admin status and group memberships */
   getUsers: adminProcedure.query(async ({ ctx }) => {
@@ -43,9 +80,12 @@ export const adminRouter = createTRPCRouter({
         email: true,
         klasse: true,
         studieretning: true,
+        studieretningOverride: true,
         isVerified: true,
         isAdmin: true,
         hasPaid: true,
+        isFadder: true,
+        fadderOverride: true,
         createdAt: true,
         memberships: {
           select: {
@@ -97,16 +137,97 @@ export const adminRouter = createTRPCRouter({
   /**
    * Promote or demote admin status.
    *
-   * Also pins the decision via `adminOverride` so it survives the next login —
-   * without it, login would re-derive admin status from TIHLDE and overwrite
-   * whatever was set here.
+   * `pin` controls what happens on the next login. Pinned (the default) writes
+   * `adminOverride` so the decision survives — without it, login re-derives
+   * admin status from TIHLDE and overwrites whatever was set here. Unpinning
+   * clears the override instead, handing control back to TIHLDE group
+   * membership; that is the only way out of a pin, and without it an
+   * accidental demotion locked a FadderKom member out of admin permanently.
    */
   setUserAdmin: adminProcedure
-    .input(z.object({ userId: z.string(), isAdmin: z.boolean() }))
+    .input(
+      z.object({
+        userId: z.string(),
+        isAdmin: z.boolean(),
+        pin: z.boolean().default(true),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.user.update({
         where: { id: input.userId },
-        data: { isAdmin: input.isAdmin, adminOverride: input.isAdmin },
+        data: {
+          isAdmin: input.isAdmin,
+          adminOverride: input.pin ? input.isAdmin : null,
+        },
+      });
+    }),
+
+  /**
+   * Mark a user as a fadder, or as someone who owes payment after all.
+   *
+   * Faddere never pay, so this is the manual escape hatch for the cases the
+   * automatic rule cannot see: a fadder whose TIHLDE profile has no study
+   * cohort, or a 2. klasse student who is actually attending as a fadderbarn.
+   * The decision is pinned in `fadderOverride` and therefore survives every
+   * later login, exactly like `adminOverride`.
+   *
+   * Marking someone a fadder also grants access, since there is no payment
+   * coming that would otherwise verify them. It deliberately does NOT touch
+   * `hasPaid`: if they already paid, that stays true and the admin gets a
+   * refund prompt from the payment overview rather than a silently rewritten
+   * record.
+   */
+  setUserFadder: adminProcedure
+    .input(z.object({ userId: z.string(), isFadder: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.update({
+        where: { id: input.userId },
+        data: {
+          isFadder: input.isFadder,
+          fadderOverride: input.isFadder,
+          ...(input.isFadder ? { isVerified: true } : {}),
+        },
+        select: { id: true, name: true, hasPaid: true },
+      });
+
+      // Surfaced by the client so a fadder who paid before being marked is
+      // never quietly left out of pocket.
+      return { ...user, needsRefund: input.isFadder && user.hasPaid };
+    }),
+
+  /**
+   * Correct which programme a user is on.
+   *
+   * TIHLDE owns this field by default, and for almost everyone that is right.
+   * The exception is anyone whose profile has fallen behind reality — Digital
+   * transformasjon being the standing case, since its students keep the
+   * bachelor STUDY group they came from. Users can say so themselves at login,
+   * and this is the same decision from the admin side: for the ones who never
+   * did, and for undoing a mis-click.
+   *
+   * Passing `null` hands the field back to TIHLDE. The stored value is left
+   * alone rather than blanked, so the user stays grouped where they are until
+   * their next login refreshes it from the profile.
+   *
+   * Deliberately does NOT touch payment status. Being on DT does not by itself
+   * make someone a fadderbarn — a second-year DT student is a fadder — so that
+   * stays the separate, explicit decision `setUserFadder` makes.
+   */
+  setUserStudieretning: adminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        studieretning: z.enum(MAJORS).nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.user.update({
+        where: { id: input.userId },
+        data: {
+          studieretningOverride: input.studieretning,
+          ...(input.studieretning ? { studieretning: input.studieretning } : {}),
+        },
+        select: { id: true, name: true, studieretning: true },
       });
     }),
 
@@ -179,22 +300,28 @@ export const adminRouter = createTRPCRouter({
           message: "Brukeren er allerede medlem av denne gruppen",
         });
       }
-      return ctx.db.fadderGruppeMember.create({
+      const membership = await ctx.db.fadderGruppeMember.create({
         data: {
           userId: input.userId,
           gruppeId: input.gruppeId,
           role: input.role,
         },
       });
+      await resyncFadderStatus(ctx.db, input.userId);
+      return membership;
     }),
 
   /** Remove a member from a faddergruppe */
   removeMember: adminProcedure
     .input(z.object({ membershipId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.fadderGruppeMember.delete({
+      const membership = await ctx.db.fadderGruppeMember.delete({
         where: { id: input.membershipId },
       });
+      // Losing a FADDER role can put someone back on the paying side, unless
+      // their cohort or a manual override still exempts them.
+      await resyncFadderStatus(ctx.db, membership.userId);
+      return membership;
     }),
 
   /** Change a member's role within a group */
@@ -206,10 +333,12 @@ export const adminRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.fadderGruppeMember.update({
+      const membership = await ctx.db.fadderGruppeMember.update({
         where: { id: input.membershipId },
         data: { role: input.role },
       });
+      await resyncFadderStatus(ctx.db, membership.userId);
+      return membership;
     }),
 
   /** Permanently delete an unverified user and all their data */
@@ -274,13 +403,14 @@ export const adminRouter = createTRPCRouter({
    */
   getRegistrations: adminProcedure.query(async ({ ctx }) => {
     const users = await ctx.db.user.findMany({
-      // Only fadderbarn pay. Admins and faddere would otherwise inflate both the
-      // sign-up count and the outstanding sum with people who never owed money.
-      // Users without a group are kept: an unassigned registration is a
-      // fadderbarn until proven otherwise, and they are exactly who to chase.
+      // Only fadderbarn pay. Admins and faddere would otherwise inflate both
+      // the sign-up count and the outstanding sum with people who never owed
+      // money. Filtering on `isFadder` rather than on group membership is what
+      // makes this agree with the actual payment guard: a fadder is exempt from
+      // their study cohort alone, long before anyone assigns them to a group.
       where: {
         isAdmin: false,
-        memberships: { none: { role: "FADDER" } },
+        isFadder: false,
       },
       select: {
         id: true,

@@ -45,8 +45,13 @@ export default function VippsPaymentOverlay() {
     },
   });
 
-  // Don't show overlay if user has paid or is verified
-  if (paymentStatus.data?.hasPaid || paymentStatus.data?.isVerified) {
+  // Nothing to ask for if they've paid, are already verified, or owe nothing
+  // at all — faddere and admins never see a payment prompt.
+  if (
+    paymentStatus.data?.hasPaid ||
+    paymentStatus.data?.isVerified ||
+    paymentStatus.data?.isExempt
+  ) {
     return null;
   }
 
