@@ -15,7 +15,7 @@ export default function AktiviteterList({
 
   return (
     <>
-      <div className="mt-16 space-y-16">
+      <div className="flex flex-col gap-10">
         {days.map(([dateKey, dayActivities]) => {
           const date = new Date(dateKey);
           const label = date.toLocaleDateString("no-NO", { weekday: "long" });
@@ -25,30 +25,31 @@ export default function AktiviteterList({
           });
 
           return (
-            <section key={dateKey} className="space-y-6">
-              <div className="flex flex-col gap-2 md:flex-row md:items-baseline md:gap-6">
-                <h2 className="text-3xl font-bold capitalize text-foreground sm:text-4xl md:text-5xl">
+            // Dagoverskriften er en h2 og skal ligge under sidens h1
+            // (text-3xl/4xl). Den var før text-5xl — større enn tittelen.
+            <section key={dateKey} className="flex flex-col gap-4">
+              <div className="flex items-baseline gap-3">
+                <h2 className="font-heading text-foreground text-2xl font-semibold capitalize tracking-tight">
                   {label}
                 </h2>
-                <span className="text-sm text-muted-foreground sm:text-base md:text-xl">
-                  {dateStr}
-                </span>
+                <span className="text-muted-foreground text-sm">{dateStr}</span>
               </div>
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 {dayActivities.map((activity) => (
                   <button
                     key={activity.id}
                     type="button"
                     onClick={() => setSelected(activity)}
-                    className="rounded-xl bg-card text-card-foreground p-6 text-left ring-1 ring-foreground/10 transition-colors hover:bg-muted/50"
+                    data-slot="card"
+                    className="ring-card-border flex flex-col gap-4 overflow-hidden rounded-xl bg-card p-4 text-left text-card-foreground ring-1"
                   >
                     <ActivityImage
                       src={activity.imageUrl}
                       alt={activity.title}
-                      className="h-44 w-full rounded-lg object-cover"
+                      className="aspect-video w-full rounded-lg object-cover"
                     />
-                    <div className="mt-6 space-y-3">
-                      <h3 className="text-2xl font-semibold text-foreground">
+                    <div className="flex flex-col gap-2">
+                      <h3 className="font-heading text-foreground text-base leading-snug font-medium">
                         {activity.title}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -66,7 +67,7 @@ export default function AktiviteterList({
                             : activity.location}
                         </span>
                       </div>
-                      <p className="line-clamp-2 text-sm text-muted-foreground">
+                      <p className="text-muted-foreground line-clamp-2 text-sm">
                         {stripMarkdown(activity.description)}
                       </p>
                     </div>

@@ -1,59 +1,42 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import React from "react";
-import HeaderLink from "~/components/ui/header-link";
 import Logo from "~/components/ui/logo";
 import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
-import { cn } from "~/lib/utils";
 import { auth } from "~/server/auth/config";
 import { NotificationBell } from "./notification-bell";
 import { NAV_LINKS, getGroupLink } from "./nav-links";
 import { UserArea } from "../user-area";
 
-const HeaderButtonsWrapper = async ({
-  className,
-  ...props
-}: React.HTMLProps<HTMLDivElement>) => {
+const HeaderButtonsWrapper = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
+  const links = [...NAV_LINKS, getGroupLink(session?.user?.isAdmin)];
+
   return (
-    <div
-      {...props}
-      className={cn(
-        "flex h-full w-full items-center justify-between",
-        className,
-      )}
-    >
-      <nav className="flex items-center gap-8">
-        <HeaderLink
-          href="/"
-          className="mr-10 p-0 hover:bg-transparent"
-          aria-label="TIHLDE"
-        >
-          <Logo />
-        </HeaderLink>
-        {[...NAV_LINKS, getGroupLink(session?.user?.isAdmin)].map(
-          ({ href, label }) => (
-            <HeaderLink
-              key={href}
-              className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
-              href={href}
-            >
-              {label}
-            </HeaderLink>
-          ),
-        )}
+    <>
+      <Link href="/" aria-label="TIHLDE" className="shrink-0">
+        <Logo />
+      </Link>
+
+      {/* Under md ligger de samme lenkene i bunnlinjas meny i stedet. */}
+      <nav className="hidden items-center gap-1 md:flex">
+        {links.map(({ href, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className="text-foreground hover:bg-muted rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors"
+          >
+            {label}
+          </Link>
+        ))}
       </nav>
 
-      <div className="text-muted-foreground flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {session?.user ? <NotificationBell /> : null}
-        <ThemeToggle
-          aria-label="Bytt tema"
-          className="text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md border-transparent bg-transparent p-2"
-          variant="ghost"
-          size="icon"
-        />
+        <ThemeToggle aria-label="Bytt tema" variant="ghost" size="icon" />
         <UserArea
           name={session?.user?.name ?? "Gjest"}
           image={session?.user?.image ?? ""}
@@ -61,7 +44,7 @@ const HeaderButtonsWrapper = async ({
           isAuthenticated={!!session?.user}
         />
       </div>
-    </div>
+    </>
   );
 };
 

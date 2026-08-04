@@ -87,7 +87,8 @@ export function GroupView({
   return (
     <section className="!space-y-6">
       <div className="flex flex-wrap items-end justify-between !gap-4">
-        <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-foreground sm:text-[36px]">
+        {/* Seksjonsoverskrift — skal ligge under sidens h1 (text-3xl/4xl). */}
+        <h2 className="font-heading text-foreground text-2xl font-semibold tracking-tight">
           {title}
         </h2>
         {canPost && (
@@ -114,7 +115,7 @@ export function GroupView({
               className="rounded-xl border border-border bg-card !p-6"
             >
               <div className="flex flex-wrap items-start justify-between !gap-3">
-                <h3 className="text-lg font-extrabold text-foreground sm:text-xl">
+                <h3 className="font-heading text-foreground text-base leading-snug font-medium">
                   {message.author.name}
                 </h3>
                 <div className="flex items-center !gap-2">
@@ -127,7 +128,7 @@ export function GroupView({
                       onClick={() =>
                         deleteMutation.mutate({ messageId: message.id })
                       }
-                      className="!p-1 text-red-400/50 hover:text-red-400 transition"
+                      className="!p-1 text-destructive/50 hover:text-destructive transition"
                       title="Slett melding"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -160,7 +161,9 @@ export function GroupView({
           <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card !p-6 text-foreground sm:!p-8">
             <div className="flex items-start justify-between !gap-4">
               <div>
-                <h3 className="text-xl font-semibold">{composerTitle}</h3>
+                <h3 className="font-heading text-base leading-snug font-medium">
+                  {composerTitle}
+                </h3>
                 <p className="!mt-1 text-sm text-muted-foreground">
                   {composerSubtitle}
                 </p>

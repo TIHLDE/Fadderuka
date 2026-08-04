@@ -1,3 +1,5 @@
+import { Separator } from "~/components/ui/separator";
+
 const FacebookIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
@@ -37,76 +39,83 @@ const attributes = [
 
 export default function Footer() {
   return (
-    <footer className="pt-6 pb-32 md:py-20 px-12 md:px-40 bg-background text-foreground border-t space-y-12">
-      <div className="flex flex-col space-y-12 lg:space-y-0 lg:flex-row md:justify-between">
-        <div className="order-last lg:order-first space-y-4 lg:w-62.5">
-          <div className="space-y-1">
-            <h2 className="font-heading text-3xl font-medium tracking-tight text-center">Kontakt</h2>
-          </div>
+    // Photon-idiomet: `container mx-auto px-4` med subtile separatorer i stedet
+    // for kanter. Den gamle `px-12 pb-32` ga 48px sidemarg på telefon — 3× det
+    // sidene selv bruker — og 128px død plass under hver eneste side.
+    <footer className="bg-background text-foreground mt-auto w-full">
+      <Separator variant="subtle" />
+
+      <div className="container mx-auto grid gap-10 px-4 py-10 md:grid-cols-3">
+        <div className="flex flex-col gap-3 text-center">
+          <h2 className="font-heading text-sm font-semibold">Kontakt</h2>
           {attributes.map((attribute) => (
-            <div className="text-center" key={attribute.key}>
-              <p className="font-semibold uppercase">{attribute.key}</p>
+            <div key={attribute.key} className="text-sm">
+              <p className="text-muted-foreground text-xs font-semibold uppercase">
+                {attribute.key}
+              </p>
               <p>{attribute.value}</p>
             </div>
           ))}
-          <p className="text-center">
-            <a
-              href="https://tihlde.org/kontakt"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              Kontakt oss
-            </a>
-          </p>
+          <a
+            href="https://tihlde.org/kontakt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-link text-sm hover:underline"
+          >
+            Kontakt oss
+          </a>
         </div>
 
-        <div className="space-y-12 lg:max-w-sm w-full">
-          <div className="space-y-4">
+        <div className="flex flex-col items-center gap-8">
+          <div className="flex w-full flex-col items-center gap-3">
             <a
-              className="mx-auto flex justify-center"
               href="https://www.dnv.com/"
               rel="noopener noreferrer"
               target="_blank"
+              className="w-full max-w-[16rem]"
             >
-              <div className="dark:bg-white p-2 w-fit rounded-md">
+              {/* `w-full max-w-*` framfor den gamle faste `w-60` (240px), som
+                  flommet over containeren sin på alle telefoner. */}
+              <div className="dark:bg-white w-full rounded-md p-2">
                 <img
                   alt="DNV"
-                  className="w-60 md:w-72 mx-auto"
+                  className="mx-auto h-auto w-full"
                   loading="lazy"
                   src="https://cdn.onedesign.dnv.com/onedesigncdn/3.7.0/images/DNV_logo_RGB.svg"
                 />
               </div>
             </a>
-            <h2 className="mt-5 text-lg text-center">Hovedsamarbeidspartner</h2>
+            <h2 className="font-heading text-sm font-semibold">
+              Hovedsamarbeidspartner
+            </h2>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 place-items-center gap-y-6 lg:flex lg:items-center">
-              {mediaList.map((media) => (
-                <a
-                  key={media.label}
-                  className="mx-8"
-                  href={media.link}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  aria-label={media.label}
-                >
-                  <media.Icon className="size-8 dark:fill-white" />
-                </a>
-              ))}
-            </div>
+          <div className="flex items-center justify-center gap-6">
+            {mediaList.map((media) => (
+              <a
+                key={media.label}
+                href={media.link}
+                rel="noopener noreferrer"
+                target="_blank"
+                aria-label={media.label}
+                className="text-muted-foreground hover:text-foreground grid size-11 place-items-center transition-colors"
+              >
+                <media.Icon className="size-6" />
+              </a>
+            ))}
           </div>
         </div>
 
-        <div className="lg:w-62.5 pb-12 lg:pb-0">
-          <div className="space-y-1 mb-4">
-            <h2 className="font-heading text-3xl font-medium tracking-tight text-center">Samarbeid</h2>
-          </div>
-          <a href="https://www.nito.no/" target="_blank" rel="noopener noreferrer">
+        <div className="flex flex-col items-center gap-3">
+          <h2 className="font-heading text-sm font-semibold">Samarbeid</h2>
+          <a
+            href="https://www.nito.no/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <img
               alt="NITO"
-              className="w-28 mx-auto mt-4"
+              className="w-28"
               loading="lazy"
               src="/nito.svg"
               width={250}
@@ -115,28 +124,28 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-center">
+      <Separator variant="subtle" />
+
+      <div className="text-muted-foreground container mx-auto flex flex-col items-center justify-between gap-2 px-4 py-6 text-sm md:flex-row">
+        <p>
           Feil på siden?{" "}
           <a
             href="https://tihlde.org/tilbakemelding"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:underline"
+            className="text-link hover:underline"
           >
             Rapporter til Index
           </a>
         </p>
-        <p className="text-center">
-          <a
-            href="https://tihlde.org/personvern"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline"
-          >
-            Personvernerklæring
-          </a>
-        </p>
+        <a
+          href="https://tihlde.org/personvern"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-link hover:underline"
+        >
+          Personvernerklæring
+        </a>
       </div>
     </footer>
   );

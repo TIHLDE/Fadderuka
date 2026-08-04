@@ -231,7 +231,7 @@ export function GrupperTab() {
                                           membershipId: member.id,
                                         })
                                       }
-                                      className="!p-1 text-red-400/70 hover:text-red-400 transition"
+                                      className="!p-1 text-destructive/70 hover:text-destructive transition"
                                       title="Fjern fra gruppen"
                                     >
                                       <UserMinus className="h-4 w-4" />
@@ -288,7 +288,7 @@ export function GrupperTab() {
                                           membershipId: member.id,
                                         })
                                       }
-                                      className="!p-1 text-red-400/70 hover:text-red-400 transition"
+                                      className="!p-1 text-destructive/70 hover:text-destructive transition"
                                       title="Fjern fra gruppen"
                                     >
                                       <UserMinus className="h-4 w-4" />
@@ -365,7 +365,7 @@ export function GrupperTab() {
                               }
                             }}
                             disabled={deleteMutation.isPending}
-                            className="inline-flex items-center !gap-1.5 text-xs text-red-400/70 transition hover:text-red-400"
+                            className="inline-flex items-center !gap-1.5 text-xs text-destructive/70 transition hover:text-destructive"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Slett gruppe

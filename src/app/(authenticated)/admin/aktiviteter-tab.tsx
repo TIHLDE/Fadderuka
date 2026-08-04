@@ -239,7 +239,7 @@ export function AktiviteterTab() {
                   />
                 ) : (
                   <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <span className="text-xs font-bold text-sky-300">
+                    <span className="text-xs font-bold text-primary">
                       {activity.title.slice(0, 2).toUpperCase()}
                     </span>
                   </div>
@@ -277,7 +277,7 @@ export function AktiviteterTab() {
                   type="button"
                   onClick={() => deleteMutation.mutate({ id: activity.id })}
                   disabled={deleteMutation.isPending}
-                  className="inline-flex items-center !gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 !px-3 !py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-60"
+                  className="inline-flex items-center !gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 !px-3 !py-1.5 text-xs font-medium text-destructive transition hover:bg-destructive/20 disabled:opacity-60"
                 >
                   <Trash2 className="h-3 w-3" />
                   Slett

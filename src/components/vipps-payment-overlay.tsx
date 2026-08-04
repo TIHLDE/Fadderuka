@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2, Wallet } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
@@ -61,77 +62,52 @@ export default function VippsPaymentOverlay() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-8 shadow-2xl sm:p-10">
-        {/* Header */}
-        <div className="mb-8 text-center m-10">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500/10">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="h-8 w-8 text-orange-500"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-              <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-              <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-            </svg>
+    // `overflow-y-auto` på wrapperen og `my-auto` på panelet: dette er den
+    // eneste skjermen en ubetalt bruker ser, og med tastaturet oppe på en liten
+    // telefon ble innholdet før klippet uten noen vei til å scrolle.
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4 supports-[backdrop-filter]:backdrop-blur-xs">
+      <div className="bg-popover text-popover-foreground ring-foreground/10 my-auto flex w-full max-w-md flex-col gap-6 rounded-xl p-6 ring-1 sm:p-8">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="bg-primary/10 grid size-14 place-items-center rounded-full">
+            <Wallet className="text-primary size-7" />
           </div>
-          <h2 className="text-2xl font-bold text-white mt-8">
-            Fullfør registreringen
-          </h2>
-          <p className="mt-4 text-sm text-zinc-400">
-            Du må betale for fadderuka før du kan se innholdet. Betal enkelt med
-            Vipps for å bli registrert som fadderbarn.
-          </p>
+          <div className="flex flex-col gap-2">
+            <h2 className="font-heading text-xl font-semibold tracking-tight">
+              Fullfør registreringen
+            </h2>
+            <p className="text-muted-foreground text-sm text-pretty">
+              Du må betale for fadderuka før du kan se innholdet. Betal enkelt
+              med Vipps for å bli registrert som fadderbarn.
+            </p>
+          </div>
         </div>
 
-        <div className="space-y-4 m-10 mb-12">
+        <div className="flex flex-col gap-2">
           <Button
             onClick={() => initiatePayment.mutate()}
             disabled={initiatePayment.isPending}
-            className="h-14 w-full rounded-xl bg-orange-500 text-lg font-bold text-white shadow-lg shadow-orange-500/25 transition-all hover:bg-orange-600 hover:shadow-orange-500/40 disabled:opacity-50"
+            className="h-11 w-full text-base"
           >
             {initiatePayment.isPending ? (
-              <span className="flex items-center gap-2">
-                <svg
-                  className="h-5 w-5 animate-spin"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
+              <>
+                <Loader2 className="size-5 animate-spin" />
                 Laster...
-              </span>
+              </>
             ) : (
               "Betal med Vipps"
             )}
           </Button>
 
-          <button
+          <Button
+            variant="ghost"
             onClick={() => checkPayment.mutate()}
             disabled={checkPayment.isPending}
-            className="w-full py-2 text-sm text-zinc-400 underline-offset-2 transition-colors hover:text-zinc-200 hover:underline disabled:opacity-50"
+            className="h-11 w-full"
           >
             {checkPayment.isPending
               ? "Sjekker betaling..."
               : "Jeg har allerede betalt"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
