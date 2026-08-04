@@ -4,7 +4,7 @@ import { ChevronDown, KeyRound, Shield, ShieldOff, Trash2, UserCheck } from "luc
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { api } from "~/trpc/react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   MAJORS,
   type Major,
@@ -74,7 +74,7 @@ export function UsersTab() {
       void utils.admin.getUsers.invalidate();
       void utils.admin.getGrupper.invalidate();
       setVerifyingUserId(null);
-      toast({ title: "Bruker verifisert og lagt til i gruppe som fadderbarn" });
+      toast("Bruker verifisert og lagt til i gruppe som fadderbarn");
     },
   });
 
@@ -82,10 +82,10 @@ export function UsersTab() {
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
       setDeletingUserId(null);
-      toast({ title: "Bruker slettet" });
+      toast("Bruker slettet");
     },
     onError: (error) => {
-      toast({ title: "Feil", description: error.message, variant: "destructive" });
+      toast.error("Feil", { description: error.message });
     },
   });
 
@@ -94,14 +94,14 @@ export function UsersTab() {
       setTempPassword({ userId: variables.userId, ...data });
     },
     onError: (error) => {
-      toast({ title: "Feil", description: error.message, variant: "destructive" });
+      toast.error("Feil", { description: error.message });
     },
   });
 
   const adminMutation = api.admin.setUserAdmin.useMutation({
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
-      toast({ title: "Adminstatus oppdatert" });
+      toast("Adminstatus oppdatert");
     },
   });
 
@@ -112,18 +112,16 @@ export function UsersTab() {
       // A fadder who paid before being marked is owed the money back, and the
       // admin is the only one who can start that — so say it here rather than
       // leaving it to be noticed in the payment overview.
-      toast({
-        title: result.needsRefund
-          ? `${result.name} er fritatt — men har allerede betalt`
-          : "Betalingsstatus oppdatert",
-        description: result.needsRefund
-          ? "Refunder betalingen fra Betalinger-fanen."
-          : undefined,
-        variant: result.needsRefund ? "destructive" : undefined,
-      });
+      if (result.needsRefund) {
+        toast.error(`${result.name} er fritatt — men har allerede betalt`, {
+          description: "Refunder betalingen fra Betalinger-fanen.",
+        });
+      } else {
+        toast("Betalingsstatus oppdatert");
+      }
     },
     onError: (error) => {
-      toast({ title: "Feil", description: error.message, variant: "destructive" });
+      toast.error("Feil", { description: error.message });
     },
   });
 
@@ -131,17 +129,19 @@ export function UsersTab() {
     onSuccess: (result, variables) => {
       void utils.admin.getUsers.invalidate();
       void utils.admin.getRegistrations.invalidate();
-      toast({
-        title: variables.studieretning
+      toast(
+        variables.studieretning
           ? `${result.name} står nå på ${variables.studieretning}`
           : `${result.name} følger TIHLDE igjen`,
-        description: variables.studieretning
-          ? "Valget overlever innlogging. Betalingsstatus er ikke endret."
-          : "Studieretningen hentes fra TIHLDE-profilen ved neste innlogging.",
-      });
+        {
+          description: variables.studieretning
+            ? "Valget overlever innlogging. Betalingsstatus er ikke endret."
+            : "Studieretningen hentes fra TIHLDE-profilen ved neste innlogging.",
+        },
+      );
     },
     onError: (error) => {
-      toast({ title: "Feil", description: error.message, variant: "destructive" });
+      toast.error("Feil", { description: error.message });
     },
   });
 
@@ -149,7 +149,7 @@ export function UsersTab() {
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
       void utils.admin.getGrupper.invalidate();
-      toast({ title: "Rolle oppdatert" });
+      toast("Rolle oppdatert");
     },
   });
 

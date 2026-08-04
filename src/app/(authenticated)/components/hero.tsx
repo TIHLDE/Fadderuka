@@ -1,4 +1,4 @@
-import { Reveal } from "~/components/ui/reveal";
+import { Reveal } from "~/components/ui/motion";
 
 export default function Hero() {
   return (

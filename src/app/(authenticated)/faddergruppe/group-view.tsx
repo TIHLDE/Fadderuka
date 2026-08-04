@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
 type GroupViewProps = {
@@ -44,17 +44,17 @@ export function GroupView({
       void utils.gruppe.getMessages.invalidate({ gruppeId, channel });
       setComposerMessage("");
       setIsComposerOpen(false);
-      toast({ title: "Melding sendt" });
+      toast("Melding sendt");
     },
     onError: (err) => {
-      toast({ title: err.message, variant: "destructive" });
+      toast.error(err.message);
     },
   });
 
   const deleteMutation = api.gruppe.deleteMessage.useMutation({
     onSuccess: () => {
       void utils.gruppe.getMessages.invalidate({ gruppeId, channel });
-      toast({ title: "Melding slettet" });
+      toast("Melding slettet");
     },
   });
 

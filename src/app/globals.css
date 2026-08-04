@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 @config "../../tailwind.config.ts";
 
 /* ── Fargepalett ──────────────────────────────────────────────────────────
@@ -128,6 +129,31 @@
      bremser nå på samme kurve i stedet for den flate standarden. Komponenter
      som setter en eksplisitt `ease-*` vinner fortsatt. */
   --default-transition-timing-function: var(--ease-out);
+
+  /* Photons button.tsx og andre komponenter bruker `rounded-[min(var(--radius-md),10px)]`
+     i vilkårlige verdier, som trenger selve CSS-variabelen — `tailwind.config.ts`
+     sin `borderRadius.md` gir bare `rounded-md`-utiliten, ikke en `--radius-md`
+     man kan referere til. Definert her så begge bruksmåtene virker. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* tw-animate-css løser inn/ut-easing via `var(--tw-ease, …)`. Redefinerer
+     dens shorthands så dialoger, popovers, dropdowns og menyer uten
+     eksplisitt `ease-*`-klasse faller tilbake på ease-out i stedet for den
+     flate nettleser-standarden. Varighet uendret (150ms). Komponenter som
+     setter egen `duration-*` vinner fortsatt. */
+  --animate-in: enter var(--tw-animation-duration, var(--tw-duration, 0.15s))
+    var(--tw-ease, var(--ease-out)) var(--tw-animation-delay, 0s)
+    var(--tw-animation-iteration-count, 1)
+    var(--tw-animation-direction, normal)
+    var(--tw-animation-fill-mode, none);
+  --animate-out: exit var(--tw-animation-duration, var(--tw-duration, 0.15s))
+    var(--tw-ease, var(--ease-out)) var(--tw-animation-delay, 0s)
+    var(--tw-animation-iteration-count, 1)
+    var(--tw-animation-direction, normal)
+    var(--tw-animation-fill-mode, none);
 }
 
 /* ── Inngangsanimasjon ────────────────────────────────────────────────────

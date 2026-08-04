@@ -73,21 +73,22 @@ export function DateTimePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          className={cn(
-            "w-full justify-start gap-2 font-normal",
-            !value && "text-muted-foreground",
-          )}
-        >
-          <CalendarIcon className="size-4 shrink-0" />
-          <span className="truncate">
-            {value ? labelFormatter.format(value) : placeholder}
-          </span>
-        </Button>
+      <PopoverTrigger
+        render={
+          <Button
+            id={id}
+            variant="outline"
+            className={cn(
+              "w-full justify-start gap-2 font-normal",
+              !value && "text-muted-foreground",
+            )}
+          />
+        }
+      >
+        <CalendarIcon className="size-4 shrink-0" />
+        <span className="truncate">
+          {value ? labelFormatter.format(value) : placeholder}
+        </span>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar

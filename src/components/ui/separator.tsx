@@ -1,34 +1,34 @@
-import type * as React from "react";
+"use client";
+
+import { Separator as SeparatorPrimitive } from "@base-ui/react/separator";
 
 import { cn } from "~/lib/utils";
 
-type SeparatorProps = React.ComponentProps<"div"> & {
-  orientation?: "horizontal" | "vertical";
-  /**
-   * `subtle` bruker --border-subtle, som er dempet nok til seksjonsskiller
-   * (footer o.l.) uten å trekke blikket.
-   */
-  variant?: "default" | "subtle";
+type SeparatorProps = SeparatorPrimitive.Props & {
+    /**
+     * `subtle` demper linjen slik at den skiller seksjoner uten å trekke blikket.
+     */
+    variant?: "default" | "subtle";
 };
 
-export function Separator({
-  className,
-  orientation = "horizontal",
-  variant = "default",
-  ...props
+function Separator({
+    className,
+    orientation = "horizontal",
+    variant = "default",
+    ...props
 }: SeparatorProps) {
-  return (
-    <div
-      data-slot="separator"
-      role="separator"
-      aria-orientation={orientation}
-      className={cn(
-        "shrink-0",
-        variant === "subtle" ? "bg-border-subtle" : "bg-border",
-        orientation === "horizontal" ? "h-px w-full" : "w-px self-stretch",
-        className,
-      )}
-      {...props}
-    />
-  );
+    return (
+        <SeparatorPrimitive
+            data-slot="separator"
+            orientation={orientation}
+            className={cn(
+                "shrink-0 bg-border data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
+                variant === "subtle" && "bg-border-subtle",
+                className,
+            )}
+            {...props}
+        />
+    );
 }
+
+export { Separator };

@@ -60,29 +60,22 @@ export const UserArea = ({
         }
         open={open}
       >
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label="Profil"
-            className="hover:bg-muted/50 rounded-full p-0.5 transition"
-          >
-            {isAuthenticated ? (
-              <Avatar className="size-8">
-                <AvatarImage
-                  src={image}
-                  alt={name}
-                  className="object-cover"
-                />
-                <AvatarFallback className="bg-muted/40 text-foreground text-xs font-medium">
-                  {getInitials(name)}
-                </AvatarFallback>
-              </Avatar>
-            ) : (
-              <span className="grid size-8 place-items-center">
-                <UserRound className="text-foreground h-4 w-4" />
-              </span>
-            )}
-          </button>
+        <PopoverTrigger
+          aria-label="Profil"
+          className="hover:bg-muted/50 rounded-full p-0.5 transition"
+        >
+          {isAuthenticated ? (
+            <Avatar className="size-8">
+              <AvatarImage src={image} alt={name} className="object-cover" />
+              <AvatarFallback className="bg-muted/40 text-foreground text-xs font-medium">
+                {getInitials(name)}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <span className="grid size-8 place-items-center">
+              <UserRound className="text-foreground h-4 w-4" />
+            </span>
+          )}
         </PopoverTrigger>
         <PopoverContent
           align="end"

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { DateTimePicker } from "~/components/ui/date-time-picker";
 import { stripMarkdown } from "~/lib/utils";
 
@@ -35,7 +35,7 @@ export function AktiviteterTab() {
       void utils.activity.getAll.invalidate();
       setShowForm(false);
       setForm(makeEmptyForm());
-      toast({ title: "Aktivitet opprettet" });
+      toast("Aktivitet opprettet");
     },
   });
 
@@ -44,14 +44,14 @@ export function AktiviteterTab() {
       void utils.activity.getAll.invalidate();
       setEditingId(null);
       setForm(makeEmptyForm());
-      toast({ title: "Aktivitet oppdatert" });
+      toast("Aktivitet oppdatert");
     },
   });
 
   const deleteMutation = api.activity.delete.useMutation({
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
-      toast({ title: "Aktivitet slettet" });
+      toast("Aktivitet slettet");
     },
   });
 

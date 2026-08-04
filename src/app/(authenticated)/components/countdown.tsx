@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import ActivityModal, {
   type ModalActivity,
 } from "~/components/ui/activity-modal";
-import { Reveal } from "~/components/ui/reveal";
+import { Reveal } from "~/components/ui/motion";
 
 function getRemaining(target: Date) {
   const diff = Math.max(0, target.getTime() - Date.now());

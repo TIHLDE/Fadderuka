@@ -7,7 +7,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 const HeaderSkeleton = () => {
   return (
     <>
-      <Skeleton className="h-8 w-40 shrink-0" />
+      <Skeleton className="h-5 w-[102px] shrink-0" />
 
       <div className="hidden items-center gap-1 md:flex">
         <Skeleton className="h-5 w-28" />

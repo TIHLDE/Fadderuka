@@ -2,11 +2,10 @@
 
 import { Loader2, Wallet } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { useToast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
 export default function VippsPaymentOverlay() {
-  const { toast } = useToast();
 
   const paymentStatus = api.payment.getStatus.useQuery();
 
@@ -15,34 +14,24 @@ export default function VippsPaymentOverlay() {
       window.location.href = data.redirectUrl;
     },
     onError: (error) => {
-      toast({
-        title: "Feil",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Feil", { description: error.message });
     },
   });
 
   const checkPayment = api.payment.checkMyPayment.useMutation({
     onSuccess: (data) => {
       if (data.found) {
-        toast({ title: "Betaling funnet!", description: "Du er nå registrert." });
+        toast("Betaling funnet!", { description: "Du er nå registrert." });
         void paymentStatus.refetch();
       } else {
-        toast({
-          title: "Ingen betaling funnet",
+        toast.error("Ingen betaling funnet", {
           description:
             "Vi fant ingen fullført betaling ennå. Prøv å betale med Vipps.",
-          variant: "destructive",
         });
       }
     },
     onError: (error) => {
-      toast({
-        title: "Feil",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Feil", { description: error.message });
     },
   });
 

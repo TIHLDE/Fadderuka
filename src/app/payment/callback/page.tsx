@@ -35,9 +35,7 @@ function PaymentCallback() {
     return (
       <CallbackFrame>
         <p className="text-destructive">Ugyldig tilbakekobling fra Vipps.</p>
-        <Button asChild variant="outline">
-          <Link href="/">Gå til forsiden</Link>
-        </Button>
+        <Button render={<Link href="/">Gå til forsiden</Link>} variant="outline" />
       </CallbackFrame>
     );
   }
@@ -48,9 +46,7 @@ function PaymentCallback() {
         <p className="text-destructive">
           Betalingen kunne ikke bekreftes: {confirm.error.message}
         </p>
-        <Button asChild variant="outline">
-          <Link href="/">Gå til forsiden</Link>
-        </Button>
+        <Button render={<Link href="/">Gå til forsiden</Link>} variant="outline" />
       </CallbackFrame>
     );
   }
@@ -70,9 +66,7 @@ function PaymentCallback() {
             Velkommen!
           </p>
         </div>
-        <Button asChild className="h-11 w-full text-base">
-          <Link href="/">Gå til appen</Link>
-        </Button>
+        <Button render={<Link href="/">Gå til appen</Link>} className="h-11 w-full text-base" />
       </CallbackFrame>
     );
   }

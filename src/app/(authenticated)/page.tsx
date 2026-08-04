@@ -5,7 +5,7 @@ import Hero from "~/app/(authenticated)/components/hero";
 import HorizontalEventsList, {
   PLACEHOLDER_IMAGE,
 } from "~/app/(authenticated)/components/horizontal-events-list";
-import { Reveal } from "~/components/ui/reveal";
+import { Reveal } from "~/components/ui/motion";
 import { api } from "~/trpc/server";
 
 export default async function Home() {
@@ -42,7 +42,7 @@ export default async function Home() {
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </Reveal>
-        <Reveal delay={80}>
+        <Reveal>
           <HorizontalEventsList events={events} />
         </Reveal>
       </div>
