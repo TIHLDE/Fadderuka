@@ -38,12 +38,22 @@ export function SlideTabsBar<V extends string>({
 }: SlideTabsBarProps<V>) {
   // Unik per instans så flere linjer på samme side ikke deler pille.
   const layoutId = React.useId();
+  const activeTabRef = React.useRef<HTMLButtonElement>(null);
+
+  // Faner som ikke får plass scroller heller enn å bli klippet. Da må den
+  // valgte fanen dras inn i synet selv, ellers kan pilla havne utenfor kanten.
+  React.useEffect(() => {
+    activeTabRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [value]);
 
   return (
     <div
       className={cn(
-        "relative flex items-center rounded-xl border border-border bg-secondary !p-1",
-        stretch ? "w-full" : "w-fit max-w-full overflow-x-auto",
+        "no-scrollbar relative flex items-center overflow-x-auto rounded-xl border border-border bg-secondary !p-1",
+        stretch ? "w-full" : "w-fit max-w-full",
         className,
       )}
       role="tablist"
@@ -54,6 +64,7 @@ export function SlideTabsBar<V extends string>({
         return (
           <button
             key={t.value}
+            ref={active ? activeTabRef : undefined}
             type="button"
             role="tab"
             aria-selected={active}
