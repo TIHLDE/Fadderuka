@@ -1,6 +1,5 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import Footer from "~/components/layout/footer/footer";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
 import { auth, needsLocalPassword } from "~/server/auth/config";
 
@@ -25,14 +24,7 @@ export default async function VelgPassordPage() {
   const hasTempPassword = session.user.passwordIsTemporary;
 
   return (
-    <div
-      className="flex min-h-screen flex-col"
-      style={{
-        backgroundColor: "var(--page-bg)",
-        backgroundImage: "var(--page-bg-image)",
-      }}
-    >
-      <main className="flex flex-1 items-center justify-center px-4 py-8">
+    <div className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-xl">
           <Card>
             <div className="flex flex-col gap-6 p-8 sm:p-12">
@@ -64,8 +56,6 @@ export default async function VelgPassordPage() {
             </div>
           </Card>
         </div>
-      </main>
-      <Footer />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { ChevronDown, KeyRound, Shield, ShieldOff, Trash2, UserCheck } from "luc
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { api } from "~/trpc/react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import {
   MAJORS,
   type Major,
@@ -74,7 +74,7 @@ export function UsersTab() {
       void utils.admin.getUsers.invalidate();
       void utils.admin.getGrupper.invalidate();
       setVerifyingUserId(null);
-      toast({ title: "Bruker verifisert og lagt til i gruppe som fadderbarn" });
+      toast("Bruker verifisert og lagt til i gruppe som fadderbarn");
     },
   });
 
@@ -82,10 +82,10 @@ export function UsersTab() {
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
       setDeletingUserId(null);
-      toast({ title: "Bruker slettet" });
+      toast("Bruker slettet");
     },
     onError: (error) => {
-      toast({ title: "Feil", description: error.message, variant: "destructive" });
+      toast.error("Feil", { description: error.message });
     },
   });
 
@@ -94,14 +94,14 @@ export function UsersTab() {
       setTempPassword({ userId: variables.userId, ...data });
     },
     onError: (error) => {
-      toast({ title: "Feil", description: error.message, variant: "destructive" });
+      toast.error("Feil", { description: error.message });
     },
   });
 
   const adminMutation = api.admin.setUserAdmin.useMutation({
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
-      toast({ title: "Adminstatus oppdatert" });
+      toast("Adminstatus oppdatert");
     },
   });
 
@@ -112,18 +112,16 @@ export function UsersTab() {
       // A fadder who paid before being marked is owed the money back, and the
       // admin is the only one who can start that — so say it here rather than
       // leaving it to be noticed in the payment overview.
-      toast({
-        title: result.needsRefund
-          ? `${result.name} er fritatt — men har allerede betalt`
-          : "Betalingsstatus oppdatert",
-        description: result.needsRefund
-          ? "Refunder betalingen fra Betalinger-fanen."
-          : undefined,
-        variant: result.needsRefund ? "destructive" : undefined,
-      });
+      if (result.needsRefund) {
+        toast.error(`${result.name} er fritatt — men har allerede betalt`, {
+          description: "Refunder betalingen fra Betalinger-fanen.",
+        });
+      } else {
+        toast("Betalingsstatus oppdatert");
+      }
     },
     onError: (error) => {
-      toast({ title: "Feil", description: error.message, variant: "destructive" });
+      toast.error("Feil", { description: error.message });
     },
   });
 
@@ -131,17 +129,19 @@ export function UsersTab() {
     onSuccess: (result, variables) => {
       void utils.admin.getUsers.invalidate();
       void utils.admin.getRegistrations.invalidate();
-      toast({
-        title: variables.studieretning
+      toast(
+        variables.studieretning
           ? `${result.name} står nå på ${variables.studieretning}`
           : `${result.name} følger TIHLDE igjen`,
-        description: variables.studieretning
-          ? "Valget overlever innlogging. Betalingsstatus er ikke endret."
-          : "Studieretningen hentes fra TIHLDE-profilen ved neste innlogging.",
-      });
+        {
+          description: variables.studieretning
+            ? "Valget overlever innlogging. Betalingsstatus er ikke endret."
+            : "Studieretningen hentes fra TIHLDE-profilen ved neste innlogging.",
+        },
+      );
     },
     onError: (error) => {
-      toast({ title: "Feil", description: error.message, variant: "destructive" });
+      toast.error("Feil", { description: error.message });
     },
   });
 
@@ -149,7 +149,7 @@ export function UsersTab() {
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
       void utils.admin.getGrupper.invalidate();
-      toast({ title: "Rolle oppdatert" });
+      toast("Rolle oppdatert");
     },
   });
 
@@ -292,14 +292,14 @@ export function UsersTab() {
                       </button>
                     </div>
                     {(!grupper || grupper.length === 0) && (
-                      <p className="text-xs text-red-400">
+                      <p className="text-xs text-destructive">
                         Opprett en faddergruppe forst (i Faddergrupper-fanen)
                       </p>
                     )}
                   </div>
                 ) : deletingUserId === user.id ? (
                   <div className="flex flex-col !gap-2 sm:items-end">
-                    <p className="text-xs font-medium text-red-400">
+                    <p className="text-xs font-medium text-destructive">
                       Sikker på at du vil slette denne brukeren?
                     </p>
                     <div className="flex !gap-2">
@@ -307,7 +307,7 @@ export function UsersTab() {
                         type="button"
                         onClick={() => deleteMutation.mutate({ userId: user.id })}
                         disabled={deleteMutation.isPending}
-                        className="rounded-lg border border-red-500/40 bg-red-500/10 !px-3 !py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/20 disabled:opacity-60"
+                        className="rounded-lg border border-destructive/40 bg-destructive/10 !px-3 !py-1.5 text-xs font-semibold text-destructive transition hover:bg-destructive/20 disabled:opacity-60"
                       >
                         {deleteMutation.isPending ? "Sletter..." : "Bekreft sletting"}
                       </button>
@@ -325,7 +325,7 @@ export function UsersTab() {
                     <button
                       type="button"
                       onClick={() => setVerifyingUserId(user.id)}
-                      className="inline-flex items-center !gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 !px-4 !py-2 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+                      className="inline-flex items-center !gap-2 rounded-xl border border-success/40 bg-success/10 !px-4 !py-2 text-sm font-semibold text-success transition hover:bg-success/20"
                     >
                       <UserCheck className="h-4 w-4" />
                       Verifiser
@@ -345,7 +345,7 @@ export function UsersTab() {
                     <button
                       type="button"
                       onClick={() => setDeletingUserId(user.id)}
-                      className="inline-flex items-center !gap-2 rounded-xl border border-red-500/40 bg-red-500/10 !px-4 !py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/20"
+                      className="inline-flex items-center !gap-2 rounded-xl border border-destructive/40 bg-destructive/10 !px-4 !py-2 text-sm font-semibold text-destructive transition hover:bg-destructive/20"
                     >
                       <Trash2 className="h-4 w-4" />
                       Slett
@@ -426,8 +426,10 @@ export function UsersTab() {
                     }}
                     className="overflow-hidden border-t border-border"
                   >
+                    {/* Se kommentaren i betalinger-tab: min-bredde framfor
+                        sammenklemte kolonner, med scroll ut til skjermkanten. */}
                     <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+                    <table className="w-full min-w-[64rem] text-left text-sm">
                       <thead>
                         <tr className="border-b border-border text-muted-foreground">
                           <th className="!px-4 !py-3 font-medium">Navn</th>
@@ -531,8 +533,8 @@ export function UsersTab() {
                                   disabled={fadderMutation.isPending}
                                   className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${
                                     user.isFadder
-                                      ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                                      : "bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                                      ? "bg-success/10 text-success hover:bg-success/20"
+                                      : "bg-warning/10 text-warning hover:bg-warning/20"
                                   }`}
                                   title={
                                     user.isFadder
@@ -561,7 +563,7 @@ export function UsersTab() {
                                   }
                                 >
                                   {user.isAdmin ? (
-                                    <Shield className="h-4 w-4 text-amber-400" />
+                                    <Shield className="h-4 w-4 text-warning" />
                                   ) : (
                                     <ShieldOff className="h-4 w-4 text-muted-foreground" />
                                   )}

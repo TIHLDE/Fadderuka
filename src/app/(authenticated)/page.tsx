@@ -5,8 +5,7 @@ import Hero from "~/app/(authenticated)/components/hero";
 import HorizontalEventsList, {
   PLACEHOLDER_IMAGE,
 } from "~/app/(authenticated)/components/horizontal-events-list";
-import Footer from "~/components/layout/footer/footer";
-import { Reveal } from "~/components/ui/reveal";
+import { Reveal } from "~/components/ui/motion";
 import { api } from "~/trpc/server";
 
 export default async function Home() {
@@ -25,19 +24,13 @@ export default async function Home() {
   }));
 
   return (
-    <main
-      className="relative flex w-full flex-1 flex-col overflow-hidden"
-      style={{
-        backgroundColor: "var(--page-bg)",
-        backgroundImage: "var(--page-bg-image)",
-      }}
-    >
+    <div className="relative flex w-full flex-1 flex-col overflow-hidden">
       <Hero />
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-6 pb-8">
         {events[0] ? <Countdown activity={events[0]} /> : null}
 
-        <Reveal className="max-w-page mx-auto flex w-full items-end justify-between px-4 pt-10 md:px-6">
+        <Reveal className="container mx-auto flex w-full items-end justify-between px-4">
           <h2 className="font-heading text-foreground text-2xl font-semibold tracking-tight">
             Aktiviteter
           </h2>
@@ -46,14 +39,13 @@ export default async function Home() {
             className="group text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
           >
             Se alle
-            <ArrowRight className="size-4 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-0.5" />
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </Reveal>
-        <Reveal delay={80}>
+        <Reveal>
           <HorizontalEventsList events={events} />
         </Reveal>
-        <Footer />
       </div>
-    </main>
+    </div>
   );
 }

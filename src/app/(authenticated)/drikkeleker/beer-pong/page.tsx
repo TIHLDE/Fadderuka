@@ -1,37 +1,23 @@
-import Footer from "~/components/layout/footer/footer";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { PageHeader, PageShell } from "~/components/layout/page-shell";
 
 export default function BeerPongPage() {
   return (
-    <main
-      className="relative flex min-h-screen w-full flex-col overflow-hidden"
-      style={{
-        backgroundColor: "var(--page-bg)",
-        backgroundImage: "var(--page-gradient)",
-      }}
-    >
+    <PageShell className="max-w-2xl">
+      <Link
+        href="/drikkeleker"
+        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 self-start text-sm font-medium transition-colors"
+      >
+        <ArrowLeft className="size-4" />
+        Tilbake til drikkeleker
+      </Link>
 
-      <div className="mx-auto w-full max-w-page flex-1 !px-4 !pb-24 !pt-24 md:!px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-6xl">
-            Beer pong
-          </h1>
-          <p className="!mt-4 text-base text-muted-foreground sm:text-lg">
-            Dette er en enkel placeholderside. Vi legger inn reglene og
-            turneringsoppsett senere.
-          </p>
-          <Link
-            className="!mt-6 inline-flex text-sm font-semibold text-primary transition hover:text-primary/80"
-            href="/drikkeleker"
-          >
-            {"Tilbake til drikkeleker ->"}
-          </Link>
-        </div>
-      </div>
-
-      <div className="mt-auto w-full -mb-8">
-        <Footer />
-      </div>
-    </main>
+      <PageHeader
+        centered
+        title="Beer pong"
+        description="Dette er en enkel placeholderside. Vi legger inn reglene og turneringsoppsett senere."
+      />
+    </PageShell>
   );
 }

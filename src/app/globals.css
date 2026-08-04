@@ -1,118 +1,257 @@
-@import url("https://fonts.googleapis.com/css2?family=Cabin&family=Oswald:wght@500;700&family=Inter:wght@300;700;900&&display=swap");
 @import "tailwindcss";
+@import "tw-animate-css";
 @config "../../tailwind.config.ts";
 
+/* ── Fargepalett ──────────────────────────────────────────────────────────
+   Verdiene er hentet direkte fra Photon (packages/ui/src/styles.css) slik at
+   de to appene deler nøyaktig samme farger. Merk at tokenene her holder hele
+   fargeverdien (oklch/hex), ikke bare HSL-kanalene — tailwind.config leser dem
+   som `var(--x)` og lar Tailwind lage color-mix() for /opacity-modifiers. */
 @layer base {
   :root {
     color-scheme: light;
-    --background: 0 0% 93%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 219 66% 33%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 99% 35%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+
+    /* TIHLDE-blå — logofargen i lys modus, og CTA-fargen den driver via
+       --primary og --ring. Mørk modus overstyrer begge. */
+    --logo: #1c458a;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: var(--logo);
+    --primary-foreground: oklch(0.985 0 0);
+    /* Tekstlenker følger --primary i lys modus — den mørke logoblåen har
+       rikelig kontrast mot hvitt (9.27:1) og leses fint som tynn tekst. Egen
+       token likevel, fordi mørk modus må avvike; se overstyringen i `.dark`. */
+    --link: var(--primary);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    /* Dempet skillelinje for seksjoner som ikke skal trekke blikket (footer o.l.) */
+    --border-subtle: oklch(0.97 0 0);
+    /* Omrisset rundt card-flater */
+    --card-border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: var(--logo);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
     --radius: 0.625rem;
-    --font-heading: "Inter", sans-serif;
-    --warning: 35 100% 20%;
-    --success: 123 40% 20%;
 
-    /* Flat, Photon-style surfaces — no gradients/glow. All map back to the
-       theme's semantic tokens so every remaining usage stays on-theme. */
-    --page-bg: hsl(var(--background));
-    --page-bg-image: none;
-    --page-gradient: none;
-
-    --surface-strong: hsl(var(--card));
-    --surface-soft: hsl(var(--card));
-    --surface-border: hsl(var(--foreground) / 0.1);
-    --surface-border-strong: hsl(var(--foreground) / 0.15);
-
-    --header-bg: hsl(var(--background) / 0.8);
-    --footer-bg: hsl(var(--background));
-    --panel-bg: hsl(var(--popover));
-
-    --action-bg: hsl(var(--card));
-    --action-border: hsl(var(--foreground) / 0.1);
-
-    --card-sheen: transparent;
-
-    --card-border: hsl(var(--foreground) / 0.1);
-    --card-border-base: hsl(var(--foreground) / 0.1);
-    --card-border-highlight: hsl(var(--foreground) / 0.15);
-    --card-border-strong: hsl(var(--foreground) / 0.15);
-
-    /* Motion — strong custom easing curves (built-in CSS easings are too weak) */
-    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
-    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    /* Tillegg utover Photon. Photon har ingen success/warning-tokens fordi
+       ingenting der trenger dem, men adminpanelets betalingsstatuser skiller
+       reelt mellom betalt, venter og refundert — å samle dem i én farge ville
+       kastet bort informasjon. Samme chroma-nivå som --destructive så de tre
+       leses som ett sett. */
+    --success: oklch(0.52 0.13 152);
+    --warning: oklch(0.58 0.12 75);
   }
 
   .dark {
     color-scheme: dark;
-    --background: 212 100% 8%;
-    --foreground: 210 40% 98%;
-    --card: 211 96% 10%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 219 100% 81%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 100% 69%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-    --warning: 36 100% 86%;
-    --success: 122 38% 85%;
 
-    /* Flat, Photon-style surfaces — no gradients/glow. */
-    --page-bg: hsl(var(--background));
-    --page-bg-image: none;
-    --page-gradient: none;
+    /* Navy-palett generert fra #030B1A — hsl(219°)-skala */
+    --background: #030b1a;
+    --foreground: #f5f7f9;
+    --card: #061532;
+    --card-foreground: #f5f7f9;
+    --popover: #091f49;
+    --popover-foreground: #f5f7f9;
+    --primary: #1b61e4;
+    --primary-foreground: #ffffff;
+    /* Her kan ikke lenker følge --primary: som tekst gir #1b61e4 bare 3.34:1
+       mot --card (#061532), under WCAG AA. Dessuten leses en stor fylt flate
+       lysere enn tynne 14px-bokstaver i samme hex, så CTA-fyllet og
+       lenketeksten ser ulike ut. Neste trinn i navy-skalaen
+       (hsl(219°, 75%, 60%)) løser begge: 5.30:1 mot --background og 4.87:1 mot
+       --card. (Mot --popover, #091f49, blir det 4.34:1 — så vidt under AA, men
+       lenker i popovers er sjeldne.) */
+    --link: #4d82e6;
+    --secondary: #0d3172;
+    --secondary-foreground: #f5f7f9;
+    --muted: #0d3172;
+    --muted-foreground: #5d8bdf;
+    --accent: #0d3172;
+    --accent-foreground: #f5f7f9;
+    --destructive: oklch(0.704 0.191 22.216);
+    --destructive-foreground: oklch(0.637 0.237 25.331);
+    --border: #0d3172;
+    /* Nytt trinn i navy-skalaen (L 11%), midt mellom --background (L 5.7%) og
+       #091f49 (L 16.1%). Så vidt synlig mot bakgrunnen. Merk: samme verdi som
+       --card, så en subtle separator inni et card blir usynlig. */
+    --border-subtle: #061532;
+    /* Ett trinn over --card i navy-skalaen, så omrisset skiller kortet fra
+       bakgrunnen uten den lyse ring-foreground/10-kanten. */
+    --card-border: #091f49;
+    --input: #0d3172;
+    --ring: #1b61e4;
+    --chart-1: #5d8bdf;
+    --chart-2: #1b61e4;
+    --chart-3: #1652c0;
+    --chart-4: #124097;
+    --chart-5: #0d3172;
+    /* På den mørke navy-bakgrunnen holder logoen seg lys for kontrast */
+    --logo: var(--foreground);
 
-    --surface-strong: hsl(var(--card));
-    --surface-soft: hsl(var(--card));
-    --surface-border: hsl(var(--foreground) / 0.1);
-    --surface-border-strong: hsl(var(--foreground) / 0.15);
-
-    --header-bg: hsl(var(--background) / 0.8);
-    --footer-bg: hsl(var(--background));
-    --panel-bg: hsl(var(--popover));
-
-    --action-bg: hsl(var(--card));
-    --action-border: hsl(var(--foreground) / 0.1);
-
-    --card-sheen: transparent;
-
-    --card-border: hsl(var(--foreground) / 0.1);
-    --card-border-base: hsl(var(--foreground) / 0.1);
-    --card-border-highlight: hsl(var(--foreground) / 0.15);
-    --card-border-strong: hsl(var(--foreground) / 0.15);
+    /* Lysere trinn, som --destructive gjør i mørk modus. */
+    --success: oklch(0.72 0.15 155);
+    --warning: oklch(0.78 0.14 80);
   }
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────────
+   Ett sett easing-tokens, likt Photons, så alle overganger og enter/exit-
+   animasjoner leses som ett system. Standardisert på expo-out
+   `cubic-bezier(0.22, 1, 0.36, 1)`: starter raskt for umiddelbar respons og
+   bremser ned i en lang, rolig hale.
+
+   `static` gjør at tokenene alltid finnes i `:root`, også når ingen komponent
+   bruker en gitt kurve akkurat nå. Uten `static` tree-shaker Tailwind ubrukte
+   theme-tokens, og en framtidig `ease-in-out`-utility ville fått tom verdi. */
+@theme static {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@theme {
+  /* Alle bare `transition-*`-utilities (knapper, tabs, rader, badges …)
+     bremser nå på samme kurve i stedet for den flate standarden. Komponenter
+     som setter en eksplisitt `ease-*` vinner fortsatt. */
+  --default-transition-timing-function: var(--ease-out);
+
+  /* Photons button.tsx og andre komponenter bruker `rounded-[min(var(--radius-md),10px)]`
+     i vilkårlige verdier, som trenger selve CSS-variabelen — `tailwind.config.ts`
+     sin `borderRadius.md` gir bare `rounded-md`-utiliten, ikke en `--radius-md`
+     man kan referere til. Definert her så begge bruksmåtene virker. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* tw-animate-css løser inn/ut-easing via `var(--tw-ease, …)`. Redefinerer
+     dens shorthands så dialoger, popovers, dropdowns og menyer uten
+     eksplisitt `ease-*`-klasse faller tilbake på ease-out i stedet for den
+     flate nettleser-standarden. Varighet uendret (150ms). Komponenter som
+     setter egen `duration-*` vinner fortsatt. */
+  --animate-in: enter var(--tw-animation-duration, var(--tw-duration, 0.15s))
+    var(--tw-ease, var(--ease-out)) var(--tw-animation-delay, 0s)
+    var(--tw-animation-iteration-count, 1)
+    var(--tw-animation-direction, normal)
+    var(--tw-animation-fill-mode, none);
+  --animate-out: exit var(--tw-animation-duration, var(--tw-duration, 0.15s))
+    var(--tw-ease, var(--ease-out)) var(--tw-animation-delay, 0s)
+    var(--tw-animation-iteration-count, 1)
+    var(--tw-animation-direction, normal)
+    var(--tw-animation-fill-mode, none);
+}
+
+/* ── Inngangsanimasjon ────────────────────────────────────────────────────
+   Innhold som mountes — en seksjon, et rutenett med kort — fader opp i stedet
+   for å smelle inn. Tre bevisste valg, hentet fra Photon:
+
+   1. Keyframen deklarerer bare `from`. Implisitt `to` er elementets egen
+      computed style, så dette komponerer med hvilken som helst layout.
+   2. `backwards`, ikke `both`. En `both`-animasjon fortsetter å fylle etter at
+      den er ferdig, og lar `transform` bli stående permanent — et transformert
+      element er containing block for `position: fixed`-etterkommere for alltid.
+   3. Bevegelsen er 0.5rem. Inngangen ses ved hver navigering, så den er
+      bevisst liten: nok til å leses som bevegelse, ikke nok til å føles treg. */
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--reveal-distance, 0.5rem), 0);
+  }
+}
+
+[data-slot="reveal"] {
+  animation: reveal-in var(--reveal-duration, 0.26s) var(--ease-out) backwards;
+}
+
+/* Stagger: barn kommer inn 40ms fra hverandre, med tak på 5 trinn (200ms).
+   Taket gjør to jobber. Uten det ville et rutenett med 24 kort fortsatt
+   animere ett sekund etter at det rendret; og siden regelen også dekker barn
+   som legges til senere, er taket nøyaktig hvor lenge en "last inn mer"-bunke
+   er usynlig før den fader inn.
+
+   Hvert direkte barn får eksplisitt indeks, også det første, fordi
+   `--reveal-index` arves: lot vi `:nth-child(1)` gå på standardverdien, ville
+   en nøstet stagger arvet forelderens forskyvning. */
+[data-slot="stagger"] > * {
+  animation: reveal-in var(--reveal-duration, 0.26s) var(--ease-out)
+    calc(var(--reveal-step, 0.04s) * var(--reveal-index, 0)) backwards;
+}
+[data-slot="stagger"] > *:nth-child(1) {
+  --reveal-index: 0;
+}
+[data-slot="stagger"] > *:nth-child(2) {
+  --reveal-index: 1;
+}
+[data-slot="stagger"] > *:nth-child(3) {
+  --reveal-index: 2;
+}
+[data-slot="stagger"] > *:nth-child(4) {
+  --reveal-index: 3;
+}
+[data-slot="stagger"] > *:nth-child(5) {
+  --reveal-index: 4;
+}
+[data-slot="stagger"] > *:nth-child(n + 6) {
+  --reveal-index: 5;
+}
+
+/* ── Interaktive flater ───────────────────────────────────────────────────
+   Et kort som navigerer skal svare på pekeren. Nøklet på `data-slot` framfor
+   en klasse, så alle nåværende og framtidige lenkekort får samme oppførsel
+   uten å melde seg på.
+
+   Løftet og skyggen bærer dette alene — coverbildet står bevisst i ro. Zoom på
+   hover slåss med innholdet: det beskjærer plakaten designeren rammet inn, og
+   på en vegg av kort konkurrerer bevegelsen med kortet som faktisk pekes på.
+
+   `@media (hover: hover)` er påkrevd på håndskrevne regler. Tailwind pakker
+   sine egne `hover:`-utilities i denne guarden, men ren CSS får ingen slik
+   hjelp, og på en touch-enhet henger en uguardet `:hover` igjen etter et trykk
+   til brukeren trykker et annet sted. */
+:is(a, button)[data-slot="card"],
+[data-slot="list-card"] {
+  transition:
+    translate 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out);
+}
+
+@media (hover: hover) {
+  /* Begge flatene har `ring-1`, så `box-shadow` er allerede Tailwinds stabel
+     av `var(--tw-*)`-slots. Å mate elevasjonen gjennom `--tw-shadow` legger
+     den *under* ringen; å sette `box-shadow` her ville droppet ringen. */
+  :is(a, button)[data-slot="card"]:hover,
+  [data-slot="list-card"]:hover {
+    translate: 0 -2px;
+    --tw-shadow: 0 10px 24px -14px oklch(0 0 0 / 0.45);
+  }
+}
+
+/* Trykk setter kortet ned igjen, raskere enn det steg opp — systemet som
+   svarer skal alltid være kjappere enn brukeren som bestemmer seg. */
+:is(a, button)[data-slot="card"]:active,
+[data-slot="list-card"]:active {
+  translate: 0 0;
+  transition-duration: 0.1s;
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
 
   body {
@@ -120,6 +259,12 @@
     font-feature-settings:
       "rlig" 1,
       "calt" 1;
+  }
+
+  html {
+    /* Reserver plass til den vertikale scrollbaren så sentrerte layouter ikke
+       hopper horisontalt når innholdshøyden endrer seg. */
+    scrollbar-gutter: stable;
   }
 
   /* Everything clickable gets a pointer cursor (native <button> defaults to
@@ -149,6 +294,13 @@
   display: none;
 }
 
+/* Respekter reduced-motion globalt: kollaps bevegelsesbaserte overganger og
+   animasjoner til tilnærmet umiddelbart, men behold den endelige visuelle
+   tilstanden — opasitet og farge lander fortsatt, bare uten reise.
+
+   Nullstillingen av delay er bærende: en `backwards`-fylt stagger holder
+   opasitet 0 gjennom hele forsinkelsen, så lot vi delayene stå ville de siste
+   kortene vært blanke i en tredjedels sekund. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -157,21 +309,7 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
   }
-}
-
-body {
-  margin: 0;
-  font-family:
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    "Open Sans",
-    "Helvetica Neue",
-    sans-serif;
 }

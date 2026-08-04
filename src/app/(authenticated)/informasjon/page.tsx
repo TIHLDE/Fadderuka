@@ -1,4 +1,5 @@
-import Footer from "~/components/layout/footer/footer";
+import { PageShell } from "~/components/layout/page-shell";
+import { Card } from "~/components/ui/card";
 
 const faqItems = [
   {
@@ -73,48 +74,42 @@ const packingList = [
 
 export default function InformasjonPage() {
   return (
-    <main
-      className="relative min-h-screen w-full overflow-x-clip pt-4"
-      style={{
-        backgroundColor: "var(--page-bg)",
-        backgroundImage: "var(--page-gradient)",
-      }}
-    >
-
-      <div className="max-w-page mx-auto w-full px-4 pt-24 pb-24 md:px-6">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-16">
-          <div className="space-y-10">
-            <h1 className="text-foreground text-4xl font-extrabold tracking-tight sm:text-6xl">
-              FAQ
-            </h1>
-            {faqItems.map((item) => (
-              <div key={item.question} className="space-y-2">
-                <h2 className="text-foreground text-xl font-bold tracking-tight sm:text-2xl">
-                  {item.question}
-                </h2>
-                <p className="text-muted-foreground text-base leading-relaxed sm:text-lg">
-                  {item.answer}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <aside className="lg:sticky lg:top-24">
-            <div className="border-border bg-card rounded-2xl border p-6 shadow-sm">
-              <h2 className="text-foreground text-xl font-bold tracking-tight sm:text-2xl">
-                Pakkeliste fadderuka
+    <PageShell>
+      {/* Sidekolonnen er 22rem, som i Photons DetailPage, og limes fast rett
+          under den 56px høye headeren. */}
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+        <div className="flex flex-col gap-8">
+          <h1 className="font-heading text-foreground text-3xl font-semibold tracking-tight sm:text-4xl">
+            FAQ
+          </h1>
+          {faqItems.map((item) => (
+            <div key={item.question} className="flex flex-col gap-2">
+              <h2 className="font-heading text-foreground text-lg font-medium tracking-tight sm:text-xl">
+                {item.question}
               </h2>
-              <ul className="text-muted-foreground mt-4 list-disc space-y-2 pl-5 text-base">
-                {packingList.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
+              {/* Svarene er sidens hovedinnhold, så de står i --foreground.
+                  Photon mapper `.prose`-brødtekst til samme token og holder
+                  --muted-foreground til sekundær tekst. */}
+              <p className="text-foreground/90 text-base leading-relaxed">
+                {item.answer}
+              </p>
             </div>
-          </aside>
+          ))}
         </div>
-      </div>
 
-      <Footer />
-    </main>
+        <aside className="lg:sticky lg:top-20">
+          <Card className="flex flex-col gap-4 p-4">
+            <h2 className="font-heading text-foreground text-lg font-medium tracking-tight">
+              Pakkeliste fadderuka
+            </h2>
+            <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm">
+              {packingList.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </Card>
+        </aside>
+      </div>
+    </PageShell>
   );
 }

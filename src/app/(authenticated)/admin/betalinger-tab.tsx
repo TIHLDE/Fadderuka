@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { api, type RouterOutputs } from "~/trpc/react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { downloadCsv, toCsv, toDateAndTime, type CsvColumn } from "~/lib/csv";
 
 type Registration = RouterOutputs["admin"]["getRegistrations"][number];
@@ -34,10 +34,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  CAPTURED: "bg-emerald-500/15 text-emerald-400",
-  AUTHORIZED: "bg-sky-500/15 text-sky-400",
-  CREATED: "bg-amber-500/15 text-amber-400",
-  REFUNDED: "bg-orange-500/15 text-orange-400",
+  CAPTURED: "bg-success/15 text-success",
+  AUTHORIZED: "bg-primary/15 text-primary",
+  CREATED: "bg-warning/15 text-warning",
+  REFUNDED: "bg-warning/15 text-warning",
 };
 
 const FILTERS: { value: Filter; label: string }[] = [
@@ -84,7 +84,7 @@ function StatusBadge({
 }) {
   if (hasPaid && status !== "CAPTURED") {
     return (
-      <span className="rounded-full bg-emerald-500/10 !px-2.5 !py-0.5 text-xs font-semibold text-emerald-400/80">
+      <span className="rounded-full bg-success/10 !px-2.5 !py-0.5 text-xs font-semibold text-success/80">
         {statusLabel(status, hasPaid)}
       </span>
     );
@@ -96,7 +96,7 @@ function StatusBadge({
   return (
     <span
       className={`rounded-full !px-2.5 !py-0.5 text-xs font-semibold ${
-        STATUS_STYLES[status] ?? "bg-red-500/15 text-red-400"
+        STATUS_STYLES[status] ?? "bg-destructive/15 text-destructive"
       }`}
     >
       {STATUS_LABELS[status] ?? status}
@@ -146,17 +146,12 @@ function RefundAction({
       void utils.admin.getPaymentDetails.invalidate({ orderId });
       void utils.admin.getRegistrations.invalidate();
       void utils.admin.getUsers.invalidate();
-      toast({
-        title: "Betalingen er refundert",
+      toast("Betalingen er refundert", {
         description: `${kr(result.refunded)} er sendt tilbake til ${result.name}, som nå står som ikke betalt.`,
       });
     },
     onError: (error) => {
-      toast({
-        title: "Refusjon feilet",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Refusjon feilet", { description: error.message });
     },
   });
 
@@ -165,7 +160,7 @@ function RefundAction({
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="inline-flex items-center !gap-2 rounded-xl border border-red-500/40 bg-red-500/10 !px-3 !py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/20"
+        className="inline-flex items-center !gap-2 rounded-xl border border-destructive/40 bg-destructive/10 !px-3 !py-2 text-sm font-semibold text-destructive transition hover:bg-destructive/20"
       >
         <Undo2 className="h-4 w-4" />
         Refunder {kr(refundable)}
@@ -174,11 +169,11 @@ function RefundAction({
   }
 
   return (
-    <div className="rounded-xl border border-red-500/40 bg-red-500/10 !p-4 !space-y-3">
+    <div className="rounded-xl border border-destructive/40 bg-destructive/10 !p-4 !space-y-3">
       <div className="flex items-start !gap-2">
-        <AlertTriangle className="!mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+        <AlertTriangle className="!mt-0.5 h-5 w-5 shrink-0 text-destructive" />
         <div className="!space-y-1">
-          <p className="text-sm font-semibold text-red-400">
+          <p className="text-sm font-semibold text-destructive">
             Dette kan ikke angres
           </p>
           <p className="text-sm text-foreground">
@@ -195,7 +190,7 @@ function RefundAction({
           type="button"
           onClick={() => refundMutation.mutate({ orderId })}
           disabled={refundMutation.isPending}
-          className="inline-flex items-center !gap-2 rounded-xl bg-red-600 !px-4 !py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+          className="bg-destructive text-background hover:bg-destructive/80 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60"
         >
           <Undo2 className="h-4 w-4" />
           {refundMutation.isPending
@@ -229,7 +224,7 @@ function PaymentDetails({ orderId, name }: { orderId: string; name: string }) {
   }
 
   if (error) {
-    return <p className="text-sm text-red-400">{error.message}</p>;
+    return <p className="text-sm text-destructive">{error.message}</p>;
   }
 
   if (!data) return null;
@@ -280,7 +275,7 @@ function PaymentDetails({ orderId, name }: { orderId: string; name: string }) {
               >
                 <span
                   className={`font-medium ${
-                    event.success ? "text-foreground" : "text-red-400"
+                    event.success ? "text-foreground" : "text-destructive"
                   }`}
                 >
                   {STATUS_LABELS[event.action] ?? event.action}
@@ -327,19 +322,14 @@ export function BetalingerTab() {
     onSuccess: (result) => {
       void utils.admin.getRegistrations.invalidate();
       void utils.admin.getUsers.invalidate();
-      toast({
-        title: "Synkronisert mot Vipps",
+      toast("Synkronisert mot Vipps", {
         description: `${result.checked} ordre sjekket, ${result.settled} ble bekreftet betalt${
           result.failed > 0 ? `, ${result.failed} feilet` : ""
         }.`,
       });
     },
     onError: (error) => {
-      toast({
-        title: "Synk feilet",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Synk feilet", { description: error.message });
     },
   });
 
@@ -591,8 +581,11 @@ export function BetalingerTab() {
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full text-left text-sm">
+        {/* 9 kolonner får aldri plass på en telefon. `min-w` hindrer at de
+            klemmes flate, og den negative margen lar scrollområdet gå helt ut
+            til skjermkanten så det er tydelig at raden kan dras sidelengs. */}
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:rounded-xl sm:border sm:border-border sm:bg-card sm:px-0">
+          <table className="w-full min-w-[56rem] text-left text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 {sortableHeader("navn", "Navn")}
@@ -699,7 +692,7 @@ export function BetalingerTab() {
             {unpaidRows.map((r) => (
               <div
                 key={r.id}
-                className="rounded-xl border border-amber-500/30 bg-amber-500/5 !p-4"
+                className="rounded-xl border border-warning/30 bg-warning/5 !p-4"
               >
                 <p className="font-medium text-foreground">{r.name}</p>
                 <p className="text-sm text-muted-foreground">{r.email ?? "—"}</p>

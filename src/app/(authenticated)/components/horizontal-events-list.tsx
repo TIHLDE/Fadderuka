@@ -20,7 +20,7 @@ export default function HorizontalEventsList({ events }: { events: Event[] }) {
   if (events.length === 0) {
     return (
       <div className="py-8">
-        <div className="max-w-page mx-auto w-full px-4 md:px-6">
+        <div className="container mx-auto w-full px-4">
           <p className="text-muted-foreground py-8 text-center text-sm">
             Ingen kommende aktiviteter enda.
           </p>
@@ -34,25 +34,32 @@ export default function HorizontalEventsList({ events }: { events: Event[] }) {
       {/* py-3 gives the hover lift (-translate-y-1) room inside the scroll
           container — overflow-x-auto makes overflow-y clip, so without it the
           lifted card is cropped at the top. */}
-      <div className="no-scrollbar max-w-page mx-auto flex w-full gap-4 overflow-x-auto px-4 py-3 md:px-6">
+      {/* `snap-x` gir kortene et fast stoppunkt, og siden `.no-scrollbar`
+          skjuler scrollbaren helt er det eneste hintet om at raden kan dras.
+          Kortene er bredere enn de gamle 135px, som ga et 76px høyt bilde. */}
+      {/* `scroll-px-4` må matche `px-4`: uten den justerer snap-start mot
+          scrollportens kant og scroller forbi paddingen, så første kort havner
+          16px til venstre for overskriften over. */}
+      <div className="no-scrollbar container mx-auto flex w-full snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto px-4 py-3">
         {events.map((event) => (
           <button
             key={event.id}
             type="button"
             onClick={() => setSelected(event)}
-            className="group w-[135px] shrink-0 text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 active:translate-y-0"
+            data-slot="list-card"
+            className="group w-[180px] shrink-0 snap-start text-left sm:w-[220px]"
           >
-            <div className="ring-foreground/10 group-hover:ring-primary/40 relative aspect-video overflow-hidden rounded-xl ring-1 transition duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]">
+            <div className="ring-card-border group-hover:ring-primary/40 relative aspect-video overflow-hidden rounded-xl ring-1 transition-colors">
               <ActivityImage
                 src={event.imageUrl}
                 alt=""
-                className="h-full w-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.06]"
+                className="h-full w-full object-cover"
               />
-              <span className="absolute bottom-1.5 left-1.5 rounded-md bg-white px-1.5 py-0.5 text-[11px] font-medium text-[#1D448C] shadow-sm">
+              <span className="bg-background/90 text-foreground absolute bottom-1.5 left-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-medium backdrop-blur-xs">
                 {event.type}
               </span>
             </div>
-            <p className="text-foreground group-hover:text-primary mt-2 truncate text-[13px] font-medium transition-colors">
+            <p className="text-foreground group-hover:text-link mt-2 truncate text-sm font-medium transition-colors">
               {event.title}
             </p>
           </button>

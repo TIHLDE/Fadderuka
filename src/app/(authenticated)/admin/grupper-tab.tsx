@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { compareMajorLabels, findMajor, UKJENT_STUDIERETNING } from "~/lib/majors";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
@@ -43,14 +43,14 @@ export function GrupperTab() {
     onSuccess: () => {
       void utils.admin.getGrupper.invalidate();
       setNewGruppeName("");
-      toast({ title: "Faddergruppe opprettet" });
+      toast("Faddergruppe opprettet");
     },
   });
 
   const deleteMutation = api.admin.deleteGruppe.useMutation({
     onSuccess: () => {
       void utils.admin.getGrupper.invalidate();
-      toast({ title: "Faddergruppe slettet" });
+      toast("Faddergruppe slettet");
     },
   });
 
@@ -59,10 +59,10 @@ export function GrupperTab() {
       void utils.admin.getGrupper.invalidate();
       void utils.admin.getUsers.invalidate();
       setAddMemberState(null);
-      toast({ title: "Medlem lagt til" });
+      toast("Medlem lagt til");
     },
     onError: (err) => {
-      toast({ title: err.message, variant: "destructive" });
+      toast.error(err.message);
     },
   });
 
@@ -70,7 +70,7 @@ export function GrupperTab() {
     onSuccess: () => {
       void utils.admin.getGrupper.invalidate();
       void utils.admin.getUsers.invalidate();
-      toast({ title: "Medlem fjernet" });
+      toast("Medlem fjernet");
     },
   });
 
@@ -78,7 +78,7 @@ export function GrupperTab() {
     onSuccess: () => {
       void utils.admin.getGrupper.invalidate();
       void utils.admin.getUsers.invalidate();
-      toast({ title: "Rolle oppdatert" });
+      toast("Rolle oppdatert");
     },
   });
 
@@ -231,7 +231,7 @@ export function GrupperTab() {
                                           membershipId: member.id,
                                         })
                                       }
-                                      className="!p-1 text-red-400/70 hover:text-red-400 transition"
+                                      className="!p-1 text-destructive/70 hover:text-destructive transition"
                                       title="Fjern fra gruppen"
                                     >
                                       <UserMinus className="h-4 w-4" />
@@ -288,7 +288,7 @@ export function GrupperTab() {
                                           membershipId: member.id,
                                         })
                                       }
-                                      className="!p-1 text-red-400/70 hover:text-red-400 transition"
+                                      className="!p-1 text-destructive/70 hover:text-destructive transition"
                                       title="Fjern fra gruppen"
                                     >
                                       <UserMinus className="h-4 w-4" />
@@ -365,7 +365,7 @@ export function GrupperTab() {
                               }
                             }}
                             disabled={deleteMutation.isPending}
-                            className="inline-flex items-center !gap-1.5 text-xs text-red-400/70 transition hover:text-red-400"
+                            className="inline-flex items-center !gap-1.5 text-xs text-destructive/70 transition hover:text-destructive"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Slett gruppe

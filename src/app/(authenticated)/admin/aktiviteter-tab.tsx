@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { DateTimePicker } from "~/components/ui/date-time-picker";
 import { stripMarkdown } from "~/lib/utils";
 
@@ -35,7 +35,7 @@ export function AktiviteterTab() {
       void utils.activity.getAll.invalidate();
       setShowForm(false);
       setForm(makeEmptyForm());
-      toast({ title: "Aktivitet opprettet" });
+      toast("Aktivitet opprettet");
     },
   });
 
@@ -44,14 +44,14 @@ export function AktiviteterTab() {
       void utils.activity.getAll.invalidate();
       setEditingId(null);
       setForm(makeEmptyForm());
-      toast({ title: "Aktivitet oppdatert" });
+      toast("Aktivitet oppdatert");
     },
   });
 
   const deleteMutation = api.activity.delete.useMutation({
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
-      toast({ title: "Aktivitet slettet" });
+      toast("Aktivitet slettet");
     },
   });
 
@@ -239,7 +239,7 @@ export function AktiviteterTab() {
                   />
                 ) : (
                   <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <span className="text-xs font-bold text-sky-300">
+                    <span className="text-xs font-bold text-primary">
                       {activity.title.slice(0, 2).toUpperCase()}
                     </span>
                   </div>
@@ -277,7 +277,7 @@ export function AktiviteterTab() {
                   type="button"
                   onClick={() => deleteMutation.mutate({ id: activity.id })}
                   disabled={deleteMutation.isPending}
-                  className="inline-flex items-center !gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 !px-3 !py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-60"
+                  className="inline-flex items-center !gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 !px-3 !py-1.5 text-xs font-medium text-destructive transition hover:bg-destructive/20 disabled:opacity-60"
                 >
                   <Trash2 className="h-3 w-3" />
                   Slett

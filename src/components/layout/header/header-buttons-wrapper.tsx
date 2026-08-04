@@ -1,59 +1,52 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import React from "react";
-import HeaderLink from "~/components/ui/header-link";
-import Logo from "~/components/ui/logo";
-import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
-import { cn } from "~/lib/utils";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+} from "~/components/ui/navigation-menu";
+import { ThemeSwitcher } from "~/components/ui/theme-switcher";
+import { TihldeLogo } from "~/components/ui/icons/tihlde";
 import { auth } from "~/server/auth/config";
 import { NotificationBell } from "./notification-bell";
 import { NAV_LINKS, getGroupLink } from "./nav-links";
 import { UserArea } from "../user-area";
 
-const HeaderButtonsWrapper = async ({
-  className,
-  ...props
-}: React.HTMLProps<HTMLDivElement>) => {
+const HeaderButtonsWrapper = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
-  return (
-    <div
-      {...props}
-      className={cn(
-        "flex h-full w-full items-center justify-between",
-        className,
-      )}
-    >
-      <nav className="flex items-center gap-8">
-        <HeaderLink
-          href="/"
-          className="mr-10 p-0 hover:bg-transparent"
-          aria-label="TIHLDE"
-        >
-          <Logo />
-        </HeaderLink>
-        {[...NAV_LINKS, getGroupLink(session?.user?.isAdmin)].map(
-          ({ href, label }) => (
-            <HeaderLink
-              key={href}
-              className="text-foreground text-base font-bold tracking-tight hover:text-sky-600 dark:hover:text-sky-300"
-              href={href}
-            >
-              {label}
-            </HeaderLink>
-          ),
-        )}
-      </nav>
+  const links = [...NAV_LINKS, getGroupLink(session?.user?.isAdmin)];
 
-      <div className="text-muted-foreground flex items-center gap-3">
+  return (
+    <>
+      <Link
+        href="/"
+        className="flex shrink-0 items-center"
+        style={{ color: "var(--color-logo, currentColor)" }}
+      >
+        <TihldeLogo variant="full" className="h-5 w-auto" />
+      </Link>
+
+      {/* Under md ligger de samme lenkene i bunnlinjas meny i stedet. */}
+      <NavigationMenu className="hidden md:flex">
+        <NavigationMenuList>
+          {links.map(({ href, label }) => (
+            <NavigationMenuItem key={href}>
+              <NavigationMenuLink render={<Link href={href} />}>
+                {label}
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+          ))}
+        </NavigationMenuList>
+      </NavigationMenu>
+
+      <div className="flex items-center gap-2">
         {session?.user ? <NotificationBell /> : null}
-        <ThemeToggle
-          aria-label="Bytt tema"
-          className="text-muted-foreground hover:bg-muted/50 hover:text-foreground rounded-md border-transparent bg-transparent p-2"
-          variant="ghost"
-          size="icon"
-        />
+        <ThemeSwitcher />
         <UserArea
           name={session?.user?.name ?? "Gjest"}
           image={session?.user?.image ?? ""}
@@ -61,7 +54,7 @@ const HeaderButtonsWrapper = async ({
           isAuthenticated={!!session?.user}
         />
       </div>
-    </div>
+    </>
   );
 };
 

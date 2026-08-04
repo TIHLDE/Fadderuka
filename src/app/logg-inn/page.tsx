@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import Footer from "~/components/layout/footer/footer";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
@@ -56,24 +55,12 @@ function LoggInnSkjema() {
   };
 
   return (
-    <div
-      className="flex min-h-screen flex-col"
-      style={{
-        backgroundColor: "var(--page-bg)",
-        backgroundImage: "var(--page-bg-image)",
-      }}
-    >
-      <main className="flex flex-1 items-center justify-center px-4 py-8">
+    <div className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-xl">
           <Card>
-            <form onSubmit={handleLogin} style={{ padding: "3rem" }}>
+            <form onSubmit={handleLogin} className="flex flex-col gap-6 p-6 sm:p-8">
               <div
-                style={{
-                  marginBottom: "1.5rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.5rem",
-                }}
+                className="flex flex-col gap-2"
               >
                 <CardTitle className="text-3xl font-bold">Logg inn</CardTitle>
                 <CardDescription>
@@ -84,19 +71,14 @@ function LoggInnSkjema() {
               {error && (
                 <div
                   className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm"
-                  style={{ marginBottom: "1.5rem" }}
+                  
                 >
                   {error}
                 </div>
               )}
 
               <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.5rem",
-                  marginBottom: "2rem",
-                }}
+                className="flex flex-col gap-6"
               >
                 <div className="grid gap-2">
                   <Label htmlFor="login-user-id">
@@ -180,13 +162,7 @@ function LoggInnSkjema() {
                 </div>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.25rem",
-                }}
-              >
+              <div className="flex flex-col gap-5">
                 <Button
                   type="submit"
                   className="h-12 w-full text-base"
@@ -204,8 +180,6 @@ function LoggInnSkjema() {
             </form>
           </Card>
         </div>
-      </main>
-      <Footer />
     </div>
   );
 }

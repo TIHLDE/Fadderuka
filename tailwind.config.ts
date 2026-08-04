@@ -1,7 +1,5 @@
 import type { Config } from 'tailwindcss';
 
-import tailwindcss_animate from "tailwindcss-animate";
-
 const config = {
   darkMode: 'class',
   content: [
@@ -12,47 +10,57 @@ const config = {
   ],
   prefix: '',
   theme: {
-    container: {
-      center: true,
-      padding: '2rem',
-      screens: {
-        '2xl': '1400px',
-      },
-    },
     extend: {
+      /* Tokenene i globals.css holder hele fargeverdien (oklch/hex), ikke bare
+         HSL-kanalene, så de leses direkte som `var(--x)`. Tailwind lager selv
+         color-mix() for /opacity-modifiers (bg-primary/90, ring-foreground/10). */
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        border: 'var(--border)',
+        'border-subtle': 'var(--border-subtle)',
+        input: 'var(--input)',
+        ring: 'var(--ring)',
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        logo: 'var(--logo)',
+        link: 'var(--link)',
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT: 'var(--primary)',
+          foreground: 'var(--primary-foreground)',
         },
         secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT: 'var(--secondary)',
+          foreground: 'var(--secondary-foreground)',
         },
         destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT: 'var(--destructive)',
+          foreground: 'var(--destructive-foreground)',
         },
+        /* Tillegg utover Photon — se kommentar i globals.css. */
+        success: 'var(--success)',
+        warning: 'var(--warning)',
         muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT: 'var(--muted)',
+          foreground: 'var(--muted-foreground)',
         },
         accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT: 'var(--accent)',
+          foreground: 'var(--accent-foreground)',
         },
         popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
+          DEFAULT: 'var(--popover)',
+          foreground: 'var(--popover-foreground)',
         },
         card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+          DEFAULT: 'var(--card)',
+          foreground: 'var(--card-foreground)',
+          border: 'var(--card-border)',
+        },
+        chart: {
+          1: 'var(--chart-1)',
+          2: 'var(--chart-2)',
+          3: 'var(--chart-3)',
+          4: 'var(--chart-4)',
+          5: 'var(--chart-5)',
         },
       },
       borderRadius: {
@@ -65,7 +73,10 @@ const config = {
         '4xl': 'calc(var(--radius) * 2.6)',
       },
       fontFamily: {
-        heading: ['var(--font-heading)', 'Inter', 'sans-serif'],
+        /* Photon aliaser font-heading til font-sans — samme snitt, egen token
+           så de kan skilles senere uten å røre kall-stedene. */
+        sans: ['var(--font-sans)', 'Inter', 'sans-serif'],
+        heading: ['var(--font-sans)', 'Inter', 'sans-serif'],
       },
       keyframes: {
         'accordion-down': {
@@ -76,48 +87,18 @@ const config = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
-        'collapsible-down': {
-          from: {
-            height: '0',
-          },
-          to: {
-            height: 'var(--radix-collapsible-content-height)',
-          },
-        },
-        'collapsible-up': {
-          from: {
-            height: 'var(--radix-collapsible-content-height)',
-          },
-          to: {
-            height: '0',
-          },
-        },
-        'reveal-up': {
-          from: { opacity: '0', transform: 'translateY(1rem)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
         'glow-breathe': {
           '0%, 100%': { opacity: '0.45', transform: 'translateX(-50%) scale(1)' },
           '50%': { opacity: '0.75', transform: 'translateX(-50%) scale(1.06)' },
         },
       },
       animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out',
-        'collapsible-down': 'collapsible-down 0.2s ease-out',
-        'collapsible-up': 'collapsible-up 0.2s ease-out',
-        'reveal-up': 'reveal-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'accordion-down': 'accordion-down 0.2s var(--ease-out)',
+        'accordion-up': 'accordion-up 0.2s var(--ease-out)',
         'glow-breathe': 'glow-breathe 7s ease-in-out infinite',
-      },
-      maxWidth: {
-        page: 'min(80rem, 90%)',
-      },
-      padding: {
-        page: '6rem',
       },
     },
   },
-  plugins: [tailwindcss_animate],
 } satisfies Config;
 
 export default config;
