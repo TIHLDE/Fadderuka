@@ -40,7 +40,7 @@ export default function Countdown({ activity }: { activity: ModalActivity }) {
   ];
 
   return (
-    <Reveal className="max-w-page mx-auto w-full px-4 pt-10 text-center md:px-6">
+    <Reveal className="container mx-auto w-full px-4 text-center">
       <p className="text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase">
         {remaining?.done ? (
           "Aktiviteten har startet"
@@ -61,7 +61,7 @@ export default function Countdown({ activity }: { activity: ModalActivity }) {
         {units.map((unit) => (
           <div
             key={unit.label}
-            className="bg-card ring-foreground/10 flex min-w-[68px] flex-col items-center gap-1 rounded-2xl px-3 py-4 shadow-[inset_0_1px_0_hsl(var(--foreground)/0.06)] ring-1 sm:min-w-[92px] sm:px-5"
+            className="bg-card ring-card-border flex min-w-[68px] flex-col items-center gap-1 rounded-xl px-3 py-4 ring-1 sm:min-w-[92px] sm:px-5"
           >
             <span className="font-heading text-foreground text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl md:text-6xl">
               {String(unit.value ?? 0).padStart(2, "0")}

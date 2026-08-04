@@ -66,12 +66,15 @@ export function NotificationBell() {
       <DropdownMenuTrigger asChild>
         <button
           aria-label="Varsler"
-          className="hover:bg-muted/50 hover:text-foreground relative rounded-md p-2 transition"
+          className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring/50 relative grid size-8 place-items-center rounded-lg transition-colors outline-none focus-visible:ring-3"
           type="button"
         >
-          <Bell className="h-4 w-4" />
+          <Bell className="size-4" />
           {!!unreadCount && unreadCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 grid h-4 w-4 place-items-center rounded-full bg-red-500 text-[10px] font-semibold text-white">
+            // `text-background` framfor `text-destructive-foreground`: i lys
+            // modus er de to destructive-tokenene samme farge, så etiketten
+            // hadde forsvunnet i sin egen bakgrunn.
+            <span className="bg-destructive text-background absolute top-0 right-0 grid size-4 place-items-center rounded-full text-[10px] font-semibold">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

@@ -1,9 +1,22 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
+
+/** Sentrert enkeltmelding — samme ramme for alle fire tilstandene. */
+function CallbackFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-1 items-center justify-center px-4 py-16">
+      <div className="flex max-w-md flex-col items-center gap-6 text-center">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function PaymentCallback() {
   const searchParams = useSearchParams();
@@ -20,76 +33,55 @@ function PaymentCallback() {
 
   if (!orderId) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-red-400">Ugyldig tilbakekobling fra Vipps.</p>
-          <Link href="/" className="mt-4 block text-orange-500 underline">
-            Gå til forsiden
-          </Link>
-        </div>
-      </div>
+      <CallbackFrame>
+        <p className="text-destructive">Ugyldig tilbakekobling fra Vipps.</p>
+        <Button asChild variant="outline">
+          <Link href="/">Gå til forsiden</Link>
+        </Button>
+      </CallbackFrame>
     );
   }
 
   if (confirm.isError) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center space-y-3">
-          <p className="text-red-400">
-            Betalingen kunne ikke bekreftes: {confirm.error.message}
-          </p>
-          <Link href="/" className="block text-orange-500 underline">
-            Gå til forsiden
-          </Link>
-        </div>
-      </div>
+      <CallbackFrame>
+        <p className="text-destructive">
+          Betalingen kunne ikke bekreftes: {confirm.error.message}
+        </p>
+        <Button asChild variant="outline">
+          <Link href="/">Gå til forsiden</Link>
+        </Button>
+      </CallbackFrame>
     );
   }
 
   if (confirm.isSuccess) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="max-w-md space-y-6 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              className="h-8 w-8 text-green-500"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-foreground">
-              Takk! Du er registrert 🎉
-            </h1>
-            <p className="text-muted-foreground">
-              Betalingen din er bekreftet, og du er nå registrert for Fadderuka.
-              Velkommen!
-            </p>
-          </div>
-          <Link
-            href="/"
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl bg-orange-500 px-6 text-base font-bold text-white shadow-lg shadow-orange-500/25 transition-all hover:bg-orange-600"
-          >
-            Gå til appen
-          </Link>
+      <CallbackFrame>
+        <div className="bg-primary/10 grid size-14 place-items-center rounded-full">
+          <Check className="text-primary size-7" />
         </div>
-      </div>
+        <div className="flex flex-col gap-2">
+          <h1 className="font-heading text-foreground text-2xl font-semibold tracking-tight">
+            Takk! Du er registrert 🎉
+          </h1>
+          <p className="text-muted-foreground text-pretty">
+            Betalingen din er bekreftet, og du er nå registrert for Fadderuka.
+            Velkommen!
+          </p>
+        </div>
+        <Button asChild className="h-11 w-full text-base">
+          <Link href="/">Gå til appen</Link>
+        </Button>
+      </CallbackFrame>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center space-y-4">
-        <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
-        <p className="text-muted-foreground">Bekrefter betaling med Vipps...</p>
-      </div>
-    </div>
+    <CallbackFrame>
+      <Loader2 className="text-muted-foreground size-8 animate-spin" />
+      <p className="text-muted-foreground">Bekrefter betaling med Vipps...</p>
+    </CallbackFrame>
   );
 }
 
@@ -97,9 +89,9 @@ export default function PaymentCallbackPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-background">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
-        </div>
+        <CallbackFrame>
+          <Loader2 className="text-muted-foreground size-8 animate-spin" />
+        </CallbackFrame>
       }
     >
       <PaymentCallback />

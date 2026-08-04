@@ -1,59 +1,40 @@
-"use client";
+import type React from "react";
 
-import { useEffect, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
 
-type RevealProps = React.HTMLAttributes<HTMLDivElement> & {
-  /** Delay in ms before the reveal starts once in view (for staggering). */
+type RevealProps = React.ComponentProps<"div"> & {
+  /** Forsinkelse i ms før inngangen starter, for å trappe flere elementer. */
   delay?: number;
 };
 
 /**
- * Wraps content and fades/slides it up the first time it scrolls into view.
- * GPU-safe (transform + opacity + blur only) and skips animation entirely
- * when the user prefers reduced motion.
+ * Fader innholdet opp ved mount. Selve timingen ligger i globals.css under
+ * `[data-slot="reveal"]`, ved siden av easing-tokenene, slik Photon gjør det.
+ *
+ * Dette var tidligere en klientkomponent som slo `opacity-0` → `opacity-100`
+ * fra en IntersectionObserver. Den varianten har et feilmodus CSS-versjonen
+ * ikke har: fyrer observeren aldri — skjult fane, ingen JS, hydrering som
+ * feiler — blir innholdet stående usynlig. CSS-animasjonen deklarerer bare
+ * `from`, så sluttilstanden *er* elementets vanlige computed style, og verste
+ * utfall er at animasjonen uteblir mens innholdet vises.
  */
 export function Reveal({ delay = 0, className, style, ...props }: RevealProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [shown, setShown] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      setShown(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          setShown(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -8% 0px" },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div
-      ref={ref}
-      style={{ transitionDelay: `${delay}ms`, ...style }}
-      className={cn(
-        "transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform",
-        shown
-          ? "translate-y-0 opacity-100 blur-0"
-          : "translate-y-4 opacity-0 blur-[2px]",
-        className,
-      )}
+      data-slot="reveal"
+      style={delay ? { animationDelay: `${delay}ms`, ...style } : style}
+      className={cn(className)}
       {...props}
     />
+  );
+}
+
+/**
+ * Lar barna komme inn 40ms fra hverandre, med tak på 5 trinn. Regelen ligger i
+ * globals.css — komponenten setter bare `data-slot`.
+ */
+export function Stagger({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div data-slot="stagger" className={cn(className)} {...props} />
   );
 }

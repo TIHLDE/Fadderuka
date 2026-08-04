@@ -19,7 +19,7 @@ function ActivityImage({
   subtitle?: string;
 }) {
   return (
-    <div className="relative h-44 w-full overflow-hidden rounded-lg bg-muted ring-1 ring-foreground/10">
+    <div className="relative h-44 w-full overflow-hidden rounded-lg bg-muted ring-1 ring-card-border">
       <div className="relative flex h-full flex-col items-center justify-center px-6 text-center">
         <span className="font-heading text-foreground text-xl font-medium tracking-tight">
           {title}
@@ -44,7 +44,7 @@ export default function ActivityCard({
   href = "#",
 }: ActivityCardProps) {
   return (
-    <div className="rounded-xl bg-card text-card-foreground ring-1 ring-foreground/10 !p-6 transition-colors hover:bg-muted/50">
+    <div className="rounded-xl bg-card text-card-foreground ring-1 ring-card-border !p-6 transition-colors hover:bg-muted/50">
       <ActivityImage title={imageTitle} subtitle={imageSubtitle} />
       <div className="mt-6 space-y-3">
         <h3 className="font-heading text-foreground text-2xl font-medium tracking-tight">{title}</h3>
