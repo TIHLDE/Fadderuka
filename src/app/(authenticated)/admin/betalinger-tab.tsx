@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { api, type RouterOutputs } from "~/trpc/react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { downloadCsv, toCsv, toDateAndTime, type CsvColumn } from "~/lib/csv";
 
 type Registration = RouterOutputs["admin"]["getRegistrations"][number];
@@ -146,17 +146,12 @@ function RefundAction({
       void utils.admin.getPaymentDetails.invalidate({ orderId });
       void utils.admin.getRegistrations.invalidate();
       void utils.admin.getUsers.invalidate();
-      toast({
-        title: "Betalingen er refundert",
+      toast("Betalingen er refundert", {
         description: `${kr(result.refunded)} er sendt tilbake til ${result.name}, som nå står som ikke betalt.`,
       });
     },
     onError: (error) => {
-      toast({
-        title: "Refusjon feilet",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Refusjon feilet", { description: error.message });
     },
   });
 
@@ -327,19 +322,14 @@ export function BetalingerTab() {
     onSuccess: (result) => {
       void utils.admin.getRegistrations.invalidate();
       void utils.admin.getUsers.invalidate();
-      toast({
-        title: "Synkronisert mot Vipps",
+      toast("Synkronisert mot Vipps", {
         description: `${result.checked} ordre sjekket, ${result.settled} ble bekreftet betalt${
           result.failed > 0 ? `, ${result.failed} feilet` : ""
         }.`,
       });
     },
     onError: (error) => {
-      toast({
-        title: "Synk feilet",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error("Synk feilet", { description: error.message });
     },
   });
 

@@ -1,5 +1,5 @@
 import { PageHeader, PageShell } from "~/components/layout/page-shell";
-import { Reveal } from "~/components/ui/reveal";
+import { Reveal } from "~/components/ui/motion";
 import { api } from "~/trpc/server";
 import AktiviteterList from "./aktiviteter-list";
 

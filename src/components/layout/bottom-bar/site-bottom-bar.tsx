@@ -17,7 +17,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "~/components/ui/drawer";
-import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
+import { ThemeSwitcher } from "~/components/ui/theme-switcher";
 import { cn } from "~/lib/utils";
 import {
   NAV_LINKS,
@@ -83,12 +83,7 @@ export function SiteBottomBar({
           <DrawerContent className="max-h-[80vh]">
             <DrawerHeader className="flex flex-row items-center justify-between gap-2">
               <DrawerTitle>Meny</DrawerTitle>
-              <ThemeToggle
-                aria-label="Bytt tema"
-                variant="ghost"
-                size="icon"
-                className="size-9"
-              />
+              <ThemeSwitcher className="size-9" />
             </DrawerHeader>
 
             {/* min-h-0 lar lista faktisk scrolle innenfor drawerens maks-høyde

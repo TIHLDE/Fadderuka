@@ -2,7 +2,7 @@ import BottomBarNav from "~/components/layout/bottom-bar";
 import Footer from "~/components/layout/footer/footer";
 import Header from "~/components/layout/header/header";
 import { ThemeProvider } from "~/components/ui/theme-provider";
-import { Toaster } from "~/components/ui/toaster";
+import { Toaster } from "~/components/ui/sonner";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";

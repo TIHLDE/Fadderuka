@@ -1,7 +1,7 @@
 import { PageHeader, PageShell } from "~/components/layout/page-shell";
 import { Badge } from "~/components/ui/badge";
 import GameCard from "~/components/ui/game-card";
-import { Reveal, Stagger } from "~/components/ui/reveal";
+import { Reveal, Stagger } from "~/components/ui/motion";
 
 const games = [
   {
