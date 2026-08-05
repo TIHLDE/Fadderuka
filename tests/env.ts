@@ -84,4 +84,10 @@ process.env.FADDERUKE_COHORT_YEAR = "2026";
 // session tests would be checking a code path no deployment runs.
 process.env.SESSION_ENCRYPTION_KEY = "0".repeat(64);
 
+// Photon's email API, which "glemt passord" sends through. The host is fake and
+// `fetch` is stubbed — the key only has to be set for the feature to be on.
+process.env.PHOTON_API_URL = "https://photon.test";
+process.env.PHOTON_EMAIL_API_KEY = "test-email-api-key";
+process.env.APP_URL = "https://fadderuka.test";
+
 export const TEST_DATABASE_URL = databaseUrl;

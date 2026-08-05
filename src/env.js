@@ -40,6 +40,25 @@ export const env = createEnv({
       .string()
       .regex(/^[0-9a-fA-F]{64}$/, "SESSION_ENCRYPTION_KEY må være 64 hex-tegn")
       .optional(),
+    /**
+     * Photon's API, which sends our email for us (`POST /api/email/send`).
+     * Fadderuka has no mail setup of its own — see `src/server/email/photon.ts`.
+     */
+    PHOTON_API_URL: z.string().url().default("https://photon.tihlde.org"),
+    /**
+     * Shared secret for that endpoint, matching `EMAIL_API_KEY` on the Photon
+     * server. Unset, no mail is sent and "glemt passord" answers that the
+     * feature is unavailable rather than pretending a mail went out.
+     */
+    PHOTON_EMAIL_API_KEY: z.string().optional(),
+    /**
+     * Public origin of this app, used to build the password reset link. Set
+     * explicitly rather than read off the request's Host header, which an
+     * attacker controls — that is how reset links get poisoned. Falls back to
+     * `VIPPS_CALLBACK_URL`, which is already the public URL in every
+     * environment that has it.
+     */
+    APP_URL: z.string().url().optional(),
   },
 
   client: {},
@@ -57,6 +76,9 @@ export const env = createEnv({
     VIPPS_WEBHOOK_SECRET: process.env.VIPPS_WEBHOOK_SECRET,
     FADDERUKE_COHORT_YEAR: process.env.FADDERUKE_COHORT_YEAR,
     SESSION_ENCRYPTION_KEY: process.env.SESSION_ENCRYPTION_KEY,
+    PHOTON_API_URL: process.env.PHOTON_API_URL,
+    PHOTON_EMAIL_API_KEY: process.env.PHOTON_EMAIL_API_KEY,
+    APP_URL: process.env.APP_URL,
   },
 
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

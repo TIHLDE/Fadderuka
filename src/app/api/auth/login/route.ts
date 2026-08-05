@@ -243,7 +243,6 @@ export async function POST(request: Request) {
         studieretning,
         klasse: mapped.klasse,
         passwordHash: null,
-        passwordIsTemporary: false,
         isFadder,
         ...studyGrant,
         ...adminGrant,
