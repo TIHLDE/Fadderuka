@@ -230,7 +230,7 @@ export function AktiviteterTab() {
               key={activity.id}
               className="flex flex-col !gap-3 rounded-xl border border-border bg-card !p-4 sm:flex-row sm:items-start sm:justify-between"
             >
-              <div className="flex !gap-4">
+              <div className="flex min-w-0 !gap-4">
                 {activity.imageUrl ? (
                   <img
                     src={activity.imageUrl}
@@ -244,8 +244,10 @@ export function AktiviteterTab() {
                     </span>
                   </div>
                 )}
-                <div className="!space-y-1">
-                  <p className="font-semibold text-foreground">{activity.title}</p>
+                <div className="min-w-0 !space-y-1">
+                  <p className="font-semibold break-words text-foreground">
+                    {activity.title}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(activity.date).toLocaleDateString("no-NO", {
                       weekday: "short",
@@ -264,7 +266,7 @@ export function AktiviteterTab() {
                 </div>
               </div>
 
-              <div className="flex items-center !gap-2 sm:flex-shrink-0">
+              <div className="flex flex-wrap items-center !gap-2 sm:flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => openEdit(activity)}

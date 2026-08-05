@@ -119,7 +119,7 @@ export function GrupperTab() {
   return (
     <div className="!space-y-6">
       {/* Create new gruppe */}
-      <form onSubmit={handleCreateGruppe} className="flex !gap-3">
+      <form onSubmit={handleCreateGruppe} className="flex flex-wrap !gap-3">
         <input
           type="text"
           placeholder="Ny faddergruppe navn..."
@@ -168,13 +168,13 @@ export function GrupperTab() {
                     {/* Gruppe header */}
                     <button
                       type="button"
-                      className="flex w-full items-center justify-between !px-5 !py-4 text-left transition hover:bg-muted/50"
+                      className="flex w-full items-center justify-between !gap-3 !px-5 !py-4 text-left transition hover:bg-muted/50"
                       onClick={() =>
                         setExpandedGruppe(isExpanded ? null : gruppe.id)
                       }
                     >
-                      <div className="flex items-center !gap-3">
-                        <h3 className="text-lg font-semibold text-foreground">
+                      <div className="flex min-w-0 flex-wrap items-center !gap-x-3">
+                        <h3 className="text-lg font-semibold break-words text-foreground">
                           {gruppe.name}
                         </h3>
                         <span className="text-sm text-muted-foreground">
@@ -182,9 +182,9 @@ export function GrupperTab() {
                         </span>
                       </div>
                       {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                        <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                        <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" />
                       )}
                     </button>
 
@@ -200,17 +200,20 @@ export function GrupperTab() {
                               {faddere.map((member) => (
                                 <li
                                   key={member.id}
-                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
+                                  className="flex items-center justify-between !gap-3 rounded-lg !px-3 !py-2 hover:bg-muted/50"
                                 >
-                                  <div>
+                                  {/* E-postene er lange nok til å skyve
+                                      knappene ut av kortet på mobil, så navn og
+                                      e-post legger seg under hverandre der. */}
+                                  <div className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:!gap-2">
                                     <span className="text-sm text-foreground">
                                       {member.user.name}
                                     </span>
-                                    <span className="!ml-2 text-xs text-muted-foreground">
+                                    <span className="text-xs break-all text-muted-foreground">
                                       {member.user.email}
                                     </span>
                                   </div>
-                                  <div className="flex items-center !gap-2">
+                                  <div className="flex shrink-0 items-center !gap-2">
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -257,17 +260,20 @@ export function GrupperTab() {
                               {fadderbarn.map((member) => (
                                 <li
                                   key={member.id}
-                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
+                                  className="flex items-center justify-between !gap-3 rounded-lg !px-3 !py-2 hover:bg-muted/50"
                                 >
-                                  <div>
+                                  {/* E-postene er lange nok til å skyve
+                                      knappene ut av kortet på mobil, så navn og
+                                      e-post legger seg under hverandre der. */}
+                                  <div className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:!gap-2">
                                     <span className="text-sm text-foreground">
                                       {member.user.name}
                                     </span>
-                                    <span className="!ml-2 text-xs text-muted-foreground">
+                                    <span className="text-xs break-all text-muted-foreground">
                                       {member.user.email}
                                     </span>
                                   </div>
-                                  <div className="flex items-center !gap-2">
+                                  <div className="flex shrink-0 items-center !gap-2">
                                     <button
                                       type="button"
                                       onClick={() =>
