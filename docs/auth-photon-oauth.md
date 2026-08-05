@@ -24,10 +24,10 @@ seg fikse innenfor modellen:
    endepunktet er per definisjon en maskin som svarer på «er dette passordet
    riktig for denne TIHLDE-brukeren?».
 
-I tillegg har appen måttet bygge sitt eget engangspassord-system for studenter
-som venter på godkjenning på tihlde.org — `passwordHash`, `passwordIsTemporary`,
-`/velg-passord`, `admin.resetUserPassword`. Det er reell kompleksitet som finnes
-kun fordi innloggingen er koblet til Leptons godkjenningsløp.
+I tillegg har appen måttet bygge sin egen lokale passordbro for studenter som
+venter på godkjenning på tihlde.org — `passwordHash`, `/velg-passord`. Det er
+reell kompleksitet som finnes kun fordi innloggingen er koblet til Leptons
+godkjenningsløp. (Engangspassordene admin kunne utstede er fjernet.)
 
 ## Hva Photon allerede kan
 
@@ -56,7 +56,7 @@ Photon-siden for selve innloggingen.
 | `Session.tihldeToken` + kryptering | Vi får et scoped access token, ikke en kontonøkkel |
 | `src/server/auth/token-crypto.ts` | Har ikke lenger noe å beskytte |
 | Rate limiting på innlogging | Ikke lenger vår innlogging å beskytte |
-| Engangspassord-systemet | `passwordHash`, `passwordIsTemporary`, `/velg-passord`, `resetUserPassword` |
+| Den lokale passordbroen | `passwordHash`, `/velg-passord` |
 | `POST /users/` som registreringsvei | Kontoopprettelse skjer hos Photon/Feide |
 
 Grovt anslag: rundt 600 linjer produksjonskode og fire databasekolonner utgår.

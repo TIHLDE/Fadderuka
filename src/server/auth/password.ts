@@ -25,32 +25,6 @@ function derive(password: string, salt: Buffer): Promise<Buffer> {
   });
 }
 
-/**
- * Alphabet without the characters that get misread when a password is passed on
- * verbally or on paper (0/O, 1/l/I).
- */
-const TEMP_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
-const TEMP_LENGTH = 12;
-
-/**
- * A single-use password an admin hands to a student whose TIHLDE account is
- * still pending. Rejection sampling keeps the distribution uniform (256 is not
- * a multiple of the alphabet length, so plain modulo would bias the first
- * characters).
- */
-export function generateTempPassword(): string {
-  const limit = 256 - (256 % TEMP_ALPHABET.length);
-  let out = "";
-  while (out.length < TEMP_LENGTH) {
-    for (const byte of randomBytes(TEMP_LENGTH)) {
-      if (byte >= limit) continue;
-      out += TEMP_ALPHABET[byte % TEMP_ALPHABET.length];
-      if (out.length === TEMP_LENGTH) break;
-    }
-  }
-  return out;
-}
-
 /** Hash a plaintext password into a self-describing `scrypt:salt:hash` string. */
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16);

@@ -19,10 +19,6 @@ export default async function VelgPassordPage() {
   // Nothing to do for anyone else — don't strand them on a dead-end page.
   if (!needsLocalPassword(session)) redirect("/");
 
-  // Two ways to land here, and the wording has to match: either an admin just
-  // handed them a one-time password, or they have none at all.
-  const hasTempPassword = session.user.passwordIsTemporary;
-
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-8">
         <div className="w-full max-w-xl">
@@ -30,17 +26,13 @@ export default async function VelgPassordPage() {
             <div className="flex flex-col gap-6 p-8 sm:p-12">
               <div className="flex flex-col gap-2">
                 <CardTitle className="text-3xl font-bold">
-                  {hasTempPassword ? "Velg ditt eget passord" : "Velg et passord"}
+                  Velg et passord
                 </CardTitle>
                 <CardDescription>
-                  {hasTempPassword
-                    ? `Du logget inn med et engangspassord du fikk av
-                       fadderkomiteen. Velg nå et passord du selv husker — det
-                       erstatter engangspassordet.`
-                    : `Brukeren din på tihlde.org venter fortsatt på godkjenning,
-                       og fram til den er godkjent kan du ikke logge inn her med
-                       TIHLDE-passordet ditt. Velg et passord du bruker her, så
-                       kommer du inn igjen neste gang.`}
+                  Brukeren din på tihlde.org venter fortsatt på godkjenning, og
+                  fram til den er godkjent kan du ikke logge inn her med
+                  TIHLDE-passordet ditt. Velg et passord du bruker her, så
+                  kommer du inn igjen neste gang.
                 </CardDescription>
                 <CardDescription>
                   Du logger inn med brukernavnet ditt,{" "}

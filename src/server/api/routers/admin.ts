@@ -7,7 +7,6 @@ import {
   adminProcedure,
   createTRPCRouter,
 } from "~/server/api/trpc";
-import { generateTempPassword, hashPassword } from "~/server/auth/password";
 import {
   PAYMENT_AMOUNT_ORE,
   VippsError,
@@ -109,31 +108,6 @@ export const adminRouter = createTRPCRouter({
         where: { id: input.userId },
         data: { isVerified: input.isVerified },
       });
-    }),
-
-  /**
-   * Issue a one-time local password for a user whose TIHLDE account is still
-   * pending approval, so they can log in here in the meantime. Needed for
-   * everyone who registered before we started storing a local hash — their
-   * password only ever went to TIHLDE, so it cannot be recovered.
-   *
-   * The plaintext is returned once, for the admin to pass on; only the hash is
-   * stored, and a successful TIHLDE login clears it again.
-   */
-  resetUserPassword: adminProcedure
-    .input(z.object({ userId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      const password = generateTempPassword();
-      const user = await ctx.db.user.update({
-        where: { id: input.userId },
-        data: {
-          passwordHash: await hashPassword(password),
-          // Brukeren blir bedt om å bytte det ut ved neste sidelast.
-          passwordIsTemporary: true,
-        },
-        select: { tihldeUserId: true },
-      });
-      return { tihldeUserId: user.tihldeUserId, password };
     }),
 
   /**
