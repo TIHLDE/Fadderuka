@@ -73,9 +73,6 @@ model User {
     // awaits approval, so they can log back in before tihlde.org activates
     // them. Cleared on the first successful TIHLDE login.
     passwordHash  String?
-    // True when passwordHash is an admin-issued one-time password. The user is
-    // asked to replace it with one of their own on the next page load.
-    passwordIsTemporary Boolean @default(false)
     // Whether this user is a fadder — i.e. someone who never owes money for
     // fadderuka. Derived on every login from the study cohort and any FADDER
     // group membership (see `src/server/fadder.ts`), and persisted so every
@@ -92,6 +89,7 @@ model User {
     groupMessages GroupMessage[]
     notifications Notification[]
     payments      Payment[]
+    passwordResets PasswordResetToken[]
 }
 
 model FadderGruppe {
@@ -187,6 +185,24 @@ model Session {
     userAgent   String?
     userId      String
     user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+    // A "glemt passord"-link, for accounts that log in with the local password
+    // chosen at registration (tihlde.org owns the password for everyone else).
+    //
+    // Only the SHA-256 of the token is stored: the plaintext lives in the email
+    // and nowhere else, so a leaked database does not hand over live reset
+    // links. Single-use (`usedAt`) and short-lived (`expiresAt`).
+    id        String    @id @default(cuid())
+    tokenHash String    @unique
+    userId    String
+    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    expiresAt DateTime
+    usedAt    DateTime?
+    createdAt DateTime  @default(now())
+
+    @@index([userId])
 }
 
 model LoginAttempt {

@@ -96,9 +96,17 @@ function LoggInnSkjema() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="login-password">
-                    Passord <span className="text-destructive">*</span>
-                  </Label>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Label htmlFor="login-password">
+                      Passord <span className="text-destructive">*</span>
+                    </Label>
+                    <Link
+                      href="/glemt-passord"
+                      className="text-muted-foreground text-sm underline"
+                    >
+                      Glemt passord?
+                    </Link>
+                  </div>
                   <Input
                     id="login-password"
                     name="password"

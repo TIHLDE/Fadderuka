@@ -140,13 +140,10 @@ export async function deleteSession(token: string) {
 /**
  * True when the signed-in user should choose a local password for this app.
  *
- * Two cases, both limited to accounts TIHLDE does not authenticate yet (no
- * token on the session, because tihlde.org has not approved them):
- *
- *  - No password at all: they registered here before we stored a hash, so
- *    nothing would let them back in once this session expires.
- *  - An admin-issued one-time password: it got them in, but it is a random
- *    string nobody wants to keep, so they are asked to replace it.
+ * Limited to accounts TIHLDE does not authenticate yet (no token on the
+ * session, because tihlde.org has not approved them) and that have no password
+ * hash: they registered here before we stored one, so nothing would let them
+ * back in once this session expires.
  *
  * Derived rather than a hardcoded list of usernames, so it stays correct as
  * accounts get approved and as new ones appear.
@@ -155,7 +152,7 @@ export function needsLocalPassword(
   session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
 ): boolean {
   if (session.session.tihldeToken) return false;
-  return !session.user.passwordHash || session.user.passwordIsTemporary;
+  return !session.user.passwordHash;
 }
 
 /**

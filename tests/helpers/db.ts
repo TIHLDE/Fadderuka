@@ -7,6 +7,7 @@ import { db } from "~/server/db";
  */
 const TABLES = [
   "LoginAttempt",
+  "PasswordResetToken",
   "Payment",
   "Notification",
   "GroupMessage",
@@ -42,7 +43,6 @@ export async function createUser(
     studieretningOverride: string | null;
     klasse: string | null;
     passwordHash: string | null;
-    passwordIsTemporary: boolean;
     isFadder: boolean;
     fadderOverride: boolean | null;
     createdAt: Date;
@@ -62,7 +62,6 @@ export async function createUser(
       studieretningOverride: overrides.studieretningOverride ?? null,
       klasse: overrides.klasse ?? null,
       passwordHash: overrides.passwordHash ?? null,
-      passwordIsTemporary: overrides.passwordIsTemporary ?? false,
       isFadder: overrides.isFadder ?? false,
       fadderOverride: overrides.fadderOverride ?? null,
       ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
