@@ -23,6 +23,12 @@ import { env } from "~/env";
 
 const SCOPES = "openid profile email";
 
+/**
+ * The audience we request tokens for — Photon's auth base URL, which is the
+ * only value its provider accepts. See the note in `exchangeCode`.
+ */
+const PHOTON_AUDIENCE = `${env.PHOTON_API_URL.replace(/\/$/, "")}/api/auth`;
+
 /** How long we wait for Photon before giving up on a request. */
 const TIMEOUT_MS = 10_000;
 
@@ -198,6 +204,20 @@ export async function exchangeCode(
     redirect_uri: redirectUri(),
     client_id: requireClientId(),
     code_verifier: codeVerifier,
+    /**
+     * Asks for an access token we can actually use against Photon's API.
+     *
+     * Without `resource` the provider mints an OPAQUE token (`tihlde_oat_…`),
+     * and Photon's own `requireAuth` only understands JWTs — it bails on
+     * `token.split(".").length !== 3` and answers 401. Every profile lookup
+     * then failed with "Kunne ikke hente profilen din fra TIHLDE", which is
+     * what took the login down on the night of the cutover.
+     *
+     * The value has to be Photon's auth base URL: `validAudiences` is not
+     * configured on the provider, so it defaults to exactly that one origin and
+     * rejects anything else with `requested resource invalid`.
+     */
+    resource: PHOTON_AUDIENCE,
   });
 
   const secret = env.PHOTON_OAUTH_CLIENT_SECRET;
