@@ -58,6 +58,12 @@ export function UsersTab() {
   const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [expandedMajor, setExpandedMajor] = useState<string | null>(null);
+  // While searching, every group with a hit opens by itself — collapsing one
+  // again is per-group, and the overrides are dropped as soon as the query
+  // changes so a new search always starts fully open.
+  const [collapsedWhileSearching, setCollapsedWhileSearching] = useState<
+    Set<string>
+  >(new Set());
   const utils = api.useUtils();
 
   const { data: users, isLoading } = api.admin.getUsers.useQuery();
@@ -155,9 +161,13 @@ export function UsersTab() {
     group.push(user);
     verifiedByStudieretning.set(key, group);
   }
-  const studieretninger = [...verifiedByStudieretning.keys()].sort(
-    compareMajorLabels,
-  );
+  const isSearching = search.trim().length > 0;
+  const studieretninger = [...verifiedByStudieretning.keys()]
+    .filter(
+      (major) =>
+        !isSearching || (verifiedByStudieretning.get(major)?.length ?? 0) > 0,
+    )
+    .sort(compareMajorLabels);
 
   if (isLoading) {
     return (
@@ -332,14 +342,19 @@ export function UsersTab() {
           type="text"
           placeholder="Sok etter bruker..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCollapsedWhileSearching(new Set());
+          }}
           className="w-full max-w-sm rounded-xl border border-border bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
 
         <div className="!space-y-4">
           {studieretninger.map((studieretning) => {
             const usersInGroup = verifiedByStudieretning.get(studieretning) ?? [];
-            const isExpanded = expandedMajor === studieretning;
+            const isExpanded = isSearching
+              ? !collapsedWhileSearching.has(studieretning)
+              : expandedMajor === studieretning;
             return (
               <div
                 key={studieretning}
@@ -347,9 +362,18 @@ export function UsersTab() {
               >
                 <button
                   type="button"
-                  onClick={() =>
-                    setExpandedMajor(isExpanded ? null : studieretning)
-                  }
+                  onClick={() => {
+                    if (isSearching) {
+                      setCollapsedWhileSearching((prev) => {
+                        const next = new Set(prev);
+                        if (isExpanded) next.add(studieretning);
+                        else next.delete(studieretning);
+                        return next;
+                      });
+                      return;
+                    }
+                    setExpandedMajor(isExpanded ? null : studieretning);
+                  }}
                   className="flex w-full items-center justify-between !gap-3 !p-4 text-left"
                 >
                   <div>
@@ -550,6 +574,11 @@ export function UsersTab() {
               </div>
             );
           })}
+          {isSearching && studieretninger.length === 0 && (
+            <p className="rounded-xl border border-border bg-card !p-4 text-sm text-muted-foreground">
+              Ingen brukere funnet
+            </p>
+          )}
         </div>
       </section>
     </div>
