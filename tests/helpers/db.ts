@@ -7,7 +7,6 @@ import { db } from "~/server/db";
  */
 const TABLES = [
   "LoginAttempt",
-  "PasswordResetToken",
   "Payment",
   "Notification",
   "GroupMessage",
@@ -42,7 +41,6 @@ export async function createUser(
     studieretning: string | null;
     studieretningOverride: string | null;
     klasse: string | null;
-    passwordHash: string | null;
     isFadder: boolean;
     fadderOverride: boolean | null;
     createdAt: Date;
@@ -61,7 +59,6 @@ export async function createUser(
       studieretning: overrides.studieretning ?? null,
       studieretningOverride: overrides.studieretningOverride ?? null,
       klasse: overrides.klasse ?? null,
-      passwordHash: overrides.passwordHash ?? null,
       isFadder: overrides.isFadder ?? false,
       fadderOverride: overrides.fadderOverride ?? null,
       ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
@@ -84,7 +81,12 @@ export async function createMember(
 export async function createAdmin(
   overrides: Parameters<typeof createUser>[0] = {},
 ) {
-  return createUser({ isAdmin: true, isVerified: true, hasPaid: true, ...overrides });
+  return createUser({
+    isAdmin: true,
+    isVerified: true,
+    hasPaid: true,
+    ...overrides,
+  });
 }
 
 export async function createGruppe(name?: string) {

@@ -96,20 +96,24 @@ async function getSession({ headers }: { headers: Headers }) {
   }
 
   const { user, ...rest } = session;
-  // Callers (allergy sync) expect a usable TIHLDE token, not the stored
-  // ciphertext, so decrypt on the way out.
+  // Callers (allergy sync) expect a usable token, not the stored ciphertext,
+  // so decrypt on the way out.
   return {
     user,
-    session: { ...rest, tihldeToken: decryptToken(rest.tihldeToken) },
+    session: {
+      ...rest,
+      photonAccessToken: decryptToken(rest.photonAccessToken),
+    },
   };
 }
 
 /** Create a persisted session for a user and return its cookie token. */
 export async function createSession(opts: {
   userId: string;
-  // Self-registered users have no TIHLDE token until they're activated and log
-  // in via TIHLDE, so this is optional.
-  tihldeToken?: string | null;
+  // Absent for a session minted straight after self-registration: the account
+  // exists on tihlde.org but nobody has logged into it yet, so there is no
+  // OAuth token to hold.
+  photonAccessToken?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;
 }) {
@@ -120,9 +124,9 @@ export async function createSession(opts: {
     data: {
       token,
       userId: opts.userId,
-      // Encrypted at rest: this is a live credential for the user's real
-      // TIHLDE account, and it outlives the session row.
-      tihldeToken: encryptToken(opts.tihldeToken ?? null),
+      // Encrypted at rest: it can act on the member's TIHLDE profile for as
+      // long as it lives.
+      photonAccessToken: encryptToken(opts.photonAccessToken ?? null),
       expiresAt,
       ipAddress: opts.ipAddress ?? null,
       userAgent: opts.userAgent ?? null,
@@ -135,24 +139,6 @@ export async function createSession(opts: {
 /** Invalidate a session by its cookie token. */
 export async function deleteSession(token: string) {
   await db.session.deleteMany({ where: { token } });
-}
-
-/**
- * True when the signed-in user should choose a local password for this app.
- *
- * Limited to accounts TIHLDE does not authenticate yet (no token on the
- * session, because tihlde.org has not approved them) and that have no password
- * hash: they registered here before we stored one, so nothing would let them
- * back in once this session expires.
- *
- * Derived rather than a hardcoded list of usernames, so it stays correct as
- * accounts get approved and as new ones appear.
- */
-export function needsLocalPassword(
-  session: NonNullable<Awaited<ReturnType<typeof getSession>>>,
-): boolean {
-  if (session.session.tihldeToken) return false;
-  return !session.user.passwordHash;
 }
 
 /**

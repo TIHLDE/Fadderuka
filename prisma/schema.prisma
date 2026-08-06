@@ -62,6 +62,13 @@ model User {
     // `null` means "trust TIHLDE"; a value pins `studieretning` and survives
     // every later login instead of being overwritten by the profile.
     studieretningOverride String?
+    // Food allergies, as free text.
+    //
+    // Kept here rather than pushed onto the TIHLDE profile: Photon models
+    // allergies as a fixed list of slugs, so there is nowhere for "laktose,
+    // litt nøtter" to go. FadderKom is who orders the food during fadderuka
+    // anyway, so this is the copy that actually gets used.
+    allergy       String?
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)
@@ -69,10 +76,6 @@ model User {
     // TIHLDE on every login" (the default); `true`/`false` pins the user and
     // survives logins, so a manual grant or revocation is not overwritten.
     adminOverride Boolean?
-    // Set only for users who self-registered here while their TIHLDE account
-    // awaits approval, so they can log back in before tihlde.org activates
-    // them. Cleared on the first successful TIHLDE login.
-    passwordHash  String?
     // Whether this user is a fadder — i.e. someone who never owes money for
     // fadderuka. Derived on every login from the study cohort and any FADDER
     // group membership (see `src/server/fadder.ts`), and persisted so every
@@ -89,7 +92,6 @@ model User {
     groupMessages GroupMessage[]
     notifications Notification[]
     payments      Payment[]
-    passwordResets PasswordResetToken[]
 }
 
 model FadderGruppe {
@@ -173,36 +175,19 @@ model Payment {
 }
 
 model Session {
-    // Opaque app session. `tihldeToken` stores the TIHLDE API token so we can
-    // call Lepton on the user's behalf (e.g. refresh their profile).
-    id          String   @id @default(cuid())
-    expiresAt   DateTime
-    token       String   @unique
-    tihldeToken String?
+    // Opaque app session. `photonAccessToken` holds the OAuth access token
+    // Photon issued for this login, so we can act on the member's behalf (their
+    // allergies) without ever having held their password.
+    id                String   @id @default(cuid())
+    expiresAt         DateTime
+    token             String   @unique
+    photonAccessToken String?
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
     ipAddress   String?
     userAgent   String?
     userId      String
     user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model PasswordResetToken {
-    // A "glemt passord"-link, for accounts that log in with the local password
-    // chosen at registration (tihlde.org owns the password for everyone else).
-    //
-    // Only the SHA-256 of the token is stored: the plaintext lives in the email
-    // and nowhere else, so a leaked database does not hand over live reset
-    // links. Single-use (`usedAt`) and short-lived (`expiresAt`).
-    id        String    @id @default(cuid())
-    tokenHash String    @unique
-    userId    String
-    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    expiresAt DateTime
-    usedAt    DateTime?
-    createdAt DateTime  @default(now())
-
-    @@index([userId])
 }
 
 model LoginAttempt {

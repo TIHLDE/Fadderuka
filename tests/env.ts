@@ -88,6 +88,9 @@ process.env.SESSION_ENCRYPTION_KEY = "0".repeat(64);
 // `fetch` is stubbed — the key only has to be set for the feature to be on.
 process.env.PHOTON_API_URL = "https://photon.test";
 process.env.PHOTON_EMAIL_API_KEY = "test-email-api-key";
+process.env.PHOTON_REGISTER_API_KEY = "test-register-api-key";
+process.env.PHOTON_OAUTH_CLIENT_ID = "test-oauth-client-id";
+process.env.PHOTON_OAUTH_CLIENT_SECRET = "test-oauth-client-secret";
 process.env.APP_URL = "https://fadderuka.test";
 
 export const TEST_DATABASE_URL = databaseUrl;
