@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import React from "react";
-import { auth, needsLocalPassword } from "~/server/auth/config";
+import { auth } from "~/server/auth/config";
 import { hasAppAccess } from "~/server/fadder";
 import AllergySync from "~/components/allergy-sync";
 import VippsPaymentOverlay from "~/components/vipps-payment-overlay";
@@ -17,12 +17,6 @@ export default async function AuthenticatedLayout({
 
   if (!session?.user) {
     redirect("/registrering");
-  }
-
-  // Accounts that would be locked out the moment this session expires get one
-  // blocking stop: choose a password while we can still tell who they are.
-  if (needsLocalPassword(session)) {
-    redirect("/velg-passord");
   }
 
   // No access yet: show the payment prompt INSTEAD of the app, not on top of

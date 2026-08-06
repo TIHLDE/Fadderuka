@@ -11,13 +11,16 @@ import { db } from "~/server/db";
  * test see exactly the context they see in production.
  */
 
-function sessionFor(user: User, tihldeToken: string | null = "tihlde-token") {
+function sessionFor(
+  user: User,
+  photonAccessToken: string | null = "photon-token",
+) {
   return {
     user,
     session: {
       id: `sess-${user.id}`,
       token: `token-${user.id}`,
-      tihldeToken,
+      photonAccessToken,
       userId: user.id,
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       createdAt: new Date(),

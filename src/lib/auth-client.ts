@@ -1,22 +1,20 @@
 /**
- * Thin client-side auth helpers that talk to our own /api/auth routes, which
- * in turn proxy to TIHLDE. Replaces the previous better-auth React client.
+ * Thin client-side auth helpers that talk to our own /api/auth routes.
+ *
+ * Signing IN is not here: it is a plain link to `/api/auth/logg-inn`, which
+ * redirects to Photon. There is nothing to submit, and nothing this app could
+ * do with a password.
  */
 
 interface Result {
   error: string | null;
 }
 
-interface SignInResult extends Result {
-  /** True when the user is already verified (e.g. an admin) and owes no payment. */
-  verified: boolean;
-}
-
 /** New-user self-registration payload (mirrors /api/auth/register). */
 export interface RegisterInput {
   full_name: string;
+  /** Must be @stud.ntnu.no — Photon derives the username from it. */
   email: string;
-  user_id: string;
   password: string;
   study: string;
 }
@@ -26,8 +24,8 @@ interface RegisterResult extends Result {
   field?: string;
   /**
    * Set when the failure was "you already have an account": the username they
-   * should log in as. Lets the form offer the way out instead of leaving them
-   * to guess which field to change.
+   * should log in as. Lets the form point at the login button instead of
+   * leaving them to guess which field to change.
    */
   existingUserId?: string;
 }
@@ -42,37 +40,6 @@ async function readError(res: Response, fallback: string): Promise<string> {
 }
 
 export const authClient = {
-  /**
-   * Log in with a TIHLDE username + password.
-   *
-   * `study` is the slug of a programme the user is STARTING this autumn, for
-   * the case where TIHLDE's profile still shows the one they came from (see
-   * /api/auth/login). Omitted for everyone else, which is almost everyone.
-   */
-  async signIn(
-    userId: string,
-    password: string,
-    study?: string,
-  ): Promise<SignInResult> {
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, password, study }),
-    });
-
-    if (!res.ok) {
-      return {
-        error: await readError(res, "Noe gikk galt ved innlogging."),
-        verified: false,
-      };
-    }
-
-    const body = (await res.json().catch(() => null)) as {
-      verified?: boolean;
-    } | null;
-    return { error: null, verified: body?.verified ?? false };
-  },
-
   /** Register a brand-new TIHLDE account and log into the app. */
   async register(input: RegisterInput): Promise<RegisterResult> {
     const res = await fetch("/api/auth/register", {

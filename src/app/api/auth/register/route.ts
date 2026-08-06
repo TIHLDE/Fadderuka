@@ -2,66 +2,63 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import {
-  REGISTRATION_STUDY_SLUGS,
-  studyLabelForSlug,
-} from "~/lib/majors";
+import { REGISTRATION_STUDY_SLUGS, studyLabelForSlug } from "~/lib/majors";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
   createSession,
 } from "~/server/auth/config";
-import { hashPassword } from "~/server/auth/password";
+import { PhotonAuthError, photonCreateUser } from "~/server/auth/photon";
 import {
   checkRegisterRateLimit,
   recordRegisterAttempt,
 } from "~/server/auth/rate-limit";
-import {
-  TihldeAuthError,
-  TihldeUnavailableError,
-  tihldeCreateUser,
-} from "~/server/auth/tihlde";
 import { db } from "~/server/db";
-import { isUniqueConstraintError, uniqueConstraintField } from "~/server/db-errors";
+import {
+  isUniqueConstraintError,
+  uniqueConstraintField,
+} from "~/server/db-errors";
 
 /**
  * Self-registration for brand-new students during fadderuka.
  *
- * Creates a REAL (but pending-approval) TIHLDE account via Lepton's public
- * `POST /users/`, mirrors it into our local user table, and mints our own
- * session so the user gets straight into the app. Payment (Vipps) is handled
- * separately by the client after this succeeds.
+ * Creates a real TIHLDE account — on Photon, which is where tihlde.org lives.
+ * It used to create one in Lepton, whose accounts are born pending approval and
+ * which nothing has been able to approve since the migration: every student who
+ * registered here got an account that could log in nowhere, and was told "Du må
+ * aktiveres som TIHLDE-medlem" when they tried.
  *
- * The password is forwarded to TIHLDE; we additionally keep a local scrypt hash
- * of it so the user can log back in here while their TIHLDE account still
- * awaits admin approval (Lepton rejects logins for pending accounts). The
- * plaintext is never stored or logged.
+ * The password never touches this app's storage now. Photon takes it, hashes
+ * it, and owns it from there; the student's next visit signs in through "Logg
+ * inn med TIHLDE". We still mint our own session here so the Vipps payment can
+ * follow immediately, exactly as before — waiting for a verification mail
+ * before letting someone pay would strand them mid-flow.
+ *
+ * The username is no longer chosen. Photon derives it from the @stud.ntnu.no
+ * address, which is the student's NTNU username — the same value Lepton used as
+ * `user_id`, so it stays the key this app stores everyone under.
  */
 
 const bodySchema = z.object({
   full_name: z.string().trim().min(1, "Fyll inn fullt navn."),
-  email: z.string().trim().email("Ugyldig e-postadresse."),
-  user_id: z
+  email: z
     .string()
     .trim()
-    .min(1, "Feltet er påkrevd")
-    // Match Kvark's exact wording; the 15-char cap mirrors Lepton's model limit
-    // (Kvark leaves that to the backend — we surface it up front).
-    .max(15, "Brukernavn kan være maks 15 tegn.")
-    .refine((v) => !v.includes("@"), "Brukernavn må være uten @stud.ntnu.no"),
+    .toLowerCase()
+    .email("Ugyldig e-postadresse.")
+    .refine(
+      (v) => v.endsWith("@stud.ntnu.no"),
+      "Bruk NTNU-e-posten din (@stud.ntnu.no) — den er brukeren din på tihlde.org.",
+    ),
   password: z.string().min(8, "Passordet må være minst 8 tegn."),
   study: z.enum(REGISTRATION_STUDY_SLUGS, {
     errorMap: () => ({ message: "Velg hvilken linje du går på." }),
   }),
 });
 
-/** Split a full name into first + last for TIHLDE (which stores them apart). */
-function splitName(fullName: string): { first: string; last: string } {
-  const parts = fullName.trim().split(/\s+/);
-  const first = parts.shift() ?? fullName;
-  // TIHLDE requires a last name; fall back to the first name when only one word.
-  const last = parts.length > 0 ? parts.join(" ") : first;
-  return { first, last };
+/** The NTNU username inside a @stud.ntnu.no address — what Photon will assign. */
+function usernameFromEmail(email: string): string {
+  return email.split("@")[0] ?? email;
 }
 
 export async function POST(request: Request) {
@@ -74,14 +71,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const { full_name, email, user_id, password, study } = parsed.data;
-  const userId = user_id.toLowerCase();
-  const { first, last } = splitName(full_name);
+  const { full_name, email, password, study } = parsed.data;
+  const userId = usernameFromEmail(email);
   const studieretning = studyLabelForSlug(study);
 
   // This route creates real TIHLDE accounts, so an unthrottled one is an open
   // account-creation proxy for tihlde.org running under our IP. Checked before
-  // we call Lepton, so a blocked attempt costs neither side anything.
+  // we call Photon, so a blocked attempt costs neither side anything.
   const hdrs = await headers();
   const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
 
@@ -99,13 +95,9 @@ export async function POST(request: Request) {
   }
   await recordRegisterAttempt(ip);
 
-  // 1. Refuse a duplicate before anything irreversible happens, and say who
-  //    they already are. Registering twice is the single most common way to
-  //    fail here: a student whose Vipps payment didn't complete comes back and
-  //    signs up again, often with a different username. Their own first
-  //    registration then owns the email, and the unique constraint used to
-  //    surface as "Noe gikk galt" — which reads as "you did something wrong"
-  //    rather than "you already have an account".
+  // Refuse a duplicate before anything irreversible happens, and say who they
+  // already are. Registering twice is the most common way to fail here: a
+  // student whose Vipps payment didn't complete comes back and signs up again.
   const clash = await db.user.findFirst({
     where: {
       OR: [
@@ -117,15 +109,10 @@ export async function POST(request: Request) {
   });
 
   if (clash) {
-    const sameUsername = clash.tihldeUserId === userId;
     return NextResponse.json(
       {
-        error: sameUsername
-          ? `Du er allerede registrert som «${clash.tihldeUserId}». Logg inn i stedet — har du glemt passordet, spør en fadder om å nullstille det.`
-          : `E-posten er allerede brukt av brukeren «${clash.tihldeUserId}». Logg inn som «${clash.tihldeUserId}», eller registrer deg med en annen e-post.`,
-        field: sameUsername ? "user_id" : "email",
-        // The client sends them to the login page rather than making them
-        // guess what to change.
+        error: `Du er allerede registrert som «${clash.tihldeUserId}». Logg inn med TIHLDE i stedet.`,
+        field: "email",
         existingUserId: clash.tihldeUserId,
       },
       { status: 409 },
@@ -133,14 +120,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    // 2. Create OUR row first, because it is the one we can undo.
-    //
-    //    This used to run after `tihldeCreateUser`, and the ordering was the
-    //    real damage in the incident above: the TIHLDE account was already
-    //    created on tihlde.org by the time the local insert failed, leaving
-    //    orphaned accounts nobody could clean up from here. A local row, by
-    //    contrast, is ours to delete — see the rollback below.
-    const passwordHash = await hashPassword(password);
+    // Our row first, because it is the one we can undo. This ordering is the
+    // fix for an earlier incident: with the TIHLDE account created first, a
+    // failing local insert left orphaned accounts nobody could clean up.
     const user = await db.user.create({
       data: {
         tihldeUserId: userId,
@@ -150,23 +132,15 @@ export async function POST(request: Request) {
         isVerified: false,
         hasPaid: false,
         isAdmin: false,
-        passwordHash,
       },
     });
 
-    // 3. Create the real TIHLDE account (pending admin approval). class:null —
-    //    the study membership is enough; the year group may not exist yet.
-    //    On failure the local row is rolled back, so a retry starts clean
-    //    instead of hitting the duplicate check above.
     try {
-      await tihldeCreateUser({
-        user_id: userId,
-        password,
-        first_name: first,
-        last_name: last,
+      await photonCreateUser({
+        name: full_name,
         email,
-        study,
-        class: null,
+        password,
+        studyProgramSlug: study,
       });
     } catch (err) {
       await db.user
@@ -177,11 +151,11 @@ export async function POST(request: Request) {
       throw err;
     }
 
-    // 4. Mint our own session (no TIHLDE token — the account isn't activated
-    //    yet) and set the httpOnly cookie so they're logged into the app.
+    // Our own session (no Photon token — nobody has signed in to the new
+    // account yet) so they go straight on to paying.
     const { token: sessionToken, expiresAt } = await createSession({
       userId: user.id,
-      tihldeToken: null,
+      photonAccessToken: null,
       ipAddress: ip,
       userAgent: hdrs.get("user-agent"),
     });
@@ -198,35 +172,22 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    // TIHLDE unreachable — nothing to do with what they typed, so say that
-    // plainly instead of sending them back to re-check the form.
-    if (err instanceof TihldeUnavailableError) {
-      console.error("[auth/register] TIHLDE unreachable", err.cause);
-      return NextResponse.json(
-        { error: err.message },
-        { status: 503, headers: { "Retry-After": "30" } },
-      );
-    }
-
-    if (err instanceof TihldeAuthError) {
-      // 400 from Lepton (duplicate username, bad email, …) → show the message
-      // and hint the client which field it belongs to when we can tell.
-      const status = err.status >= 400 && err.status < 500 ? 400 : 502;
-      const field = /brukernavn/i.test(err.message)
-        ? "user_id"
-        : /e-?post/i.test(err.message)
-          ? "email"
+    if (err instanceof PhotonAuthError) {
+      // 5xx is ours to own; anything else is something the student can act on,
+      // and Photon's message already says what.
+      const status = err.status >= 500 ? 502 : 400;
+      const field = /e-?post|adresse/i.test(err.message)
+        ? "email"
+        : /passord/i.test(err.message)
+          ? "password"
           : undefined;
       return NextResponse.json({ error: err.message, field }, { status });
     }
 
-    // A duplicate that slipped past the check above — two submits racing each
-    // other. Same advice as the pre-flight case, since it is the same problem.
     if (isUniqueConstraintError(err)) {
       return NextResponse.json(
         {
-          error:
-            "Du er allerede registrert. Prøv å logge inn i stedet — har du glemt passordet, spør en fadder om å nullstille det.",
+          error: "Du er allerede registrert. Logg inn med TIHLDE i stedet.",
           field: uniqueConstraintField(err),
         },
         { status: 409 },
