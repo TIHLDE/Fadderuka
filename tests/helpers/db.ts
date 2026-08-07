@@ -8,6 +8,7 @@ import { setGrupperPublished } from "~/server/gruppe-visibility";
  */
 const TABLES = [
   "AppSetting",
+  "PasswordResetToken",
   "LoginAttempt",
   "Payment",
   "Notification",

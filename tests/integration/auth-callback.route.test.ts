@@ -90,6 +90,44 @@ describe("GET /api/auth/callback", () => {
     );
   });
 
+  /**
+   * Studenten som skrev noe annet enn NTNU-brukernavnet sitt i skjemaet. Uten
+   * adopsjonen ville de fått en ny rad, og betalingen blitt liggende igjen på
+   * den gamle — usynlig for alle andre enn den som leter etter den.
+   */
+  it("adopterer raden på e-post når brukernavnet ikke stemmer", async () => {
+    const gammel = await createUser({
+      tihldeUserId: "olanordmann",
+      email: "ola@stud.ntnu.no",
+      hasPaid: true,
+      isFadder: true,
+      fadderOverride: true,
+      passwordHash: await hashPassword(PASSORD),
+    });
+    stubPhoton({ username: "ola" });
+
+    await get();
+
+    await expect(db.user.count()).resolves.toBe(1);
+    const etter = await db.user.findUniqueOrThrow({ where: { id: gammel.id } });
+    expect(etter.tihldeUserId).toBe("ola");
+    expect(etter.hasPaid).toBe(true);
+    expect(etter.isFadder).toBe(true);
+    expect(etter.passwordHash).toBeNull();
+  });
+
+  it("lager ny rad når verken brukernavn eller e-post kjennes igjen", async () => {
+    await createUser({ tihldeUserId: "kari", email: "kari@stud.ntnu.no" });
+    stubPhoton({ username: "ola" });
+
+    await get();
+
+    await expect(db.user.count()).resolves.toBe(2);
+    await expect(
+      db.user.findUniqueOrThrow({ where: { tihldeUserId: "ola" } }),
+    ).resolves.toMatchObject({ name: "Ola Nordmann" });
+  });
+
   it("matcher fortsatt eksisterende brukere på tihldeUserId", async () => {
     const user = await createUser({ tihldeUserId: "ola", name: "Gammelt Navn" });
     stubPhoton();

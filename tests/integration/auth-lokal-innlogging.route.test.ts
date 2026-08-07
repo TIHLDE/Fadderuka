@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST as lokalInnlogging } from "~/app/api/auth/lokal-innlogging/route";
 import { SESSION_COOKIE } from "~/server/auth/config";
-import { hashPassword } from "~/server/auth/password";
+import { RESET_REQUIRED, hashPassword } from "~/server/auth/password";
 
 import { createUser, db } from "../helpers/db";
 import { lastSetCookie, resetNextHeaders } from "../helpers/next-headers";
@@ -78,19 +78,37 @@ describe("POST /api/auth/lokal-innlogging", () => {
   it("skiller ikke ukjent bruker fra feil passord fra manglende hash", async () => {
     await createPendingStudent();
     await createUser({ tihldeUserId: "kari", passwordHash: null });
+    await createUser({ tihldeUserId: "trine", passwordHash: RESET_REQUIRED });
 
     const svar = await Promise.all([
       post({ user_id: "finnesikke", password: PASSORD }),
       post({ user_id: "ola", password: "feilpassord" }),
       post({ user_id: "kari", password: PASSORD }),
+      post({ user_id: "trine", password: PASSORD }),
     ]);
 
-    const meldinger = await Promise.all(
-      svar.map(async (r) => ((await r.json()) as { error: string }).error),
+    const kropper = await Promise.all(
+      svar.map((r) => r.json() as Promise<{ error: string; code?: string }>),
     );
 
-    expect(svar.map((r) => r.status)).toEqual([401, 401, 401]);
-    expect(new Set(meldinger).size).toBe(1);
+    expect(svar.map((r) => r.status)).toEqual([401, 401, 401, 401]);
+    expect(new Set(kropper.map((b) => JSON.stringify(b))).size).toBe(1);
+  });
+
+  /**
+   * Teksten leder med passordbyttet, fordi det er det de aller fleste som
+   * treffer denne faktisk trenger — cutoveren slettet hashene deres. `code`
+   * lar innloggingssida vise «Glemt passord» som lenke.
+   */
+  it("ber om nytt passord og bærer koden som gjør lenka mulig", async () => {
+    await createPendingStudent();
+
+    const response = await post({ user_id: "ola", password: "feilpassord" });
+    const body = (await response.json()) as { error: string; code?: string };
+
+    expect(body.code).toBe("ma_sette_nytt_passord");
+    expect(body.error).toContain("Glemt passord");
+    expect(body.error).toContain("ny hovedside");
   });
 
   /**

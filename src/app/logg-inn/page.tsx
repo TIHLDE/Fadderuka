@@ -28,6 +28,9 @@ function LoggInnSkjema() {
   const [nyttStudium, setNyttStudium] = useState(false);
   const [study, setStudy] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Settes når serveren ber om at passordet må fornyes, så meldingen kan vises
+  // med «Glemt passord» som lenke i stedet for som ren tekst.
+  const [feilkode, setFeilkode] = useState<string | null>(null);
   const feilFraTihlde = useSearchParams().get("error");
 
   const vist = error ?? feilFraTihlde;
@@ -40,16 +43,18 @@ function LoggInnSkjema() {
   async function handleLokalInnlogging(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    setFeilkode(null);
     setLaster(true);
 
     const data = new FormData(e.currentTarget);
-    const { error: innloggingsfeil } = await authClient.localLogin({
+    const { error: innloggingsfeil, code } = await authClient.localLogin({
       user_id: (data.get("user_id") as string)?.trim(),
       password: data.get("password") as string,
     });
 
     if (innloggingsfeil) {
       setError(innloggingsfeil);
+      setFeilkode(code ?? null);
       setLaster(false);
       return;
     }
@@ -74,7 +79,22 @@ function LoggInnSkjema() {
 
             {vist && (
               <div className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm">
-                {vist}
+                {/* Samme setning som serveren sender, men med «Glemt passord»
+                    som lenke. Å plukke teksten fra hverandre på klienten ville
+                    knekt neste gang noen retter et komma, så koden styrer
+                    hvilken variant som vises. */}
+                {feilkode === "ma_sette_nytt_passord" ? (
+                  <>
+                    Vi har lansert ny hovedside, og du må sette nytt passord via{" "}
+                    <Link href="/glemt-passord" className="font-semibold underline">
+                      Glemt passord
+                    </Link>
+                    . Om du har godkjent TIHLDE-bruker, logg inn med den i
+                    stedet.
+                  </>
+                ) : (
+                  vist
+                )}
               </div>
             )}
 
@@ -175,6 +195,25 @@ function LoggInnSkjema() {
                   </button>
                 ) : (
                   <form onSubmit={handleLokalInnlogging} className="grid gap-4">
+                    {/* De som registrerte seg før cutoveren har ikke lenger et
+                        passord — hashen deres ble slettet. De kommer hit,
+                        prøver det gamle passordet, og må få vite hvorfor det
+                        ikke virker før de gir opp. */}
+                    <div className="bg-muted rounded-md px-4 py-3 text-sm">
+                      <p className="font-medium">
+                        Registrerte du deg før vi lanserte ny hovedside?
+                      </p>
+                      <p className="text-muted-foreground mt-1">
+                        Da må du sette nytt passord før du kommer inn.{" "}
+                        <Link
+                          href="/glemt-passord"
+                          className="font-semibold underline"
+                        >
+                          Sett nytt passord
+                        </Link>
+                      </p>
+                    </div>
+
                     <p className="text-muted-foreground text-sm">
                       Bruk brukernavnet og passordet du valgte da du registrerte
                       deg. Når TIHLDE-brukeren din er aktivert, logger du inn

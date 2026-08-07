@@ -104,17 +104,48 @@ export async function GET(request: Request) {
       );
     }
 
-    const existing = await db.user.findUnique({
+    const selectExisting = {
+      id: true,
+      tihldeUserId: true,
+      adminOverride: true,
+      fadderOverride: true,
+      studieretningOverride: true,
+      isFadder: true,
+      hasPaid: true,
+      memberships: { where: { role: "FADDER" as const }, select: { id: true } },
+    };
+
+    /**
+     * The username is the key, and for almost everyone it matches outright.
+     *
+     * The exception is a student who self-registered here and typed something
+     * other than their real NTNU username — the form asks for the Feide one,
+     * but nothing can enforce it. Their row holds a payment and possibly a
+     * fadder exemption, and creating a second row under the real username would
+     * silently orphan both: to an admin reading the payment overview they would
+     * look like someone who never paid.
+     *
+     * So fall back to the address before giving up. A hit means this is the
+     * same person arriving under the name TIHLDE knows them by, and the row is
+     * adopted — `tihldeUserId` is rewritten to the real username below, which
+     * also stops the fallback from being needed a second time.
+     */
+    let existing = await db.user.findUnique({
       where: { tihldeUserId },
-      select: {
-        adminOverride: true,
-        fadderOverride: true,
-        studieretningOverride: true,
-        isFadder: true,
-        hasPaid: true,
-        memberships: { where: { role: "FADDER" }, select: { id: true } },
-      },
+      select: selectExisting,
     });
+
+    if (!existing && email) {
+      existing = await db.user.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
+        select: selectExisting,
+      });
+      if (existing) {
+        console.info(
+          `[auth/callback] adopting ${existing.tihldeUserId} as ${tihldeUserId} (matched on e-mail)`,
+        );
+      }
+    }
 
     /**
      * A manual decision in the admin panel (`adminOverride`) always wins and
@@ -178,38 +209,45 @@ export async function GET(request: Request) {
       ? { studieretningOverride: declaredStudy, fadderOverride: false }
       : {};
 
-    const user = await db.user.upsert({
-      where: { tihldeUserId },
-      create: {
-        tihldeUserId,
-        name: name ?? tihldeUserId,
-        email: email ?? "",
-        image: picture,
-        studieretning,
-        klasse,
-        isAdmin,
-        isFadder,
-        ...studyGrant,
-        ...accessGrant,
-      },
-      update: {
-        // Payment flags for non-exempt users are earned via Vipps and owned by
-        // us, so they are deliberately absent here.
-        name: name ?? undefined,
-        email: email ?? undefined,
-        image: picture,
-        studieretning,
-        klasse,
-        isAdmin,
-        isFadder,
-        // The handover. A local password exists only to bridge the gap until
-        // TIHLDE will answer for this account, and TIHLDE just did — so the
-        // bridge comes down rather than living on as a second, weaker way in.
-        passwordHash: null,
-        ...studyGrant,
-        ...accessGrant,
-      },
-    });
+    // Keyed on the row we resolved above rather than on `tihldeUserId`, since
+    // an adopted row is still stored under the username the student typed.
+    const user = existing
+      ? await db.user.update({
+          where: { id: existing.id },
+          data: {
+            // Payment flags for non-exempt users are earned via Vipps and owned
+            // by us, so they are deliberately absent here.
+            tihldeUserId,
+            name: name ?? undefined,
+            email: email ?? undefined,
+            image: picture,
+            studieretning,
+            klasse,
+            isAdmin,
+            isFadder,
+            // The handover. A local password exists only to bridge the gap
+            // until TIHLDE will answer for this account, and TIHLDE just did —
+            // so the bridge comes down rather than living on as a second,
+            // weaker way in.
+            passwordHash: null,
+            ...studyGrant,
+            ...accessGrant,
+          },
+        })
+      : await db.user.create({
+          data: {
+            tihldeUserId,
+            name: name ?? tihldeUserId,
+            email: email ?? "",
+            image: picture,
+            studieretning,
+            klasse,
+            isAdmin,
+            isFadder,
+            ...studyGrant,
+            ...accessGrant,
+          },
+        });
 
     const hdrs = await headers();
     const { token: sessionToken, expiresAt } = await createSession({

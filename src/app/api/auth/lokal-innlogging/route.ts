@@ -75,15 +75,25 @@ export async function POST(request: Request) {
     select: { id: true, passwordHash: true, isVerified: true },
   });
 
-  // One message for "no such user", "no local password" and "wrong password".
-  // They are the same fact to anyone who is not the account holder, and telling
-  // them apart is how an attacker enumerates who registered here.
+  /**
+   * One answer for "no such user", "no local password", "must reset" and
+   * "wrong password". They are the same fact to anyone who is not the account
+   * holder, and telling them apart is how an attacker enumerates who
+   * registered here.
+   *
+   * The text leads with the reset, because that is what the great majority of
+   * people hitting this actually need: the cutover destroyed the stored hashes,
+   * so everyone who registered before it must set a new password. `code` lets
+   * the login page render «Glemt passord» as a link — the string is kept as the
+   * fallback for anything reading the API directly.
+   */
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     await recordFailedLogin(userId, ip);
     return NextResponse.json(
       {
+        code: "ma_sette_nytt_passord",
         error:
-          "Feil brukernavn eller passord. Har du fått TIHLDE-brukeren din godkjent, logg inn med TIHLDE i stedet.",
+          "Vi har lansert ny hovedside, og du må sette nytt passord via «Glemt passord». Om du har godkjent TIHLDE-bruker, logg inn med den i stedet.",
       },
       { status: 401 },
     );
