@@ -8,6 +8,7 @@ import {
   createGruppe,
   createMember,
   db,
+  publishGrupper,
 } from "../helpers/db";
 
 async function expectCode(promise: Promise<unknown>, code: string) {
@@ -24,6 +25,7 @@ describe("gruppe.getMyGruppe", () => {
     const barn = await createMember({ name: "Barn" });
     await addMember(fadder.id, gruppe.id, "FADDER");
     await addMember(barn.id, gruppe.id, "FADDERBARN");
+    await publishGrupper();
 
     const membership = await callerFor(barn).gruppe.getMyGruppe();
 
@@ -42,6 +44,105 @@ describe("gruppe.getMyGruppe", () => {
 
   it("krever innlogging", async () => {
     await expectCode(anonCaller().gruppe.getMyGruppe(), "UNAUTHORIZED");
+  });
+});
+
+describe("publisering av faddergruppene", () => {
+  it("skjuler gruppa for et fadderbarn før publisering", async () => {
+    const gruppe = await createGruppe();
+    const barn = await createMember();
+    await addMember(barn.id, gruppe.id, "FADDERBARN");
+
+    await expect(callerFor(barn).gruppe.getMyGruppe()).resolves.toBeNull();
+    await expectCode(
+      callerFor(barn).gruppe.getMessages({
+        gruppeId: gruppe.id,
+        channel: "ANNOUNCEMENT",
+      }),
+      "FORBIDDEN",
+    );
+    await expectCode(
+      callerFor(barn).gruppe.postMessage({
+        gruppeId: gruppe.id,
+        content: "hei",
+        channel: "CHAT",
+      }),
+      "FORBIDDEN",
+    );
+  });
+
+  it("lar fadderen se og forberede gruppa før publisering", async () => {
+    const gruppe = await createGruppe();
+    const fadder = await createMember();
+    await addMember(fadder.id, gruppe.id, "FADDER");
+
+    await expect(
+      callerFor(fadder).gruppe.getMyGruppe(),
+    ).resolves.toMatchObject({ role: "FADDER" });
+    await expect(
+      callerFor(fadder).gruppe.postMessage({
+        gruppeId: gruppe.id,
+        content: "Velkommen!",
+        channel: "ANNOUNCEMENT",
+      }),
+    ).resolves.toMatchObject({ content: "Velkommen!" });
+  });
+
+  it("varsler ikke fadderbarna om meldinger skrevet før publisering", async () => {
+    const gruppe = await createGruppe();
+    const fadder = await createMember();
+    const annenFadder = await createMember();
+    const barn = await createMember();
+    await addMember(fadder.id, gruppe.id, "FADDER");
+    await addMember(annenFadder.id, gruppe.id, "FADDER");
+    await addMember(barn.id, gruppe.id, "FADDERBARN");
+
+    await callerFor(fadder).gruppe.postMessage({
+      gruppeId: gruppe.id,
+      content: "Velkommen!",
+      channel: "ANNOUNCEMENT",
+    });
+
+    const notifications = await db.notification.findMany();
+    expect(notifications.map((n) => n.userId)).toEqual([annenFadder.id]);
+  });
+
+  it("åpner gruppa for fadderbarnet når den publiseres", async () => {
+    const gruppe = await createGruppe("Gruppe 1");
+    const barn = await createMember();
+    await addMember(barn.id, gruppe.id, "FADDERBARN");
+
+    await publishGrupper();
+
+    await expect(callerFor(barn).gruppe.getMyGruppe()).resolves.toMatchObject({
+      gruppe: { name: "Gruppe 1" },
+    });
+  });
+
+  it("slipper admin inn uansett", async () => {
+    const gruppe = await createGruppe();
+    const admin = await createAdmin();
+
+    await expect(
+      callerFor(admin).gruppe.getMessages({
+        gruppeId: gruppe.id,
+        channel: "ANNOUNCEMENT",
+      }),
+    ).resolves.toEqual([]);
+  });
+
+  it("rapporterer publiseringsstatusen", async () => {
+    const user = await createMember();
+
+    await expect(callerFor(user).gruppe.getPublication()).resolves.toEqual({
+      published: false,
+    });
+
+    await publishGrupper();
+
+    await expect(callerFor(user).gruppe.getPublication()).resolves.toEqual({
+      published: true,
+    });
   });
 });
 
@@ -111,6 +212,7 @@ describe("gruppe.postMessage", () => {
     const gruppe = await createGruppe();
     const barn = await createMember();
     await addMember(barn.id, gruppe.id, "FADDERBARN");
+    await publishGrupper();
     const caller = callerFor(barn);
 
     await expect(
@@ -154,6 +256,7 @@ describe("gruppe.postMessage", () => {
     await addMember(fadder.id, gruppe.id, "FADDER");
     await addMember(barn1.id, gruppe.id, "FADDERBARN");
     await addMember(barn2.id, gruppe.id, "FADDERBARN");
+    await publishGrupper();
 
     await callerFor(fadder).gruppe.postMessage({
       gruppeId: gruppe.id,
@@ -176,6 +279,7 @@ describe("gruppe.postMessage", () => {
     const barn = await createMember();
     await addMember(fadder.id, gruppe.id, "FADDER");
     await addMember(barn.id, gruppe.id, "FADDERBARN");
+    await publishGrupper();
 
     await callerFor(fadder).gruppe.postMessage({
       gruppeId: gruppe.id,

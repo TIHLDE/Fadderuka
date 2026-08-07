@@ -4,6 +4,10 @@ import { z } from "zod";
 import { MAJORS } from "~/lib/majors";
 import { deriveIsFadder } from "~/server/fadder";
 import {
+  getGruppePublishedAt,
+  setGrupperPublished,
+} from "~/server/gruppe-visibility";
+import {
   adminProcedure,
   createTRPCRouter,
 } from "~/server/api/trpc";
@@ -205,6 +209,26 @@ export const adminRouter = createTRPCRouter({
         },
         select: { id: true, name: true, studieretning: true },
       });
+    }),
+
+  /** Whether fadderbarn can see their faddergruppe yet, and since when. */
+  getGruppePublication: adminProcedure.query(async ({ ctx }) => {
+    const publishedAt = await getGruppePublishedAt(ctx.db);
+    return { published: publishedAt !== null, publishedAt };
+  }),
+
+  /**
+   * Release every faddergruppe to its fadderbarn — or take them back.
+   *
+   * One switch for all grupper at once, which is how FadderKom runs it: the
+   * groups are announced together, and publishing them one by one would leave
+   * some fadderbarn staring at an empty page while others got theirs.
+   */
+  setGruppePublication: adminProcedure
+    .input(z.object({ published: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const publishedAt = await setGrupperPublished(ctx.db, input.published);
+      return { published: publishedAt !== null, publishedAt };
     }),
 
   /** List all faddergrupper with member counts */

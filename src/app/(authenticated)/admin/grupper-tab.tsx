@@ -3,6 +3,8 @@
 import {
   ChevronDown,
   ChevronUp,
+  Eye,
+  EyeOff,
   Plus,
   Trash2,
   UserMinus,
@@ -118,6 +120,8 @@ export function GrupperTab() {
 
   return (
     <div className="!space-y-6">
+      <PublicationBanner />
+
       {/* Create new gruppe */}
       <form onSubmit={handleCreateGruppe} className="flex flex-wrap !gap-3">
         <input
@@ -395,6 +399,103 @@ export function GrupperTab() {
       </div>
     </div>
   );
+}
+
+/**
+ * Bryteren som slipper faddergruppene til fadderbarna — alle på én gang.
+ *
+ * Ligger øverst i fanen fordi den er statusen man vil se før man rører noe
+ * annet: er gruppene fortsatt hemmelige, eller er de ute?
+ */
+function PublicationBanner() {
+  const utils = api.useUtils();
+  const { data, isLoading } = api.admin.getGruppePublication.useQuery();
+
+  const setPublication = api.admin.setGruppePublication.useMutation({
+    onSuccess: (result) => {
+      void utils.admin.getGruppePublication.invalidate();
+      toast(
+        result.published
+          ? "Faddergruppene er publisert"
+          : "Faddergruppene er skjult igjen",
+      );
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  if (isLoading || !data) return null;
+
+  const { published, publishedAt } = data;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between !gap-4 rounded-xl border border-border bg-card !px-5 !py-4">
+      <div className="!space-y-1">
+        <div className="flex items-center !gap-2">
+          {published ? (
+            <Eye className="h-4 w-4 text-primary" />
+          ) : (
+            <EyeOff className="h-4 w-4 text-muted-foreground" />
+          )}
+          <h3 className="text-base font-semibold text-foreground">
+            {published
+              ? "Faddergruppene er publisert"
+              : "Faddergruppene er skjult"}
+          </h3>
+        </div>
+        <p className="max-w-xl text-sm text-muted-foreground">
+          {published
+            ? `Fadderbarna ser gruppa si, medlemmene og meldingene. Publisert ${formatDateTime(publishedAt)}.`
+            : "Fadderbarna ser hverken gruppa, medlemmene eller meldingene. Faddere og admins ser alt hele tiden."}
+        </p>
+      </div>
+      <button
+        type="button"
+        disabled={setPublication.isPending}
+        onClick={() => {
+          if (
+            published &&
+            !confirm(
+              "Skjule faddergruppene igjen? Fadderbarna mister tilgangen til gruppa si.",
+            )
+          ) {
+            return;
+          }
+          setPublication.mutate({ published: !published });
+        }}
+        className={`inline-flex items-center !gap-2 rounded-xl !px-4 !py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+          published
+            ? "border border-border bg-secondary text-foreground hover:bg-secondary/80"
+            : "bg-primary text-primary-foreground hover:bg-primary/90"
+        }`}
+      >
+        {published ? (
+          <>
+            <EyeOff className="h-4 w-4" />
+            Skjul igjen
+          </>
+        ) : (
+          <>
+            <Eye className="h-4 w-4" />
+            Publiser til fadderbarna
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** Dato på norsk format, eller «—» når tidspunktet mangler. */
+function formatDateTime(value: Date | string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleString("no-NO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function AddMemberForm({

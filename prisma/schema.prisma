@@ -94,6 +94,18 @@ model User {
     payments      Payment[]
 }
 
+model AppSetting {
+    // One row, always keyed "singleton": app-wide switches FadderKom flips by
+    // hand. A fixed id makes every read a primary-key lookup and an upsert
+    // instead of a "first row wins" gamble.
+    id String @id @default("singleton")
+    // When the faddergrupper were released to fadderbarn. `null` means they
+    // are still hidden, so faddere can be assigned and can prepare their
+    // gruppe before the fadderbarn get to see who they ended up with.
+    gruppePublishedAt DateTime?
+    updatedAt         DateTime  @updatedAt
+}
+
 model FadderGruppe {
     id            String   @id @default(cuid())
     name          String

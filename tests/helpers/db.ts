@@ -1,4 +1,5 @@
 import { db } from "~/server/db";
+import { setGrupperPublished } from "~/server/gruppe-visibility";
 
 /**
  * Every table, ordered so the single TRUNCATE covers them all. CASCADE handles
@@ -6,6 +7,7 @@ import { db } from "~/server/db";
  * model that isn't added here will show up as leaked rows between tests.
  */
 const TABLES = [
+  "AppSetting",
   "LoginAttempt",
   "Payment",
   "Notification",
@@ -99,6 +101,17 @@ export async function addMember(
   role: "FADDER" | "FADDERBARN",
 ) {
   return db.fadderGruppeMember.create({ data: { userId, gruppeId, role } });
+}
+
+/**
+ * Release the faddergrupper to their fadderbarn.
+ *
+ * The reset leaves publication off, which mirrors production before FadderKom
+ * flips the switch — so any test about what a fadderbarn can actually see has
+ * to say so out loud.
+ */
+export async function publishGrupper() {
+  return setGrupperPublished(db, true);
 }
 
 export async function createPayment(
