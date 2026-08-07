@@ -14,6 +14,50 @@ import {
 } from "~/lib/majors";
 
 /**
+ * Hva betalingskolonnen viser for én bruker.
+ *
+ * Kolonnen viste før bare `isFadder` — «Fritatt» eller «Skal betale» — så en
+ * fadderbarn som HADDE betalt sto som «Skal betale». Den leses som en status,
+ * så nå er den det.
+ *
+ * Fritak vinner over betaling: en fadder skylder ingenting uansett hva som står
+ * i `hasPaid`. Unntaket er fadderen som allerede har betalt — de har penger til
+ * gode, og det fortjener en egen tilstand framfor å bli borte bak «Fritatt» til
+ * noen tilfeldigvis åpner Betalinger-fanen.
+ *
+ * Knappen bytter fortsatt fritaket; bare merkelappen er ny. Derfor sier hver
+ * hjelpetekst også hva et klikk faktisk gjør.
+ */
+function betalingsvisning(user: { isFadder: boolean; hasPaid: boolean }) {
+  if (user.isFadder && user.hasPaid) {
+    return {
+      label: "Fritatt · betalt",
+      className: "bg-destructive/10 text-destructive hover:bg-destructive/20",
+      hint: "Fritatt, men har betalt — pengene skal refunderes fra Betalinger-fanen. Klikk for å gjøre betalingspliktig igjen.",
+    };
+  }
+  if (user.isFadder) {
+    return {
+      label: "Fritatt",
+      className: "bg-muted text-muted-foreground hover:bg-muted/80",
+      hint: "Fadder — skylder ingenting. Klikk for å gjøre betalingspliktig.",
+    };
+  }
+  if (user.hasPaid) {
+    return {
+      label: "Betalt",
+      className: "bg-success/10 text-success hover:bg-success/20",
+      hint: "Har betalt for fadderuka. Klikk for å frita som fadder.",
+    };
+  }
+  return {
+    label: "Ikke betalt",
+    className: "bg-warning/10 text-warning hover:bg-warning/20",
+    hint: "Har ikke betalt ennå. Klikk for å frita som fadder.",
+  };
+}
+
+/**
  * Correct the programme TIHLDE reports for a user.
  *
  * Shows the pinned choice when there is one, and otherwise "Følg TIHLDE" with
@@ -111,7 +155,9 @@ export function UsersTab() {
           description: "Refunder betalingen fra Betalinger-fanen.",
         });
       } else {
-        toast("Betalingsstatus oppdatert");
+        // «Betalingsplikt», ikke «betalingsstatus»: bryteren flytter hvem som
+        // skylder penger, og rører aldri om noen har betalt.
+        toast("Betalingsplikt oppdatert");
       }
     },
     onError: (error) => {
@@ -441,6 +487,8 @@ export function UsersTab() {
                           <th className="!px-4 !py-3 font-medium">Studie</th>
                           <th className="!px-4 !py-3 font-medium">Gruppe</th>
                           <th className="!px-4 !py-3 font-medium">Rolle</th>
+                          {/* Se `betalingsvisning`: viser faktisk status
+                              (betalt / ikke betalt), med fritak for faddere. */}
                           <th className="!px-4 !py-3 font-medium">Betaling</th>
                           <th className="!px-4 !py-3 font-medium text-center">Admin</th>
                         </tr>
@@ -533,18 +581,10 @@ export function UsersTab() {
                                     })
                                   }
                                   disabled={fadderMutation.isPending}
-                                  className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${
-                                    user.isFadder
-                                      ? "bg-success/10 text-success hover:bg-success/20"
-                                      : "bg-warning/10 text-warning hover:bg-warning/20"
-                                  }`}
-                                  title={
-                                    user.isFadder
-                                      ? "Fritatt for betaling. Klikk for å markere som betalende."
-                                      : "Skal betale. Klikk for å markere som fadder."
-                                  }
+                                  className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${betalingsvisning(user).className}`}
+                                  title={betalingsvisning(user).hint}
                                 >
-                                  {user.isFadder ? "Fritatt" : "Skal betale"}
+                                  {betalingsvisning(user).label}
                                 </button>
                                 {/* Bare for de som ennå ikke er TIHLDE-
                                     medlemmer. Forsvinner av seg selv når de har
