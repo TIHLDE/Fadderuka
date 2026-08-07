@@ -152,6 +152,51 @@ describe("admin: brukere og grupper", () => {
     );
   });
 
+  it("avviser medlemskap i en ny gruppe når brukeren allerede har en", async () => {
+    const admin = await createAdmin();
+    const user = await createUser();
+    const gruppe1 = await createGruppe();
+    const gruppe2 = await createGruppe();
+    await addMember(user.id, gruppe1.id, "FADDERBARN");
+
+    await expectCode(
+      callerFor(admin).admin.addMember({
+        userId: user.id,
+        gruppeId: gruppe2.id,
+        role: "FADDERBARN",
+      }),
+      "CONFLICT",
+    );
+
+    const memberships = await db.fadderGruppeMember.findMany({
+      where: { userId: user.id },
+    });
+    expect(memberships).toHaveLength(1);
+    expect(memberships[0]!.gruppeId).toBe(gruppe1.id);
+  });
+
+  it("verifyAndAssign avviser bruker som allerede er i en annen gruppe", async () => {
+    const admin = await createAdmin();
+    const user = await createUser();
+    const gruppe1 = await createGruppe();
+    const gruppe2 = await createGruppe();
+    await addMember(user.id, gruppe1.id, "FADDERBARN");
+
+    await expectCode(
+      callerFor(admin).admin.verifyAndAssign({
+        userId: user.id,
+        gruppeId: gruppe2.id,
+      }),
+      "CONFLICT",
+    );
+
+    const memberships = await db.fadderGruppeMember.findMany({
+      where: { userId: user.id },
+    });
+    expect(memberships).toHaveLength(1);
+    expect(memberships[0]!.gruppeId).toBe(gruppe1.id);
+  });
+
   it("verifyAndAssign er idempotent og bytter ikke rolle", async () => {
     const admin = await createAdmin();
     const user = await createUser();
