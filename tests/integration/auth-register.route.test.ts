@@ -128,4 +128,46 @@ describe("POST /api/auth/register", () => {
       db.user.findUnique({ where: { tihldeUserId: "ola" } }),
     ).resolves.toBeNull();
   });
+
+  // Photon svarer «Internal server error» når brukernavnet er tatt, men
+  // e-posten er ny — altså den som allerede har laget bruker med Feide. Den
+  // meldingen ble tidligere vist ordrett i skjemaet, og etterlot studenten uten
+  // noe å gjøre.
+  it("tilbyr innlogging i stedet for å gjenta Photons «Internal server error»", async () => {
+    fetchMock.on(
+      "POST",
+      "/api/user/register",
+      json({ status: 500, message: "Internal server error" }, 500),
+    );
+
+    const response = await post(FORM);
+    const body = (await response.json()) as {
+      error: string;
+      existingUserId?: string;
+    };
+
+    expect(response.status).toBe(502);
+    expect(body.error).not.toContain("Internal server error");
+    expect(body.error).toContain("logge inn");
+    // Lyser opp innloggingslenken i skjemaet.
+    expect(body.existingUserId).toBe("ola");
+
+    await expect(
+      db.user.findUnique({ where: { tihldeUserId: "ola" } }),
+    ).resolves.toBeNull();
+  });
+
+  it("ber studenten vente når Photon ikke er å få tak i", async () => {
+    fetchMock.on("POST", "/api/user/register", () => {
+      throw new Error("ECONNREFUSED");
+    });
+
+    const response = await post(FORM);
+
+    const body = (await response.json()) as { error: string };
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("30");
+    expect(body.error).toContain("Får ikke kontakt med TIHLDE");
+  });
 });
