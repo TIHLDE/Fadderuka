@@ -8,6 +8,7 @@ import {
   SESSION_MAX_AGE,
   createSession,
 } from "~/server/auth/config";
+import { hashPassword } from "~/server/auth/password";
 import {
   PhotonAuthError,
   PhotonUnavailableError,
@@ -32,38 +33,38 @@ import {
  * registered here got an account that could log in nowhere, and was told "Du må
  * aktiveres som TIHLDE-medlem" when they tried.
  *
- * The password never touches this app's storage now. Photon takes it, hashes
- * it, and owns it from there; the student's next visit signs in through "Logg
- * inn med TIHLDE". We still mint our own session here so the Vipps payment can
- * follow immediately, exactly as before — waiting for a verification mail
- * before letting someone pay would strand them mid-flow.
+ * Photon takes the password, hashes it and owns it from there. We keep a local
+ * hash as well, which is the bridge these students need: Photon will not let
+ * them sign in until they have clicked the verification mail, and their TIHLDE
+ * membership is not activated until an admin or a Feide login does it. Without
+ * it they could register and pay, then be locked out of the app they just paid
+ * for. `POST /api/auth/lokal-innlogging` accepts it, and the first successful
+ * TIHLDE login clears it.
  *
- * The username is no longer chosen. Photon derives it from the @stud.ntnu.no
- * address, which is the student's NTNU username — the same value Lepton used as
- * `user_id`, so it stays the key this app stores everyone under.
+ * The address is deliberately NOT required to be @stud.ntnu.no. Many new
+ * students have not been given theirs when they sign up on stand, and refusing
+ * them is refusing the very group this form exists for. The username is
+ * therefore chosen rather than derived — the form asks for the Feide one — and
+ * passed to Photon explicitly. It stays the key this app stores everyone under.
  */
 
 const bodySchema = z.object({
   full_name: z.string().trim().min(1, "Fyll inn fullt navn."),
-  email: z
+  email: z.string().trim().toLowerCase().email("Ugyldig e-postadresse."),
+  user_id: z
     .string()
     .trim()
     .toLowerCase()
-    .email("Ugyldig e-postadresse.")
-    .refine(
-      (v) => v.endsWith("@stud.ntnu.no"),
-      "Bruk NTNU-e-posten din (@stud.ntnu.no) — den er brukeren din på tihlde.org.",
-    ),
+    .min(1, "Feltet er påkrevd")
+    // Match Kvark's exact wording; the 15-char cap mirrors TIHLDE's model limit
+    // (Kvark leaves that to the backend — we surface it up front).
+    .max(15, "Brukernavn kan være maks 15 tegn.")
+    .refine((v) => !v.includes("@"), "Brukernavn må være uten @stud.ntnu.no"),
   password: z.string().min(8, "Passordet må være minst 8 tegn."),
   study: z.enum(REGISTRATION_STUDY_SLUGS, {
     errorMap: () => ({ message: "Velg hvilken linje du går på." }),
   }),
 });
-
-/** The NTNU username inside a @stud.ntnu.no address — what Photon will assign. */
-function usernameFromEmail(email: string): string {
-  return email.split("@")[0] ?? email;
-}
 
 export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
@@ -75,8 +76,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { full_name, email, password, study } = parsed.data;
-  const userId = usernameFromEmail(email);
+  const { full_name, email, user_id: userId, password, study } = parsed.data;
   const studieretning = studyLabelForSlug(study);
 
   // This route creates real TIHLDE accounts, so an unthrottled one is an open
@@ -113,10 +113,17 @@ export async function POST(request: Request) {
   });
 
   if (clash) {
+    // Point at the field that actually collided. Now that the username is
+    // chosen again, the two cases come apart: someone re-registering under a
+    // new username owns the address, while someone picking a taken username
+    // may be a different person entirely.
+    const sameUsername = clash.tihldeUserId === userId;
     return NextResponse.json(
       {
-        error: `Du er allerede registrert som «${clash.tihldeUserId}». Logg inn med TIHLDE i stedet.`,
-        field: "email",
+        error: sameUsername
+          ? `Brukernavnet «${userId}» er allerede registrert. Logg inn i stedet.`
+          : `E-postadressen er allerede registrert som «${clash.tihldeUserId}». Logg inn i stedet.`,
+        field: sameUsername ? "user_id" : "email",
         existingUserId: clash.tihldeUserId,
       },
       { status: 409 },
@@ -133,6 +140,9 @@ export async function POST(request: Request) {
         name: full_name,
         email,
         studieretning,
+        // The bridge into the app until TIHLDE takes over. Hashed with scrypt;
+        // the plaintext is never stored or logged.
+        passwordHash: await hashPassword(password),
         isVerified: false,
         hasPaid: false,
         isAdmin: false,
@@ -145,6 +155,7 @@ export async function POST(request: Request) {
         email,
         password,
         studyProgramSlug: study,
+        username: userId,
       });
     } catch (err) {
       await db.user

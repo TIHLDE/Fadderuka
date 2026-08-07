@@ -202,6 +202,10 @@ export async function GET(request: Request) {
         klasse,
         isAdmin,
         isFadder,
+        // The handover. A local password exists only to bridge the gap until
+        // TIHLDE will answer for this account, and TIHLDE just did — so the
+        // bridge comes down rather than living on as a second, weaker way in.
+        passwordHash: null,
         ...studyGrant,
         ...accessGrant,
       },
