@@ -35,6 +35,8 @@ const ADMIN_PROCEDURE_INPUTS: Record<string, unknown> = {
   setUserFadder: { userId: "x", isFadder: true },
   setUserStudieretning: { userId: "x", studieretning: "Dataingeniør" },
   getGrupper: undefined,
+  getGruppePublication: undefined,
+  setGruppePublication: { published: true },
   createGruppe: { name: "Gruppe" },
   updateGruppe: { gruppeId: "x", name: "Gruppe" },
   deleteGruppe: { gruppeId: "x" },
@@ -185,6 +187,50 @@ describe("admin: brukere og grupper", () => {
     expect(await db.fadderGruppe.count()).toBe(0);
     expect(await db.groupMessage.count()).toBe(0);
     expect(await db.fadderGruppeMember.count()).toBe(0);
+  });
+});
+
+describe("publisering av faddergruppene fra adminpanelet", () => {
+  it("starter skjult, publiserer og skjuler igjen", async () => {
+    const admin = await createAdmin();
+    const caller = callerFor(admin);
+
+    await expect(caller.admin.getGruppePublication()).resolves.toMatchObject({
+      published: false,
+      publishedAt: null,
+    });
+
+    const publisert = await caller.admin.setGruppePublication({
+      published: true,
+    });
+    expect(publisert.published).toBe(true);
+    expect(publisert.publishedAt).toBeInstanceOf(Date);
+    await expect(caller.admin.getGruppePublication()).resolves.toMatchObject({
+      published: true,
+    });
+
+    await expect(
+      caller.admin.setGruppePublication({ published: false }),
+    ).resolves.toMatchObject({ published: false, publishedAt: null });
+  });
+
+  it("gjelder alle gruppene samtidig", async () => {
+    const admin = await createAdmin();
+    const gruppeA = await createGruppe("A");
+    const gruppeB = await createGruppe("B");
+    const barnA = await createUser({ isVerified: true });
+    const barnB = await createUser({ isVerified: true });
+    await addMember(barnA.id, gruppeA.id, "FADDERBARN");
+    await addMember(barnB.id, gruppeB.id, "FADDERBARN");
+
+    await callerFor(admin).admin.setGruppePublication({ published: true });
+
+    await expect(callerFor(barnA).gruppe.getMyGruppe()).resolves.toMatchObject({
+      gruppe: { name: "A" },
+    });
+    await expect(callerFor(barnB).gruppe.getMyGruppe()).resolves.toMatchObject({
+      gruppe: { name: "B" },
+    });
   });
 });
 
