@@ -1,9 +1,9 @@
 /**
  * Thin client-side auth helpers that talk to our own /api/auth routes.
  *
- * Signing IN is not here: it is a plain link to `/api/auth/logg-inn`, which
- * redirects to Photon. There is nothing to submit, and nothing this app could
- * do with a password.
+ * Signing in with TIHLDE is not here: it is a plain link to
+ * `/api/auth/logg-inn`, which redirects to Photon. `localLogin` is the
+ * exception, and only for students whose TIHLDE account is not usable yet.
  */
 
 interface Result {
@@ -13,10 +13,20 @@ interface Result {
 /** New-user self-registration payload (mirrors /api/auth/register). */
 export interface RegisterInput {
   full_name: string;
-  /** Must be @stud.ntnu.no — Photon derives the username from it. */
+  /**
+   * Any address. New students often have not been given their @stud.ntnu.no
+   * one when they sign up on stand.
+   */
   email: string;
+  /** The TIHLDE username, ideally the Feide one. Chosen, not derived. */
+  user_id: string;
   password: string;
   study: string;
+}
+
+interface LocalLoginResult extends Result {
+  /** Whether they already have app access, so the form can skip the paywall. */
+  verified?: boolean;
 }
 
 interface RegisterResult extends Result {
@@ -69,6 +79,35 @@ export const authClient = {
       return { error, field, existingUserId };
     }
     return { error: null };
+  },
+
+  /**
+   * Log in with the password chosen at registration.
+   *
+   * Only works while the TIHLDE account cannot be used yet — the hash is
+   * dropped the first time they sign in through TIHLDE.
+   */
+  async localLogin(input: {
+    user_id: string;
+    password: string;
+  }): Promise<LocalLoginResult> {
+    const res = await fetch("/api/auth/lokal-innlogging", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+
+    if (!res.ok) {
+      return {
+        error: await readError(
+          res,
+          "Fikk ikke svar fra serveren. Sjekk nettet og prøv igjen.",
+        ),
+      };
+    }
+
+    const body = (await res.json().catch(() => ({}))) as { verified?: boolean };
+    return { error: null, verified: body.verified };
   },
 
   /** Destroy the current session. */

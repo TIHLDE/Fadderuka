@@ -34,6 +34,7 @@ export default function RegistreringPage() {
     const formData = new FormData(e.currentTarget);
     const full_name = (formData.get("full_name") as string)?.trim();
     const email = (formData.get("email") as string)?.trim();
+    const user_id = (formData.get("user_id") as string)?.trim();
     const password = formData.get("password") as string;
     const allergies = (formData.get("allergies") as string)?.trim();
 
@@ -52,6 +53,7 @@ export default function RegistreringPage() {
     } = await authClient.register({
       full_name,
       email,
+      user_id,
       password,
       study,
     });
@@ -160,7 +162,7 @@ export default function RegistreringPage() {
 
               <div className="grid gap-2">
                 <Label htmlFor="reg-email">
-                  NTNU-e-post <span className="text-destructive">*</span>
+                  E-post <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="reg-email"
@@ -173,8 +175,31 @@ export default function RegistreringPage() {
                   className="h-12"
                 />
                 <p className="text-muted-foreground text-xs">
-                  Bruk NTNU-e-posten din. Brukernavnet ditt på tihlde.org blir
-                  det som står foran @stud.ntnu.no.
+                  Bruk NTNU-e-posten din hvis du har fått den. Har du ikke det
+                  ennå, går det fint med en privat adresse.
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="reg-user-id">
+                  Brukernavn <span className="text-destructive">*</span>{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (helst Feide)
+                  </span>
+                </Label>
+                <Input
+                  id="reg-user-id"
+                  name="user_id"
+                  autoComplete="username"
+                  required
+                  maxLength={15}
+                  placeholder="olanord"
+                  aria-invalid={errorField === "user_id"}
+                  className="h-12"
+                />
+                <p className="text-muted-foreground text-xs">
+                  Dette blir brukernavnet ditt på tihlde.org. Bruk Feide-brukernavnet
+                  ditt — da blir det samme konto når du senere logger inn med Feide.
                 </p>
               </div>
 

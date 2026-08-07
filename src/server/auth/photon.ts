@@ -326,15 +326,24 @@ export function isMemberOfAnyGroup(
  * could approve them — every student who registered here got an account that
  * could not log in anywhere, including here.
  *
- * Photon owns the rules: the address must be @stud.ntnu.no, the username is
- * derived from it rather than chosen, and a verification mail goes out. We
+ * Photon owns the password rules and sends the verification mail. We
  * authenticate with an API key, so this must only run on the server.
+ *
+ * `username` is what lets a student without an @stud.ntnu.no address register
+ * at all. Photon derives the username from the address when none is given, and
+ * refuses anything that is not a stud address — which locks out exactly the
+ * new students this form exists for, since many have not been given their NTNU
+ * address yet. Passing it explicitly is the contract Lepton had, and the form
+ * asks for the Feide username, so the account they create here *is* their NTNU
+ * identity: a later Feide login lands on the same account rather than a second
+ * one.
  */
 export async function photonCreateUser(input: {
   name: string;
   email: string;
   password: string;
   studyProgramSlug: string;
+  username?: string;
 }): Promise<{ id: string; username: string; email: string }> {
   const apiKey = env.PHOTON_REGISTER_API_KEY;
   if (!apiKey) {

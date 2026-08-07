@@ -69,6 +69,14 @@ model User {
     // litt nøtter" to go. FadderKom is who orders the food during fadderuka
     // anyway, so this is the copy that actually gets used.
     allergy       String?
+    // Local password for students who registered here without an @stud.ntnu.no
+    // address. Photon requires them to verify their e-mail before it will let
+    // them sign in, and their TIHLDE membership is not activated until an admin
+    // or a Feide login does it — so without this they could register and pay,
+    // then be locked out of the app they just paid for. Set only at
+    // registration, and cleared the first time a real TIHLDE login succeeds
+    // (see `src/app/api/auth/callback/route.ts`), which is the handover.
+    passwordHash  String?
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)
