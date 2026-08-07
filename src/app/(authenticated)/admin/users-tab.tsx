@@ -119,6 +119,22 @@ export function UsersTab() {
     },
   });
 
+  // «Aktiver»: gir en selvregistrert student en ekte TIHLDE-bruker. Photon har
+  // ingen godkjenningskø, så opprettelsen ER aktiveringen.
+  const aktiverMutation = api.admin.createTihldeAccount.useMutation({
+    onSuccess: (result) => {
+      void utils.admin.getUsers.invalidate();
+      toast(`${result.username} har fått TIHLDE-bruker`, {
+        description: `Studenten setter sitt eget passord med «glemt passord» på tihlde.org. Verifiserings-e-post er sendt til ${result.email}.`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Fikk ikke opprettet TIHLDE-bruker", {
+        description: error.message,
+      });
+    },
+  });
+
   const studieMutation = api.admin.setUserStudieretning.useMutation({
     onSuccess: (result, variables) => {
       void utils.admin.getUsers.invalidate();
@@ -530,6 +546,23 @@ export function UsersTab() {
                                 >
                                   {user.isFadder ? "Fritatt" : "Skal betale"}
                                 </button>
+                                {/* Bare for de som ennå ikke er TIHLDE-
+                                    medlemmer. Forsvinner av seg selv når de har
+                                    logget inn med TIHLDE, siden det nullstiller
+                                    det lokale passordet. */}
+                                {user.harLokalKonto && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      aktiverMutation.mutate({ userId: user.id })
+                                    }
+                                    disabled={aktiverMutation.isPending}
+                                    className="bg-primary/10 text-primary hover:bg-primary/20 !ml-2 rounded-full !px-3 !py-1 text-xs font-semibold transition"
+                                    title="Oppretter TIHLDE-bruker på tihlde.org. Studenten setter selv passord med «glemt passord» der."
+                                  >
+                                    Aktiver
+                                  </button>
+                                )}
                               </td>
                               <td className="!px-4 !py-3 text-center">
                                 <button

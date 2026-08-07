@@ -1,7 +1,10 @@
+import { randomBytes } from "node:crypto";
+
 import { TRPCError } from "@trpc/server";
 import type { PaymentStatus, PrismaClient } from "@prisma/client";
 import { z } from "zod";
-import { MAJORS } from "~/lib/majors";
+import { MAJORS, slugForStudyLabel } from "~/lib/majors";
+import { photonCreateUser } from "~/server/auth/photon";
 import { deriveIsFadder } from "~/server/fadder";
 import {
   getGruppePublishedAt,
@@ -77,7 +80,7 @@ async function resyncFadderStatus(
 export const adminRouter = createTRPCRouter({
   /** List all users with their verification/admin status and group memberships */
   getUsers: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db.user.findMany({
+    const users = await ctx.db.user.findMany({
       select: {
         id: true,
         tihldeUserId: true,
@@ -91,6 +94,7 @@ export const adminRouter = createTRPCRouter({
         hasPaid: true,
         isFadder: true,
         fadderOverride: true,
+        passwordHash: true,
         createdAt: true,
         memberships: {
           select: {
@@ -102,7 +106,86 @@ export const adminRouter = createTRPCRouter({
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // The hash itself never leaves the server — only the one fact the panel
+    // acts on: this account signs in with a local password, so TIHLDE has not
+    // taken it over and the "aktiver"-button still applies. A login through
+    // TIHLDE clears the hash, which is what makes the button disappear on its
+    // own once the student is a real member.
+    return users.map(({ passwordHash, ...user }) => ({
+      ...user,
+      harLokalKonto: passwordHash !== null,
+    }));
   }),
+
+  /**
+   * Give a self-registered student a real TIHLDE account.
+   *
+   * This is the "aktiver"-button FadderKom presses when the student turns up in
+   * person. Everyone who signs up here without an @stud.ntnu.no address gets a
+   * local account only; they can pay and use the app, but they are not TIHLDE
+   * members and cannot sign in through tihlde.org.
+   *
+   * There is no approval queue to put them in: Photon's register endpoint gives
+   * the `member` role outright (`syncBaselineRoles`), so creating the account IS
+   * the activation. The old Lepton model — created pending, approved later in
+   * Kvark — no longer exists.
+   *
+   * The password is random and never shown to anyone. The student sets their
+   * own through "glemt passord" on tihlde.org, and Photon's verification mail
+   * goes out as it does for any other sign-up. Handing an admin a password to
+   * read aloud would be worse than making them do that.
+   *
+   * The username we pass is the one already stored here, so the two systems
+   * agree and a later Feide login lands on this same account rather than a
+   * second one.
+   */
+  createTihldeAccount: adminProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: {
+          tihldeUserId: true,
+          name: true,
+          email: true,
+          studieretning: true,
+        },
+      });
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Bruker ikke funnet" });
+      }
+      if (!user.email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Brukeren har ingen e-postadresse å opprette kontoen med.",
+        });
+      }
+
+      const study = slugForStudyLabel(user.studieretning);
+      if (!study) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Brukeren mangler en linje vi kan melde dem inn i. Sett linje først.",
+        });
+      }
+
+      try {
+        const created = await photonCreateUser({
+          name: user.name,
+          email: user.email,
+          // Never stored, never shown. "Glemt passord" på tihlde.org is how
+          // they get one they know.
+          password: randomBytes(24).toString("base64url"),
+          studyProgramSlug: study,
+          username: user.tihldeUserId,
+        });
+        return { username: created.username, email: created.email };
+      } catch (err) {
+        throw toTRPCError(err);
+      }
+    }),
 
   /** Verify or unverify a user */
   setUserVerified: adminProcedure

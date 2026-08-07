@@ -100,6 +100,25 @@ model User {
     groupMessages GroupMessage[]
     notifications Notification[]
     payments      Payment[]
+    passwordResets PasswordResetToken[]
+}
+
+model PasswordResetToken {
+    // A "glemt passord"-link, for accounts that log in with the local password
+    // chosen at registration (tihlde.org owns the password for everyone else).
+    //
+    // Only the SHA-256 of the token is stored: the plaintext lives in the email
+    // and nowhere else, so a leaked database does not hand over live reset
+    // links. Single-use (`usedAt`) and short-lived (`expiresAt`).
+    id        String    @id @default(cuid())
+    tokenHash String    @unique
+    userId    String
+    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    expiresAt DateTime
+    usedAt    DateTime?
+    createdAt DateTime  @default(now())
+
+    @@index([userId])
 }
 
 model AppSetting {
