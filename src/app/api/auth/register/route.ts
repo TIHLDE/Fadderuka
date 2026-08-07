@@ -8,7 +8,11 @@ import {
   SESSION_MAX_AGE,
   createSession,
 } from "~/server/auth/config";
-import { PhotonAuthError, photonCreateUser } from "~/server/auth/photon";
+import {
+  PhotonAuthError,
+  PhotonUnavailableError,
+  photonCreateUser,
+} from "~/server/auth/photon";
 import {
   checkRegisterRateLimit,
   recordRegisterAttempt,
@@ -172,16 +176,65 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
+    // Photon could not be reached at all. Its own message says so, and the
+    // advice is "wait", not "check the form" — so it keeps a 503 and a
+    // Retry-After rather than being folded into the case below.
+    if (err instanceof PhotonUnavailableError) {
+      console.error("[auth/register] photon unreachable", err.cause);
+      return NextResponse.json(
+        { error: err.message },
+        { status: 503, headers: { "Retry-After": "30" } },
+      );
+    }
+
     if (err instanceof PhotonAuthError) {
-      // 5xx is ours to own; anything else is something the student can act on,
-      // and Photon's message already says what.
-      const status = err.status >= 500 ? 502 : 400;
+      /**
+       * A 5xx from Photon is never something to repeat to the student.
+       *
+       * Photon answers an unhandled error with the literal string "Internal
+       * server error", and this route used to forward it verbatim — which is
+       * what a new student on Digital transformasjon met on 2026-08-07: an
+       * English server message on a Norwegian form, with no idea what to do
+       * next.
+       *
+       * The overwhelmingly likely cause is that they already have a TIHLDE
+       * account. Photon derives the username from the e-mail, and creating an
+       * account whose username is taken but whose address is not hits the
+       * unique index on `user.username` unguarded — Photon's own duplicate
+       * check only ever sees the address. That is exactly the shape of an
+       * account made with Feide on tihlde.org, where the address Feide reports
+       * is usually not `<ntnu-brukernavn>@stud.ntnu.no`. Logging in is the only
+       * thing that helps them, so we offer that instead of a raw 500, and hedge
+       * it as a question because the same status also covers a genuine Photon
+       * fault.
+       */
+      if (err.status >= 500) {
+        console.error(
+          "[auth/register] photon 5xx",
+          err.status,
+          err.message,
+          userId,
+        );
+        return NextResponse.json(
+          {
+            error:
+              "Vi fikk ikke opprettet TIHLDE-brukeren din. Har du allerede en bruker på tihlde.org — for eksempel laget med Feide? Da må du logge inn i stedet for å registrere deg. Hjelper ikke det, si fra til en fadder.",
+            // Lights up the "Logg inn med TIHLDE"-link on the form; the
+            // username is the one Photon would have given them anyway.
+            existingUserId: userId,
+          },
+          { status: 502 },
+        );
+      }
+
+      // Anything else is something the student can act on, and Photon's message
+      // already says what.
       const field = /e-?post|adresse/i.test(err.message)
         ? "email"
         : /passord/i.test(err.message)
           ? "password"
           : undefined;
-      return NextResponse.json({ error: err.message, field }, { status });
+      return NextResponse.json({ error: err.message, field }, { status: 400 });
     }
 
     if (isUniqueConstraintError(err)) {

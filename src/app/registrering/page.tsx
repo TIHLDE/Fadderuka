@@ -113,7 +113,12 @@ export default function RegistreringPage() {
               </CardTitle>
               <CardDescription>
                 Opprett en TIHLDE-bruker og betal med Vipps. Brukeren kan du
-                senere bruke på tihlde.org.
+                senere bruke på tihlde.org. Har du allerede laget bruker på
+                tihlde.org — for eksempel med Feide — skal du{" "}
+                <Link href="/logg-inn" className="underline">
+                  logge inn
+                </Link>{" "}
+                i stedet.
               </CardDescription>
             </div>
 
