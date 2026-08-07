@@ -76,6 +76,9 @@ export function UsersTab() {
       setVerifyingUserId(null);
       toast("Bruker verifisert og lagt til i gruppe som fadderbarn");
     },
+    onError: (error) => {
+      toast.error("Feil", { description: error.message });
+    },
   });
 
   const deleteMutation = api.admin.deleteUser.useMutation({

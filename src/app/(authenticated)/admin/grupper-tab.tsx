@@ -88,12 +88,12 @@ export function GrupperTab() {
     createMutation.mutate({ name: newGruppeName.trim() });
   };
 
-  // Get verified users who are not in the currently expanded group
-  const getAvailableUsers = (gruppeId: string) => {
-    if (!users || !grupper) return [];
-    const gruppe = grupper.find((g) => g.id === gruppeId);
-    const memberIds = new Set(gruppe?.members.map((m) => m.userId) ?? []);
-    return users.filter((u) => u.isVerified && !memberIds.has(u.id));
+  // Verified users who are not in a faddergruppe at all. A user belongs to
+  // exactly one group, so someone already placed elsewhere must be removed
+  // from that group before they can be added here.
+  const getAvailableUsers = () => {
+    if (!users) return [];
+    return users.filter((u) => u.isVerified && u.memberships.length === 0);
   };
 
   // Categorize grupper by major, sorted in canonical major order
@@ -315,7 +315,7 @@ export function GrupperTab() {
                           <AddMemberForm
                             gruppeId={gruppe.id}
                             role={addMemberState.role}
-                            availableUsers={getAvailableUsers(gruppe.id)}
+                            availableUsers={getAvailableUsers()}
                             onAdd={(userId) =>
                               addMemberMutation.mutate({
                                 userId,
@@ -504,7 +504,8 @@ function AddMemberForm({
         ))}
         {filtered.length === 0 && (
           <p className="text-center text-xs text-muted-foreground !py-2">
-            Ingen tilgjengelige brukere
+            Ingen tilgjengelige brukere. Brukere som allerede er i en
+            faddergruppe må fjernes derfra først.
           </p>
         )}
       </div>

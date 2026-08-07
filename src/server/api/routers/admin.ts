@@ -252,7 +252,14 @@ export const adminRouter = createTRPCRouter({
       });
     }),
 
-  /** Add a user to a faddergruppe with a role */
+  /**
+   * Add a user to a faddergruppe with a role.
+   *
+   * A user belongs to exactly one faddergruppe: the schema only stops the same
+   * user being added to the *same* group twice, so this is where "one group per
+   * person" is enforced. Moving someone means removing the old membership
+   * first, which keeps the fadderbarn lists unambiguous.
+   */
   addMember: adminProcedure
     .input(
       z.object({
@@ -262,18 +269,17 @@ export const adminRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.fadderGruppeMember.findUnique({
-        where: {
-          userId_gruppeId: {
-            userId: input.userId,
-            gruppeId: input.gruppeId,
-          },
-        },
+      const existing = await ctx.db.fadderGruppeMember.findFirst({
+        where: { userId: input.userId },
+        select: { gruppeId: true, gruppe: { select: { name: true } } },
       });
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Brukeren er allerede medlem av denne gruppen",
+          message:
+            existing.gruppeId === input.gruppeId
+              ? "Brukeren er allerede medlem av denne gruppen"
+              : `Brukeren er allerede medlem av «${existing.gruppe.name}». Fjern brukeren derfra først.`,
         });
       }
       const membership = await ctx.db.fadderGruppeMember.create({
@@ -350,15 +356,18 @@ export const adminRouter = createTRPCRouter({
         where: { id: input.userId },
         data: { isVerified: true },
       });
-      // Only create membership if not already a member
-      const existing = await ctx.db.fadderGruppeMember.findUnique({
-        where: {
-          userId_gruppeId: {
-            userId: input.userId,
-            gruppeId: input.gruppeId,
-          },
-        },
+      // One group per person (see `addMember`): an existing membership in
+      // another group is a conflict, in the same group a no-op.
+      const existing = await ctx.db.fadderGruppeMember.findFirst({
+        where: { userId: input.userId },
+        select: { gruppeId: true, gruppe: { select: { name: true } } },
       });
+      if (existing && existing.gruppeId !== input.gruppeId) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Brukeren er allerede medlem av «${existing.gruppe.name}». Fjern brukeren derfra først.`,
+        });
+      }
       if (!existing) {
         await ctx.db.fadderGruppeMember.create({
           data: {
