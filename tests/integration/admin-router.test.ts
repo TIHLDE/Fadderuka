@@ -44,6 +44,7 @@ const ADMIN_PROCEDURE_INPUTS: Record<string, unknown> = {
   removeMember: { membershipId: "x" },
   updateMemberRole: { membershipId: "x", role: "FADDER" },
   deleteUser: { userId: "x" },
+  createTihldeAccount: { userId: "x" },
   verifyAndAssign: { userId: "x", gruppeId: "y" },
   getRegistrations: undefined,
   getPayments: undefined,
