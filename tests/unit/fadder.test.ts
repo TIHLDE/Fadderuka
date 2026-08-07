@@ -138,4 +138,12 @@ describe("isPaymentExempt / hasAppAccess", () => {
     expect(hasAppAccess({ isAdmin: true, isVerified: false })).toBe(true);
     expect(hasAppAccess({ isVerified: false })).toBe(false);
   });
+
+  // En betaling flyttet mellom kontoer for hånd setter bare `hasPaid`. Uten
+  // dette ble brukeren låst ute samtidig som betalingsoverlayet skjulte seg,
+  // altså en helt blank side.
+  it("gir tilgang når pengene har skiftet hender, selv uten verifisering", () => {
+    expect(hasAppAccess({ hasPaid: true, isVerified: false })).toBe(true);
+    expect(hasAppAccess({ hasPaid: false, isVerified: false })).toBe(false);
+  });
 });

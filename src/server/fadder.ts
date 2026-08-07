@@ -153,11 +153,22 @@ export function isPaymentExempt(user: {
  *
  * Exempt users are in without paying; everyone else needs the verification a
  * captured payment (or an admin) grants them.
+ *
+ * `hasPaid` counts on its own, and that is the point: the two flags are set
+ * together when Vipps captures, but a payment moved between accounts by hand
+ * sets only `hasPaid`. That left the user locked out of the app while the
+ * payment overlay — which hides itself the moment `hasPaid` is true — rendered
+ * nothing, i.e. a completely blank page with only header and footer. Money
+ * having changed hands is the strongest signal we have; it must never be the
+ * thing that produces less access than no payment at all.
  */
 export function hasAppAccess(user: {
   isAdmin?: boolean | null;
   isFadder?: boolean | null;
   isVerified?: boolean | null;
+  hasPaid?: boolean | null;
 }): boolean {
-  return isPaymentExempt(user) || user.isVerified === true;
+  return (
+    isPaymentExempt(user) || user.isVerified === true || user.hasPaid === true
+  );
 }
