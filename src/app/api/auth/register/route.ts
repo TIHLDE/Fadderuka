@@ -55,11 +55,14 @@ const bodySchema = z.object({
     .string()
     .trim()
     .toLowerCase()
-    .min(1, "Feltet er påkrevd")
-    // Match Kvark's exact wording; the 15-char cap mirrors TIHLDE's model limit
-    // (Kvark leaves that to the backend — we surface it up front).
+    .min(1, "Fyll inn brukernavnet du vil ha.")
+    // The 15-char cap mirrors TIHLDE's own model limit; we surface it up front
+    // rather than letting Photon reject the form after the fact.
     .max(15, "Brukernavn kan være maks 15 tegn.")
-    .refine((v) => !v.includes("@"), "Brukernavn må være uten @stud.ntnu.no"),
+    .refine(
+      (v) => !v.includes("@"),
+      "Skriv bare brukernavnet, ikke hele e-postadressen.",
+    ),
   password: z.string().min(8, "Passordet må være minst 8 tegn."),
   study: z.enum(REGISTRATION_STUDY_SLUGS, {
     errorMap: () => ({ message: "Velg hvilken linje du går på." }),
@@ -71,7 +74,11 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     const first = parsed.error?.issues[0];
     return NextResponse.json(
-      { error: first?.message ?? "Ugyldig skjema.", field: first?.path[0] },
+      {
+        error:
+          first?.message ?? "Noe mangler i skjemaet. Sjekk at alle felt er fylt ut.",
+        field: first?.path[0],
+      },
       { status: 400 },
     );
   }
@@ -117,12 +124,19 @@ export async function POST(request: Request) {
     // chosen again, the two cases come apart: someone re-registering under a
     // new username owns the address, while someone picking a taken username
     // may be a different person entirely.
+    // Mention the reset too. Registering again is exactly what someone does
+    // when they cannot get in, and for everyone who signed up before the
+    // cutover "log in instead" is a dead end — their password is gone.
     const sameUsername = clash.tihldeUserId === userId;
+    const utvei =
+      " Kommer du ikke inn, sett nytt passord med «Glemt passord».";
     return NextResponse.json(
       {
-        error: sameUsername
-          ? `Brukernavnet «${userId}» er allerede registrert. Logg inn i stedet.`
-          : `E-postadressen er allerede registrert som «${clash.tihldeUserId}». Logg inn i stedet.`,
+        error:
+          (sameUsername
+            ? `Brukernavnet «${userId}» er allerede registrert. Logg inn i stedet.`
+            : `E-postadressen er allerede registrert som «${clash.tihldeUserId}». Logg inn i stedet.`) +
+          utvei,
         field: sameUsername ? "user_id" : "email",
         existingUserId: clash.tihldeUserId,
       },

@@ -36,6 +36,26 @@ export function studyLabelForSlug(slug: string): string | null {
   return REGISTRATION_STUDIES.find((s) => s.slug === slug)?.label ?? null;
 }
 
+/**
+ * The inverse: the slug TIHLDE knows a stored `studieretning` by.
+ *
+ * Needed when we create a TIHLDE account on a student's behalf, since Photon
+ * enrols them by slug. Case-insensitive, because the label may have come back
+ * from a TIHLDE profile rather than from `REGISTRATION_STUDIES`. Returns null
+ * for a programme fadderuka does not register for, which the caller has to
+ * treat as "cannot create the account yet" rather than guessing.
+ */
+export function slugForStudyLabel(
+  label: string | null | undefined,
+): RegistrationStudySlug | null {
+  if (!label) return null;
+  const wanted = label.trim().toLowerCase();
+  return (
+    REGISTRATION_STUDIES.find((s) => s.label.toLowerCase() === wanted)?.slug ??
+    null
+  );
+}
+
 export const UKJENT_STUDIERETNING = "Ukjent studieretning";
 
 /** TIHLDE's casing for studieretning names isn't guaranteed, so match case-insensitively. */

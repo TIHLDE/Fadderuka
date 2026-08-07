@@ -16,6 +16,24 @@ import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
  * OWASP minimum (N=2^16, r=8, p=1).
  */
 
+/**
+ * Stands in for a hash nobody knows, marking an account that must set a new
+ * password before it can be used.
+ *
+ * The OAuth cutover dropped the `passwordHash` column from production, which
+ * destroyed the only credential 130 self-registered students had — 113 of whom
+ * had already paid. The hashes are gone for good: Neon's history window is six
+ * hours and the migration ran eight hours before the earliest restorable point.
+ *
+ * Writing this value restores the one fact that matters, that these accounts
+ * have a local password, without pretending to know what it was. It is not a
+ * valid `scrypt:` string, so `verifyPassword` can never accept it; but it is
+ * non-null, so `glemt-passord` will send them a reset link. Storing a random
+ * hash instead would do the same job while being unreadable to whoever opens
+ * the table next.
+ */
+export const RESET_REQUIRED = "reset-required";
+
 const KEY_LENGTH = 64;
 const SCRYPT_OPTIONS = { N: 65536, r: 8, p: 1, maxmem: 128 * 65536 * 8 * 2 };
 

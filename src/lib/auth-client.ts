@@ -27,6 +27,12 @@ export interface RegisterInput {
 interface LocalLoginResult extends Result {
   /** Whether they already have app access, so the form can skip the paywall. */
   verified?: boolean;
+  /**
+   * Stable identifier for the failure, so the page can render the message with
+   * a working «Glemt passord»-link instead of picking the words apart. The
+   * `error` string stays the plain-text version of the same thing.
+   */
+  code?: string;
 }
 
 interface RegisterResult extends Result {
@@ -98,11 +104,14 @@ export const authClient = {
     });
 
     if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        code?: string;
+      };
       return {
-        error: await readError(
-          res,
-          "Fikk ikke svar fra serveren. Sjekk nettet og prøv igjen.",
-        ),
+        error:
+          body.error ?? "Fikk ikke svar fra serveren. Sjekk nettet og prøv igjen.",
+        code: body.code,
       };
     }
 
