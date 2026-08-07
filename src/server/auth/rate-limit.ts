@@ -73,12 +73,13 @@ export async function recordFailedLogin(
   if (ip) rows.push({ key: ipKey(ip) });
 
   await db.loginAttempt.createMany({ data: rows });
-  // Scoped to this counter's own keys. An unscoped delete would also take the
-  // `register-ip:` rows, which run on a window four times as long — quietly
-  // handing back registration budget every time someone mistypes a password.
+  // Scoped to this counter's own keys, and listed positively so a counter added
+  // later is not swept by accident. Every other counter in this table runs on a
+  // window four times as long, so an unscoped delete would quietly hand their
+  // budget back every time someone mistyped a password.
   await db.loginAttempt.deleteMany({
     where: {
-      key: { not: { startsWith: "register-ip:" } },
+      OR: [{ key: { startsWith: "user:" } }, { key: { startsWith: "ip:" } }],
       createdAt: { lt: new Date(Date.now() - WINDOW_MS) },
     },
   });
@@ -91,6 +92,74 @@ export async function clearLoginFailures(
 ): Promise<void> {
   const keys = ip ? [userKey(userId), ipKey(ip)] : [userKey(userId)];
   await db.loginAttempt.deleteMany({ where: { key: { in: keys } } });
+}
+
+/**
+ * Reset-mail throttling.
+ *
+ * Every request sends mail to somebody else's inbox, so the thing being bounded
+ * is not guessing but nuisance: without it, anyone could point this endpoint at
+ * a student and keep their inbox filling up. Counted per account *and* per IP,
+ * so neither one address nor one distributed caller can keep hitting the same
+ * inbox.
+ */
+const RESET_WINDOW_MS = 60 * 60 * 1000;
+
+/** Reset mails one account may trigger per hour. */
+const MAX_RESETS_PER_USER = 5;
+/** Reset mails one IP may trigger per hour, across accounts. */
+const MAX_RESETS_PER_IP = 15;
+
+const resetUserKey = (userId: string) =>
+  `reset-user:${userId.trim().toLowerCase()}`;
+const resetIpKey = (ip: string) => `reset-ip:${ip}`;
+
+/** Whether this account/IP has used up its reset budget. */
+export async function checkResetRateLimit(
+  userId: string,
+  ip: string | null,
+): Promise<RateLimitVerdict> {
+  const since = new Date(Date.now() - RESET_WINDOW_MS);
+  const keys = ip
+    ? [resetUserKey(userId), resetIpKey(ip)]
+    : [resetUserKey(userId)];
+
+  const attempts = await db.loginAttempt.findMany({
+    where: { key: { in: keys }, createdAt: { gte: since } },
+    select: { key: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const forUser = attempts.filter((a) => a.key === keys[0]);
+  const forIp = ip ? attempts.filter((a) => a.key === resetIpKey(ip)) : [];
+
+  const overUser = forUser.length >= MAX_RESETS_PER_USER;
+  const overIp = forIp.length >= MAX_RESETS_PER_IP;
+  if (!overUser && !overIp) return { blocked: false, retryAfterMinutes: 0 };
+
+  const oldest = (overUser ? forUser : forIp)[0]!.createdAt;
+  const msLeft = oldest.getTime() + RESET_WINDOW_MS - Date.now();
+  return {
+    blocked: true,
+    retryAfterMinutes: Math.max(1, Math.ceil(msLeft / 60_000)),
+  };
+}
+
+/** Record a sent reset mail and drop rows that have aged out. */
+export async function recordResetAttempt(
+  userId: string,
+  ip: string | null,
+): Promise<void> {
+  const rows = [{ key: resetUserKey(userId) }];
+  if (ip) rows.push({ key: resetIpKey(ip) });
+
+  await db.loginAttempt.createMany({ data: rows });
+  await db.loginAttempt.deleteMany({
+    where: {
+      key: { startsWith: "reset-" },
+      createdAt: { lt: new Date(Date.now() - RESET_WINDOW_MS) },
+    },
+  });
 }
 
 /**
