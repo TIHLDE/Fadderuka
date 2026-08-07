@@ -26,8 +26,15 @@ const SCOPES = "openid profile email";
 /**
  * The audience we request tokens for — Photon's auth base URL, which is the
  * only value its provider accepts. See the note in `exchangeCode`.
+ *
+ * A function, not a constant: with `SKIP_ENV_VALIDATION` set — which is how CI
+ * runs `next build` — `env` is raw `process.env`, so the zod default for
+ * `PHOTON_API_URL` never applies. Reading it while the module loaded therefore
+ * threw `Cannot read properties of undefined` and failed the build on every
+ * machine without that variable set. Nothing else here touches `env` before it
+ * is called.
  */
-const PHOTON_AUDIENCE = `${env.PHOTON_API_URL.replace(/\/$/, "")}/api/auth`;
+const photonAudience = () => endpoint("/api/auth");
 
 /** How long we wait for Photon before giving up on a request. */
 const TIMEOUT_MS = 10_000;
@@ -217,7 +224,7 @@ export async function exchangeCode(
      * configured on the provider, so it defaults to exactly that one origin and
      * rejects anything else with `requested resource invalid`.
      */
-    resource: PHOTON_AUDIENCE,
+    resource: photonAudience(),
   });
 
   const secret = env.PHOTON_OAUTH_CLIENT_SECRET;
