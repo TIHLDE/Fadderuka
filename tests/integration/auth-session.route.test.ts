@@ -10,7 +10,7 @@ import {
 } from "~/server/auth/config";
 
 import { createUser, db } from "../helpers/db";
-import { fetchMock, json, text } from "../helpers/fetch-mock";
+import { fetchMock } from "../helpers/fetch-mock";
 import { cookieJar, resetNextHeaders } from "../helpers/next-headers";
 
 vi.mock("next/headers", () => import("../helpers/next-headers"));
@@ -22,18 +22,25 @@ beforeEach(() => {
 describe("sesjonslaget", () => {
   it("finner en gyldig sesjon fra cookien", async () => {
     const user = await createUser();
-    const { token } = await createSession({ userId: user.id, tihldeToken: "t" });
+    const { token } = await createSession({
+      userId: user.id,
+      photonAccessToken: "t",
+    });
 
     const session = await auth.api.getSession({
-      headers: new Headers({ cookie: `${SESSION_COOKIE}=${token}; annet=verdi` }),
+      headers: new Headers({
+        cookie: `${SESSION_COOKIE}=${token}; annet=verdi`,
+      }),
     });
 
     expect(session?.user.id).toBe(user.id);
-    expect(session?.session.tihldeToken).toBe("t");
+    expect(session?.session.photonAccessToken).toBe("t");
   });
 
   it("gir null uten cookie eller med ukjent token", async () => {
-    await expect(auth.api.getSession({ headers: new Headers() })).resolves.toBeNull();
+    await expect(
+      auth.api.getSession({ headers: new Headers() }),
+    ).resolves.toBeNull();
     await expect(
       auth.api.getSession({
         headers: new Headers({ cookie: `${SESSION_COOKIE}=finnes-ikke` }),
@@ -106,32 +113,41 @@ describe("POST /api/profile/allergy", () => {
       }),
     );
 
-  async function signIn(tihldeToken: string | null) {
+  async function signIn(photonAccessToken: string | null) {
     const user = await createUser({ tihldeUserId: "olanor" });
-    const { token } = await createSession({ userId: user.id, tihldeToken });
+    const { token } = await createSession({
+      userId: user.id,
+      photonAccessToken,
+    });
     resetNextHeaders({ cookie: `${SESSION_COOKIE}=${token}` });
     return user;
   }
 
-  it("skriver allergien til TIHLDE når sesjonen har token", async () => {
-    await signIn("tihlde-token");
-    fetchMock.on("PATCH", "/users/olanor/", json({}));
+  it("lagrer allergien lokalt", async () => {
+    const user = await signIn("photon-token");
 
     const response = await post({ allergy: "Nøtter" });
 
     await expect(response.json()).resolves.toEqual({ synced: true });
-    const [call] = fetchMock.callsTo("/users/olanor/");
-    expect(call?.body).toEqual({ allergy: "Nøtter" });
-    expect(call?.headers["x-csrf-token"]).toBe("tihlde-token");
+    // Photon modellerer allergier som en fast slug-liste, så fritekst har
+    // ingen plass der — den blir liggende her, hos dem som bestiller maten.
+    const stored = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(stored.allergy).toBe("Nøtter");
+    expect(fetchMock.calls).toHaveLength(0);
   });
 
-  it("ber klienten beholde bufferen når kontoen ikke er aktivert", async () => {
-    await signIn(null);
+  it("lagrer også for en sesjon uten Photon-token", async () => {
+    // Sesjonen rett etter registrering har ikke noe token; allergien skal
+    // likevel bli lagret, ikke bufret i det uendelige slik den ble før.
+    const user = await signIn(null);
 
-    const response = await post({ allergy: "Nøtter" });
-
-    await expect(response.json()).resolves.toEqual({ synced: false });
-    expect(fetchMock.calls).toHaveLength(0);
+    await expect(
+      post({ allergy: "Laktose" }).then((r) => r.json()),
+    ).resolves.toEqual({
+      synced: true,
+    });
+    const stored = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(stored.allergy).toBe("Laktose");
   });
 
   it("krever innlogging", async () => {
@@ -141,16 +157,9 @@ describe("POST /api/profile/allergy", () => {
   });
 
   it("avviser tom allergi", async () => {
-    await signIn("tihlde-token");
+    await signIn("photon-token");
 
     expect((await post({ allergy: "  " })).status).toBe(400);
     expect(fetchMock.calls).toHaveLength(0);
-  });
-
-  it("videreformidler TIHLDEs statuskode ved feil", async () => {
-    await signIn("tihlde-token");
-    fetchMock.on("PATCH", "/users/olanor/", text("nope", 403));
-
-    expect((await post({ allergy: "Nøtter" })).status).toBe(403);
   });
 });

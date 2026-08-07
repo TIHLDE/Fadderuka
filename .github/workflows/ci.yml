@@ -43,6 +43,9 @@ jobs:
       # at module load. Dummy values only — nothing here reaches a real service.
       DATABASE_URL: postgresql://postgres:password@localhost:5432/fadderuke_test
       TIHLDE_API_URL: https://api.tihlde.org
+      # Both API URLs are spelled out because SKIP_ENV_VALIDATION hands the code
+      # raw process.env — the defaults in ~/env never run here.
+      PHOTON_API_URL: https://photon.tihlde.org
       SKIP_ENV_VALIDATION: "1"
 
     steps:

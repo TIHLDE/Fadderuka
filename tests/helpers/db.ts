@@ -1,4 +1,5 @@
 import { db } from "~/server/db";
+import { setGrupperPublished } from "~/server/gruppe-visibility";
 
 /**
  * Every table, ordered so the single TRUNCATE covers them all. CASCADE handles
@@ -6,8 +7,8 @@ import { db } from "~/server/db";
  * model that isn't added here will show up as leaked rows between tests.
  */
 const TABLES = [
+  "AppSetting",
   "LoginAttempt",
-  "PasswordResetToken",
   "Payment",
   "Notification",
   "GroupMessage",
@@ -42,7 +43,6 @@ export async function createUser(
     studieretning: string | null;
     studieretningOverride: string | null;
     klasse: string | null;
-    passwordHash: string | null;
     isFadder: boolean;
     fadderOverride: boolean | null;
     createdAt: Date;
@@ -61,7 +61,6 @@ export async function createUser(
       studieretning: overrides.studieretning ?? null,
       studieretningOverride: overrides.studieretningOverride ?? null,
       klasse: overrides.klasse ?? null,
-      passwordHash: overrides.passwordHash ?? null,
       isFadder: overrides.isFadder ?? false,
       fadderOverride: overrides.fadderOverride ?? null,
       ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
@@ -84,7 +83,12 @@ export async function createMember(
 export async function createAdmin(
   overrides: Parameters<typeof createUser>[0] = {},
 ) {
-  return createUser({ isAdmin: true, isVerified: true, hasPaid: true, ...overrides });
+  return createUser({
+    isAdmin: true,
+    isVerified: true,
+    hasPaid: true,
+    ...overrides,
+  });
 }
 
 export async function createGruppe(name?: string) {
@@ -97,6 +101,17 @@ export async function addMember(
   role: "FADDER" | "FADDERBARN",
 ) {
   return db.fadderGruppeMember.create({ data: { userId, gruppeId, role } });
+}
+
+/**
+ * Release the faddergrupper to their fadderbarn.
+ *
+ * The reset leaves publication off, which mirrors production before FadderKom
+ * flips the switch — so any test about what a fadderbarn can actually see has
+ * to say so out loud.
+ */
+export async function publishGrupper() {
+  return setGrupperPublished(db, true);
 }
 
 export async function createPayment(

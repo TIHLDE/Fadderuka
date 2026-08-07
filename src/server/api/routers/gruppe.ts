@@ -4,11 +4,23 @@ import {
   createTRPCRouter,
   verifiedProcedure,
 } from "~/server/api/trpc";
+import { areGrupperPublished, canSeeGruppe } from "~/server/gruppe-visibility";
 
 const channelSchema = z.enum(["ANNOUNCEMENT", "CHAT"]);
 
 export const gruppeRouter = createTRPCRouter({
-  /** Get the current user's faddergruppe membership(s) */
+  /** Whether the faddergrupper have been released to fadderbarn. */
+  getPublication: verifiedProcedure.query(async ({ ctx }) => {
+    return { published: await areGrupperPublished(ctx.db) };
+  }),
+
+  /**
+   * Get the current user's faddergruppe membership(s).
+   *
+   * A fadderbarn gets `null` until the grupper are published — the same answer
+   * as "you have no gruppe yet", which is deliberate: before publication the
+   * assignment simply doesn't exist as far as they're concerned.
+   */
   getMyGruppe: verifiedProcedure.query(async ({ ctx }) => {
     const membership = await ctx.db.fadderGruppeMember.findFirst({
       where: { userId: ctx.session.user.id },
@@ -25,7 +37,14 @@ export const gruppeRouter = createTRPCRouter({
         },
       },
     });
-    return membership;
+    if (!membership) return null;
+
+    const visible = canSeeGruppe({
+      isAdmin: ctx.session.user.isAdmin,
+      role: membership.role,
+      published: await areGrupperPublished(ctx.db),
+    });
+    return visible ? membership : null;
   }),
 
   /** Get messages for a group (user must be a member or admin) */
@@ -47,6 +66,16 @@ export const gruppeRouter = createTRPCRouter({
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Du har ikke tilgang til denne gruppen",
+          });
+        }
+        // An unpublished gruppe is closed to its fadderbarn, messages included:
+        // the announcements are written by the faddere before release, and
+        // reading them would give away the gruppe the page still hides.
+        const published = await areGrupperPublished(ctx.db);
+        if (!canSeeGruppe({ role: membership.role, published })) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Faddergruppene er ikke publisert enda",
           });
         }
       }
@@ -97,6 +126,13 @@ export const gruppeRouter = createTRPCRouter({
             message: "Kun faddere kan poste meldinger",
           });
         }
+        const published = await areGrupperPublished(ctx.db);
+        if (!canSeeGruppe({ role: membership.role, published })) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Faddergruppene er ikke publisert enda",
+          });
+        }
       }
 
       const created = await ctx.db.groupMessage.create({
@@ -111,10 +147,15 @@ export const gruppeRouter = createTRPCRouter({
         },
       });
 
+      // Faddere write their welcome messages before the grupper are released.
+      // Notifying the fadderbarn then would announce the very gruppe we are
+      // still hiding, so they only get pinged once publication has happened.
+      const published = await areGrupperPublished(ctx.db);
       const otherMembers = await ctx.db.fadderGruppeMember.findMany({
         where: {
           gruppeId: input.gruppeId,
           userId: { not: ctx.session.user.id },
+          ...(published ? {} : { role: "FADDER" as const }),
         },
         select: { userId: true },
       });

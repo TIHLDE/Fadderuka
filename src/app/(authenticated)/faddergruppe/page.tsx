@@ -4,6 +4,7 @@ import { PageHeader, PageShell } from "~/components/layout/page-shell";
 import { Card } from "~/components/ui/card";
 import { auth } from "~/server/auth/config";
 import { db } from "~/server/db";
+import { areGrupperPublished, canSeeGruppe } from "~/server/gruppe-visibility";
 import { GroupView } from "./group-view";
 
 export default async function FaddergroupPage() {
@@ -45,6 +46,28 @@ export default async function FaddergroupPage() {
           className="max-w-md"
           title="Ingen faddergruppe"
           description="Du er ikke tildelt en faddergruppe enda. Kontakt en administrator for å bli lagt til i en gruppe."
+        />
+      </PageShell>
+    );
+  }
+
+  // Fadderbarna får ikke se gruppa si før FadderKom publiserer alle gruppene.
+  // Faddere ser sin hele tiden, så de rekker å bli kjent og skrive velkomst.
+  const published = await areGrupperPublished(db);
+  if (
+    !canSeeGruppe({
+      isAdmin: session.user.isAdmin,
+      role: membership.role,
+      published,
+    })
+  ) {
+    return (
+      <PageShell className="flex-1 items-center justify-center">
+        <PageHeader
+          centered
+          className="max-w-md"
+          title="Faddergruppene slippes snart"
+          description="Vi holder fortsatt gruppene hemmelige. Så snart de er klare finner du gruppa di, fadderne dine og resten av gjengen her."
         />
       </PageShell>
     );

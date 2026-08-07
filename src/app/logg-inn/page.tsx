@@ -1,193 +1,134 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { authClient } from "~/lib/auth-client";
 import { REGISTRATION_STUDIES } from "~/lib/majors";
 
+/**
+ * "Logg inn med TIHLDE".
+ *
+ * No password field any more: the student types it on tihlde.org, and we get
+ * back a scoped token. Everything this page still asks for is the one thing
+ * their TIHLDE profile cannot tell us — see `nyttStudium` below.
+ */
 function LoggInnSkjema() {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   // Den som begynner på et nytt studium i høst må si fra selv: TIHLDE-profilen
   // deres viser fortsatt bachelorlinja og bachelorkullet, så uten dette valget
   // leses de som 2. klassing — altså fadder — og slipper å betale.
   const [nyttStudium, setNyttStudium] = useState(false);
   const [study, setStudy] = useState("");
-  const router = useRouter();
-  // Registreringssiden sender hit med brukernavnet når noen prøvde å
-  // registrere seg på nytt — da slipper de å huske hva de valgte.
-  const prefilledUserId = useSearchParams().get("user_id") ?? "";
+  const [error, setError] = useState<string | null>(null);
+  const feilFraTihlde = useSearchParams().get("error");
 
-  const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
+  const vist = error ?? feilFraTihlde;
 
-    if (nyttStudium && !study) {
-      setError("Velg hvilken linje du begynner på.");
-      return;
-    }
-
-    setLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const userId = (formData.get("user_id") as string)?.trim();
-    const password = formData.get("password") as string;
-
-    const { error } = await authClient.signIn(
-      userId,
-      password,
-      nyttStudium ? study : undefined,
-    );
-
-    if (error) {
-      setError(error);
-      setLoading(false);
-      return;
-    }
-
-    router.push("/");
-    router.refresh();
-  };
+  const href =
+    nyttStudium && study
+      ? `/api/auth/logg-inn?study=${encodeURIComponent(study)}`
+      : "/api/auth/logg-inn";
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-8">
-        <div className="w-full max-w-xl">
-          <Card>
-            <form onSubmit={handleLogin} className="flex flex-col gap-6 p-6 sm:p-8">
-              <div
-                className="flex flex-col gap-2"
-              >
-                <CardTitle className="text-3xl font-bold">Logg inn</CardTitle>
-                <CardDescription>
-                  Logg inn med ditt TIHLDE-brukernavn og passord
-                </CardDescription>
-              </div>
+      <div className="w-full max-w-xl">
+        <Card>
+          <div className="flex flex-col gap-6 p-6 sm:p-8">
+            <div className="flex flex-col gap-2">
+              <CardTitle className="text-3xl font-bold">Logg inn</CardTitle>
+              <CardDescription>
+                Du logger inn med TIHLDE-brukeren din på tihlde.org.
+              </CardDescription>
+            </div>
 
-              {error && (
+            {vist && (
+              <div className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm">
+                {vist}
+              </div>
+            )}
+
+            <div className="border-input grid gap-3 rounded-md border px-4 py-3">
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={nyttStudium}
+                  onChange={(e) => {
+                    setNyttStudium(e.target.checked);
+                    setError(null);
+                  }}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>
+                  <span className="font-medium">
+                    Jeg begynner på et nytt studium i høst
+                  </span>
+                  <span className="text-muted-foreground block">
+                    For eksempel Digital transformasjon etter fullført bachelor.
+                  </span>
+                </span>
+              </label>
+
+              {nyttStudium && (
                 <div
-                  className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm"
-                  
+                  className="grid gap-2"
+                  role="radiogroup"
+                  aria-label="Ny linje"
                 >
-                  {error}
+                  {REGISTRATION_STUDIES.map((option) => (
+                    <label
+                      key={option.slug}
+                      className="border-input has-[:checked]:border-primary has-[:checked]:bg-primary/5 flex cursor-pointer items-center gap-3 rounded-md border px-4 py-3 text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="study"
+                        value={option.slug}
+                        checked={study === option.slug}
+                        onChange={(e) => {
+                          setStudy(e.target.value);
+                          setError(null);
+                        }}
+                        className="h-4 w-4"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
                 </div>
               )}
+            </div>
 
-              <div
-                className="flex flex-col gap-6"
-              >
-                <div className="grid gap-2">
-                  <Label htmlFor="login-user-id">
-                    Brukernavn <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="login-user-id"
-                    name="user_id"
-                    type="text"
-                    autoComplete="username"
-                    required
-                    defaultValue={prefilledUserId}
-                    placeholder="ditt TIHLDE-brukernavn"
-                    className="h-12"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <Label htmlFor="login-password">
-                      Passord <span className="text-destructive">*</span>
-                    </Label>
-                    <Link
-                      href="/glemt-passord"
-                      className="text-muted-foreground text-sm underline"
-                    >
-                      Glemt passord?
-                    </Link>
-                  </div>
-                  <Input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    placeholder="••••••••"
-                    className="h-12"
-                  />
-                </div>
-
-                <div className="grid gap-3 rounded-md border border-input px-4 py-3">
-                  <label className="flex cursor-pointer items-start gap-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={nyttStudium}
-                      onChange={(e) => {
-                        setNyttStudium(e.target.checked);
-                        setError(null);
-                      }}
-                      className="mt-0.5 h-4 w-4"
-                    />
-                    <span>
-                      <span className="font-medium">
-                        Jeg begynner på et nytt studium i høst
-                      </span>
-                      <span className="text-muted-foreground block">
-                        For eksempel Digital transformasjon etter fullført
-                        bachelor.
-                      </span>
-                    </span>
-                  </label>
-
-                  {nyttStudium && (
-                    <div
-                      className="grid gap-2"
-                      role="radiogroup"
-                      aria-label="Ny linje"
-                    >
-                      {REGISTRATION_STUDIES.map((option) => (
-                        <label
-                          key={option.slug}
-                          className="flex cursor-pointer items-center gap-3 rounded-md border border-input px-4 py-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-                        >
-                          <input
-                            type="radio"
-                            name="study"
-                            value={option.slug}
-                            checked={study === option.slug}
-                            onChange={(e) => {
-                              setStudy(e.target.value);
-                              setError(null);
-                            }}
-                            className="h-4 w-4"
-                          />
-                          {option.label}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-5">
+              {/* En lenke, ikke et skjema: innloggingen skjer på tihlde.org.
+                  Mangler linjevalget, blir det en knapp som sier fra i stedet
+                  — å sende dem videre uten det ville gitt feil svar på hvem
+                  som skal betale. */}
+              {nyttStudium && !study ? (
                 <Button
-                  type="submit"
+                  type="button"
                   className="h-12 w-full text-base"
-                  disabled={loading}
+                  onClick={() => setError("Velg hvilken linje du begynner på.")}
                 >
-                  {loading ? "Logger inn..." : "Logg inn"}
+                  Logg inn med TIHLDE
                 </Button>
-                <p className="text-muted-foreground text-center text-sm">
-                  Ny student uten TIHLDE-bruker?{" "}
-                  <Link href="/registrering" className="underline">
-                    Registrer deg her
-                  </Link>
-                </p>
-              </div>
-            </form>
-          </Card>
-        </div>
+              ) : (
+                <a
+                  href={href}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-12 w-full items-center justify-center rounded-md text-base font-medium"
+                >
+                  Logg inn med TIHLDE
+                </a>
+              )}
+              <p className="text-muted-foreground text-center text-sm">
+                Ny student uten TIHLDE-bruker?{" "}
+                <Link href="/registrering" className="underline">
+                  Registrer deg her
+                </Link>
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -199,7 +140,7 @@ function LoggInnSkjema() {
  */
 export default function LoggInnPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense>
       <LoggInnSkjema />
     </Suspense>
   );
