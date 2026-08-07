@@ -45,6 +45,7 @@ export async function createUser(
     klasse: string | null;
     isFadder: boolean;
     fadderOverride: boolean | null;
+    passwordHash: string | null;
     createdAt: Date;
   }> = {},
 ) {
@@ -63,6 +64,7 @@ export async function createUser(
       klasse: overrides.klasse ?? null,
       isFadder: overrides.isFadder ?? false,
       fadderOverride: overrides.fadderOverride ?? null,
+      passwordHash: overrides.passwordHash ?? null,
       ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
     },
   });

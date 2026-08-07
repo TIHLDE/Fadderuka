@@ -1,20 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { authClient } from "~/lib/auth-client";
 import { REGISTRATION_STUDIES } from "~/lib/majors";
 
 /**
- * "Logg inn med TIHLDE".
+ * "Logg inn med TIHLDE", plus the local fallback.
  *
- * No password field any more: the student types it on tihlde.org, and we get
- * back a scoped token. Everything this page still asks for is the one thing
- * their TIHLDE profile cannot tell us — see `nyttStudium` below.
+ * Almost everyone types their password on tihlde.org and comes back with a
+ * scoped token. The exception is students who registered here without an
+ * @stud.ntnu.no address: their TIHLDE account is not usable until it is
+ * activated, so they get the username/password form at the bottom.
  */
 function LoggInnSkjema() {
+  const router = useRouter();
+  const [lokal, setLokal] = useState(false);
+  const [laster, setLaster] = useState(false);
   // Den som begynner på et nytt studium i høst må si fra selv: TIHLDE-profilen
   // deres viser fortsatt bachelorlinja og bachelorkullet, så uten dette valget
   // leses de som 2. klassing — altså fadder — og slipper å betale.
@@ -29,6 +36,29 @@ function LoggInnSkjema() {
     nyttStudium && study
       ? `/api/auth/logg-inn?study=${encodeURIComponent(study)}`
       : "/api/auth/logg-inn";
+
+  async function handleLokalInnlogging(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setLaster(true);
+
+    const data = new FormData(e.currentTarget);
+    const { error: innloggingsfeil } = await authClient.localLogin({
+      user_id: (data.get("user_id") as string)?.trim(),
+      password: data.get("password") as string,
+    });
+
+    if (innloggingsfeil) {
+      setError(innloggingsfeil);
+      setLaster(false);
+      return;
+    }
+
+    // Forsiden uansett: betalingsmuren der slipper inn den som har betalt og
+    // tar imot den som ikke har, så det er ikke denne siden sin avgjørelse.
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-8">
@@ -125,6 +155,63 @@ function LoggInnSkjema() {
                   Registrer deg her
                 </Link>
               </p>
+
+              {/* Broen for de som registrerte seg her uten NTNU-e-post.
+                  TIHLDE-brukeren deres er ikke aktivert ennå, så «Logg inn med
+                  TIHLDE» avviser dem — men de har allerede betalt. Bevisst
+                  nedtonet: alle andre skal bruke knappen over. */}
+              <div className="border-input border-t pt-5">
+                {!lokal ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLokal(true);
+                      setError(null);
+                    }}
+                    className="text-muted-foreground w-full text-center text-sm underline"
+                  >
+                    Registrerte du deg her uten NTNU-e-post? Logg inn med
+                    brukernavn og passord
+                  </button>
+                ) : (
+                  <form onSubmit={handleLokalInnlogging} className="grid gap-4">
+                    <p className="text-muted-foreground text-sm">
+                      Bruk brukernavnet og passordet du valgte da du registrerte
+                      deg. Når TIHLDE-brukeren din er aktivert, logger du inn
+                      med TIHLDE i stedet.
+                    </p>
+                    <div className="grid gap-2">
+                      <Label htmlFor="lokal-user-id">Brukernavn</Label>
+                      <Input
+                        id="lokal-user-id"
+                        name="user_id"
+                        autoComplete="username"
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="lokal-passord">Passord</Label>
+                      <Input
+                        id="lokal-passord"
+                        name="password"
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      disabled={laster}
+                      className="h-12 w-full text-base"
+                    >
+                      {laster ? "Logger inn …" : "Logg inn"}
+                    </Button>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
         </Card>
