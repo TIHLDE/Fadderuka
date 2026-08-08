@@ -39,7 +39,7 @@ import {
   admissionYearFromFormClass,
   normaliseFadderName,
 } from "../src/lib/fadder-liste";
-import { studyLabelForFormCode } from "../src/lib/majors";
+import { findMajor, studyLabelForFormCode } from "../src/lib/majors";
 
 const db = new PrismaClient();
 
@@ -346,6 +346,7 @@ async function main() {
       name: true,
       email: true,
       klasse: true,
+      studieretning: true,
       isFadder: true,
       fadderOverride: true,
       hasPaid: true,
@@ -365,6 +366,7 @@ async function main() {
   const alreadySet: string[] = [];
   const unregistered: string[] = [];
   const ambiguous: string[] = [];
+  const mismatched: string[] = [];
   const needsRefund: string[] = [];
 
   for (const row of listed) {
@@ -382,6 +384,23 @@ async function main() {
 
     if (!user) {
       unregistered.push(label);
+      continue;
+    }
+
+    /**
+     * The same veto the login path applies, and for the same reason: a name is
+     * not an identity. Two students called Sivert Eikrem exist — one a Digsec
+     * fadder on this list, one a paying Digital transformasjon student who is
+     * not — and matching on the name alone exempted the wrong one, wiping out
+     * a payment that had actually been made. A programme that contradicts the
+     * list means this is a different person, so leave them alone and say so.
+     */
+    const listMajor = findMajor(row.studieretning);
+    const userMajor = findMajor(user.studieretning);
+    if (listMajor && userMajor && listMajor !== userMajor) {
+      mismatched.push(
+        `${label} — lista sier ${row.studieretning}, brukeren går ${user.studieretning}`,
+      );
       continue;
     }
 
@@ -422,6 +441,13 @@ async function main() {
   if (needsRefund.length > 0) {
     console.log(
       `\nHar betalt og må refunderes (${needsRefund.length}):\n  ${needsRefund.join("\n  ")}`,
+    );
+  }
+  if (mismatched.length > 0) {
+    console.log(
+      `\nHoppet over – navnet traff, men linja stemmer ikke (${mismatched.length}).\n` +
+        `Sannsynligvis en annen person med samme navn:\n  ` +
+        mismatched.join("\n  "),
     );
   }
   if (ambiguous.length > 0) {
