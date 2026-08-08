@@ -4,7 +4,12 @@ import { PageHeader, PageShell } from "~/components/layout/page-shell";
 import { Card } from "~/components/ui/card";
 import { auth } from "~/server/auth/config";
 import { db } from "~/server/db";
-import { areGrupperPublished, canSeeGruppe } from "~/server/gruppe-visibility";
+import {
+  areGrupperPublished,
+  canSeeGruppe,
+  GRUPPE_RELEASE_LABEL,
+  GRUPPE_WAIT_DESCRIPTION,
+} from "~/server/gruppe-visibility";
 import { GroupView } from "./group-view";
 
 export default async function FaddergroupPage() {
@@ -44,8 +49,8 @@ export default async function FaddergroupPage() {
         <PageHeader
           centered
           className="max-w-md"
-          title="Ingen faddergruppe"
-          description="Du er ikke tildelt en faddergruppe enda. Kontakt en administrator for å bli lagt til i en gruppe."
+          title="Du har ikke fått faddergruppe enda"
+          description={`${GRUPPE_WAIT_DESCRIPTION} Kom tilbake hit da, så finner du gruppa di, fadderne dine og resten av gjengen.`}
         />
       </PageShell>
     );
@@ -66,8 +71,8 @@ export default async function FaddergroupPage() {
         <PageHeader
           centered
           className="max-w-md"
-          title="Faddergruppene slippes snart"
-          description="Vi holder fortsatt gruppene hemmelige. Så snart de er klare finner du gruppa di, fadderne dine og resten av gjengen her."
+          title={`Faddergruppene slippes ${GRUPPE_RELEASE_LABEL}`}
+          description={`Vi holder fortsatt gruppene hemmelige. Kom tilbake hit ${GRUPPE_RELEASE_LABEL}, så finner du gruppa di, fadderne dine og resten av gjengen.`}
         />
       </PageShell>
     );
