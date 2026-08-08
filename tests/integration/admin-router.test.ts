@@ -98,6 +98,11 @@ describe("admin: brukere og grupper", () => {
     expect(
       (await db.user.findUniqueOrThrow({ where: { id: user.id } })).isVerified,
     ).toBe(true);
+    // «Uten gruppe»-knappen i Brukere-fanen går hit: verifiseringen skal stå
+    // på egne ben, uten å plassere noen i en faddergruppe.
+    expect(
+      await db.fadderGruppeMember.count({ where: { userId: user.id } }),
+    ).toBe(0);
   });
 
   it("nekter å slette verifiserte brukere", async () => {
