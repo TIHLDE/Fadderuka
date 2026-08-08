@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import {
   adminProcedure,
@@ -5,9 +6,10 @@ import {
   verifiedProcedure,
 } from "~/server/api/trpc";
 import {
-  getTihldeFadderukaEvents,
+  getPhotonFadderukaEvents,
+  PHOTON_EVENTS_TAG,
   type EventItem,
-} from "~/server/tihlde/events";
+} from "~/server/events/photon";
 
 export const activityRouter = createTRPCRouter({
   getAll: verifiedProcedure.query(({ ctx }) => {
@@ -18,13 +20,13 @@ export const activityRouter = createTRPCRouter({
 
   /**
    * Merged, date-sorted event feed shown inside the app: Fadderuka events from
-   * TIHLDE plus any locally-managed activities. Admins still create local
-   * activities via the mutations below; TIHLDE events are read-only.
+   * Photon plus any locally-managed activities. Admins still create local
+   * activities via the mutations below; Photon events are read-only.
    */
   getUpcoming: verifiedProcedure.query(async ({ ctx }): Promise<EventItem[]> => {
-    const [local, tihlde] = await Promise.all([
+    const [local, photon] = await Promise.all([
       ctx.db.activity.findMany({ orderBy: { date: "asc" } }),
-      getTihldeFadderukaEvents(),
+      getPhotonFadderukaEvents(),
     ]);
 
     const localEvents: EventItem[] = local.map((a) => ({
@@ -37,9 +39,20 @@ export const activityRouter = createTRPCRouter({
       source: "local",
     }));
 
-    return [...tihlde, ...localEvents].sort(
+    return [...photon, ...localEvents].sort(
       (a, b) => a.date.getTime() - b.date.getTime(),
     );
+  }),
+
+  /**
+   * Tømmer cachen for Photon-svarene, slik at neste sidevisning henter events
+   * på nytt med én gang i stedet for å vente på at cachen går ut.
+   */
+  refreshPhoton: adminProcedure.mutation(async () => {
+    // "max" utløper oppføringene uansett hvilken cache-profil de har.
+    revalidateTag(PHOTON_EVENTS_TAG, "max");
+    const events = await getPhotonFadderukaEvents();
+    return { count: events.length };
   }),
 
   create: adminProcedure
