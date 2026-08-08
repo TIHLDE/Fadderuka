@@ -16,6 +16,17 @@ import type { MemberRole } from "@prisma/client";
 /** Primærnøkkelen til den ene raden i `AppSetting`. */
 export const APP_SETTING_ID = "singleton";
 
+/**
+ * Når fadderbarna får gruppene sine. Står ett sted fordi teksten gjentas på
+ * forsiden og på /faddergruppe — flytter slippet seg, endres begge her.
+ */
+export const GRUPPE_RELEASE_LABEL = "på mandag";
+
+/** Forklaringen fadderbarn får mens de venter, uansett hvor de leser den. */
+export const GRUPPE_WAIT_DESCRIPTION =
+  `Fadderkom setter fortsatt sammen gruppene, så du er ikke tildelt en ` +
+  `faddergruppe enda. Alle fadderbarn får gruppa si ${GRUPPE_RELEASE_LABEL}.`;
+
 type Db = Pick<PrismaClient, "appSetting">;
 
 /** Når gruppene ble publisert, eller `null` hvis de fortsatt er skjult. */

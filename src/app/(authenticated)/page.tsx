@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import Countdown from "~/app/(authenticated)/components/countdown";
+import GruppeNotice from "~/app/(authenticated)/components/gruppe-notice";
 import Hero from "~/app/(authenticated)/components/hero";
 import HorizontalEventsList, {
   PLACEHOLDER_IMAGE,
@@ -26,6 +27,8 @@ export default async function Home() {
   return (
     <div className="relative flex w-full flex-1 flex-col overflow-hidden">
       <Hero />
+
+      <GruppeNotice />
 
       <div className="mt-auto flex flex-col gap-6 pb-8">
         {events[0] ? <Countdown activity={events[0]} /> : null}
