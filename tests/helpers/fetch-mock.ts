@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 
 /**
- * A tiny `fetch` stub for the two external APIs (Vipps and TIHLDE).
+ * A tiny `fetch` stub for the two external APIs (Vipps and Photon).
  *
  * Deliberately strict: an unmatched request throws instead of returning a
  * default. A test that silently talks to an unstubbed endpoint would otherwise
@@ -36,7 +36,7 @@ export function json(body: unknown, status = 200): Response {
   });
 }
 
-/** Build an error `Response` with a plain-text body, as Vipps/Lepton return. */
+/** Build an error `Response` with a plain-text body, as Vipps/Photon return. */
 export function text(body: string, status: number): Response {
   return new Response(body, { status });
 }

@@ -19,63 +19,74 @@ const localActivity = (overrides: Partial<{ title: string; date: Date }> = {}) =
   date: overrides.date ?? new Date("2026-08-10T18:00:00Z"),
 });
 
-/** Stub the TIHLDE events endpoints: list + one detail per event. */
-function stubTihldeEvents(
-  events: { id: number; title: string; start_date: string; category: string }[],
+/**
+ * Datoer relativt til nå. `getUpcoming` filtrerer bort passerte arrangementer,
+ * så faste datoer ville fått testene til å ryke av seg selv når den dagen kom.
+ */
+const inDays = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+
+/** Stub Photons event-endepunkter: lista + ett detaljkall per event. */
+function stubPhotonEvents(
+  events: { id: string; title: string; startTime: Date; category: string }[],
 ) {
+  const asItem = (e: (typeof events)[number]) => ({
+    id: e.id,
+    title: e.title,
+    location: "TIHLDE-kontoret",
+    startTime: e.startTime.toISOString(),
+    endTime: new Date(e.startTime.getTime() + 3 * 60 * 60 * 1000).toISOString(),
+    image: "",
+    category: { slug: e.category, label: e.category },
+    visibility: "public",
+  });
+
   fetchMock.on(
     "GET",
-    "/events/",
-    json({
-      results: events.map((e) => ({
-        id: e.id,
-        title: e.title,
-        start_date: e.start_date,
-        location: "TIHLDE-kontoret",
-        image: "",
-        category: { id: 1, text: e.category },
-      })),
-    }),
+    "/api/event",
+    json({ items: events.map(asItem), nextPage: null }),
   );
   for (const e of events) {
     fetchMock.on(
       "GET",
-      `/events/${e.id}/`,
-      json({
-        id: e.id,
-        title: e.title,
-        start_date: e.start_date,
-        location: "TIHLDE-kontoret",
-        image: "",
-        category: { id: 1, text: e.category },
-        description: "Fra TIHLDE",
-      }),
+      `/api/event/${e.id}`,
+      json({ ...asItem(e), description: "Fra Photon" }),
     );
   }
 }
 
 describe("activity.getUpcoming", () => {
-  it("fletter TIHLDE-arrangementer med lokale aktiviteter, sortert på dato", async () => {
+  it("fletter Photon-arrangementer med lokale aktiviteter, sortert på dato", async () => {
     await db.activity.create({
-      data: localActivity({ title: "Lokal", date: new Date("2026-08-10T18:00:00Z") }),
+      data: localActivity({ title: "Lokal", date: inDays(3) }),
     });
-    stubTihldeEvents([
-      { id: 1, title: "Fadderuka-event", start_date: "2026-08-09T18:00:00Z", category: "Fadderuka" },
-      { id: 2, title: "Annet", start_date: "2026-08-08T18:00:00Z", category: "Bedpres" },
+    stubPhotonEvents([
+      {
+        id: "evt-1",
+        title: "Fadderuka-event",
+        startTime: inDays(2),
+        category: "fadderuka",
+      },
+      {
+        id: "evt-2",
+        title: "Annet",
+        startTime: inDays(1),
+        category: "bedpres",
+      },
     ]);
 
     const events = await callerFor(await createMember()).activity.getUpcoming();
 
-    // Kun Fadderuka-kategorien fra TIHLDE, og lokal aktivitet sist (senest dato).
+    // Kun Fadderuka-kategorien fra Photon, og lokal aktivitet sist (senest dato).
     expect(events.map((e) => e.title)).toEqual(["Fadderuka-event", "Lokal"]);
-    expect(events.map((e) => e.source)).toEqual(["tihlde", "local"]);
-    // Tom bilde-streng fra TIHLDE skal bli null, ikke "".
+    expect(events.map((e) => e.source)).toEqual(["photon", "local"]);
+    // Tom bilde-streng fra Photon skal bli null, ikke "".
     expect(events[0]!.imageUrl).toBeNull();
   });
 
-  it("viser lokale aktiviteter selv om TIHLDE er nede", async () => {
+  it("viser lokale aktiviteter selv om Photon er nede", async () => {
     await db.activity.create({ data: localActivity({ title: "Lokal" }) });
-    fetchMock.on("GET", "/events/", text("service unavailable", 503));
+    fetchMock.on("GET", "/api/event", text("service unavailable", 503));
 
     const events = await callerFor(await createMember()).activity.getUpcoming();
 
@@ -83,27 +94,35 @@ describe("activity.getUpcoming", () => {
   });
 
   it("hopper over arrangementer der detaljkallet feiler", async () => {
-    stubTihldeEvents([
-      { id: 1, title: "Ok", start_date: "2026-08-09T18:00:00Z", category: "Fadderuka" },
+    stubPhotonEvents([
+      {
+        id: "evt-1",
+        title: "Ok",
+        startTime: inDays(2),
+        category: "fadderuka",
+      },
     ]);
     fetchMock.reset();
     fetchMock.on(
       "GET",
-      "/events/",
+      "/api/event",
       json({
-        results: [
+        items: [
           {
-            id: 1,
+            id: "evt-1",
             title: "Ok",
-            start_date: "2026-08-09T18:00:00Z",
             location: "",
+            startTime: inDays(2).toISOString(),
+            endTime: inDays(2).toISOString(),
             image: null,
-            category: { id: 1, text: "Fadderuka" },
+            category: { slug: "fadderuka", label: "Fadderuka" },
+            visibility: "public",
           },
         ],
+        nextPage: null,
       }),
     );
-    fetchMock.on("GET", "/events/1/", text("boom", 500));
+    fetchMock.on("GET", "/api/event/evt-1", text("boom", 500));
 
     await expect(
       callerFor(await createMember()).activity.getUpcoming(),
@@ -216,8 +235,6 @@ describe("aktiviteter er bak betalingsmuren", () => {
   it("slipper inn faddere, som aldri betaler", async () => {
     const fadder = await createUser({ isFadder: true, isVerified: false });
 
-    await expect(
-      callerFor(fadder).activity.getAll(),
-    ).resolves.toEqual([]);
+    await expect(callerFor(fadder).activity.getAll()).resolves.toEqual([]);
   });
 });

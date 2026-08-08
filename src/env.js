@@ -8,11 +8,6 @@ export const env = createEnv({
      * Photon as a confidential client; without them the login page can only say
      * that sign-in is not configured.
      */
-    /**
-     * Lepton, still the source for the public event list (`src/server/tihlde/
-     * events.ts`). Authentication no longer goes here — see the PHOTON_* vars.
-     */
-    TIHLDE_API_URL: z.string().url().default("https://api.tihlde.org"),
     PHOTON_OAUTH_CLIENT_ID: z.string().optional(),
     PHOTON_OAUTH_CLIENT_SECRET: z.string().optional(),
     /**
@@ -56,8 +51,9 @@ export const env = createEnv({
       .regex(/^[0-9a-fA-F]{64}$/, "SESSION_ENCRYPTION_KEY må være 64 hex-tegn")
       .optional(),
     /**
-     * Photon's API, which sends our email for us (`POST /api/email/send`).
-     * Fadderuka has no mail setup of its own — see `src/server/email/photon.ts`.
+     * Photon's API — TIHLDE's only backend now that Lepton is gone. It sends
+     * our email for us (`POST /api/email/send`, see `src/server/email/photon.ts`)
+     * and is the source of the public event list (`src/server/events/photon.ts`).
      */
     PHOTON_API_URL: z.string().url().default("https://photon.tihlde.org"),
     /**
@@ -77,7 +73,6 @@ export const env = createEnv({
   client: {},
 
   runtimeEnv: {
-    TIHLDE_API_URL: process.env.TIHLDE_API_URL,
     PHOTON_OAUTH_CLIENT_ID: process.env.PHOTON_OAUTH_CLIENT_ID,
     PHOTON_OAUTH_CLIENT_SECRET: process.env.PHOTON_OAUTH_CLIENT_SECRET,
     PHOTON_REGISTER_API_KEY: process.env.PHOTON_REGISTER_API_KEY,

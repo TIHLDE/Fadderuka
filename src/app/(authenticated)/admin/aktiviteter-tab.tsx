@@ -1,6 +1,13 @@
 "use client";
 
-import { CalendarDays, MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  CalendarDays,
+  MapPin,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -38,6 +45,7 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { Textarea } from "~/components/ui/textarea";
+import { cn } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 import { TIME_ZONE } from "~/lib/date";
 
@@ -97,6 +105,17 @@ export function AktiviteterTab() {
     },
   });
 
+  // Events fra Photon caches i ett minutt. Denne knappen tømmer cachen med én
+  // gang, for når man nettopp har lagt inn et event med Fadderuka-kategorien.
+  const refreshPhotonMutation = api.activity.refreshPhoton.useMutation({
+    onSuccess: ({ count }) => {
+      toast(`Hentet ${count} Fadderuka-event fra Photon`);
+    },
+    onError: () => {
+      toast.error("Klarte ikke å hente events fra Photon");
+    },
+  });
+
   const isValid =
     form.title.trim().length > 0 &&
     form.location.trim().length > 0 &&
@@ -151,10 +170,23 @@ export function AktiviteterTab() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 className="text-2xl">Aktiviteter ({activities?.length ?? 0})</h2>
-        <Button onClick={openCreate}>
-          <Plus />
-          Ny aktivitet
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => refreshPhotonMutation.mutate()}
+            disabled={refreshPhotonMutation.isPending}
+            title="Hent Fadderuka-events fra Photon på nytt"
+          >
+            <RefreshCw
+              className={cn(refreshPhotonMutation.isPending && "animate-spin")}
+            />
+            Hent fra Photon
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus />
+            Ny aktivitet
+          </Button>
+        </div>
       </div>
 
       <Card>
