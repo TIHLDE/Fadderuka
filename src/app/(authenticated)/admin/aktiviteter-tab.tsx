@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
+import { MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
 import { DateTimePicker } from "~/components/ui/date-time-picker";
@@ -52,6 +52,17 @@ export function AktiviteterTab() {
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
       toast("Aktivitet slettet");
+    },
+  });
+
+  // Events fra Photon caches i ett minutt. Denne knappen tømmer cachen med én
+  // gang, for når man nettopp har lagt inn et event med Fadderuka-kategorien.
+  const refreshPhotonMutation = api.activity.refreshPhoton.useMutation({
+    onSuccess: ({ count }) => {
+      toast(`Hentet ${count} Fadderuka-event fra Photon`);
+    },
+    onError: () => {
+      toast("Klarte ikke å hente events fra Photon");
     },
   });
 
@@ -111,16 +122,30 @@ export function AktiviteterTab() {
         <h3 className="text-lg font-semibold text-foreground">
           Aktiviteter ({activities?.length ?? 0})
         </h3>
-        {!showForm && (
+        <div className="flex items-center !gap-2">
           <button
             type="button"
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
+            onClick={() => refreshPhotonMutation.mutate()}
+            disabled={refreshPhotonMutation.isPending}
+            title="Hent Fadderuka-events fra Photon på nytt"
+            className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:opacity-50"
           >
-            <Plus className="h-4 w-4" />
-            Ny aktivitet
+            <RefreshCw
+              className={`h-4 w-4 ${refreshPhotonMutation.isPending ? "animate-spin" : ""}`}
+            />
+            Hent fra Photon
           </button>
-        )}
+          {!showForm && (
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
+            >
+              <Plus className="h-4 w-4" />
+              Ny aktivitet
+            </button>
+          )}
+        </div>
       </div>
 
       {showForm && (
