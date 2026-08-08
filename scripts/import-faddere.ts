@@ -14,12 +14,19 @@
  * made here survives every later login the same way.
  *
  * Usage:
- *   bun run scripts/import-faddere.ts <fil.xlsx> [--dry]
+ *   bun run scripts/import-faddere.ts <fil.xlsx> [--dry] [--paameldingsar=ÅÅÅÅ]
  *
- * Rows are matched against existing users by email first, then by full name.
- * Only existing users are touched — nothing is created, since a user record
- * here needs a TIHLDE account behind it. Faddere who have not signed into the
- * app yet are reported as "ikke registrert"; re-run the script once they have.
+ * Two things happen, in this order:
+ *
+ * 1. The whole sheet is stored in `FadderListEntry`. Most of it has no user
+ *    row yet — the form is filled in during spring, and someone who has never
+ *    signed in cannot be flagged — so the list is kept, and the auth callback
+ *    reads it on every first login. That is what makes this run once instead
+ *    of having to be repeated as people trickle in.
+ * 2. Users who *do* already exist are flagged immediately, matched by email
+ *    first and then by full name, so nobody has to log out and back in.
+ *
+ * No user is ever created here: a user row needs a TIHLDE account behind it.
  */
 
 import { readFileSync } from "node:fs";
@@ -28,11 +35,23 @@ import { inflateRawSync } from "node:zlib";
 
 import { PrismaClient } from "@prisma/client";
 
+import {
+  admissionYearFromFormClass,
+  normaliseFadderName,
+} from "../src/lib/fadder-liste";
+import { studyLabelForFormCode } from "../src/lib/majors";
+
 const db = new PrismaClient();
 
 const COLUMN_ALIASES = {
   name: ["hvaerdittfullenavn", "fulltnavn", "navn", "name", "fullname"],
   email: ["emailaddress", "email", "epost", "e-post", "epostadresse", "mail"],
+  // "Hvilken linje går du?" — answered with FadderKom's own abbreviations
+  // (Data, Digfor, Digsec, Digtrans), which `studyLabelForFormCode` resolves.
+  studieretning: ["hvilkenlinjegardu", "linje", "studieretning", "studie"],
+  // "Hvilken klasse går du?" — an ordinal at sign-up time, not an admission
+  // year; `admissionYearFromFormClass` converts it.
+  klasse: ["hvilkenklassegardu", "klasse", "kull", "arstrinn"],
 };
 
 // ---------------------------------------------------------------------------
@@ -178,24 +197,11 @@ export function normaliseHeader(cell: string): string {
 }
 
 /**
- * A name reduced to something two spellings of the same person share.
- *
- * Diacritics, hyphens and middle names are exactly where the form and the
- * TIHLDE profile disagree ("Alva Kjærstad-Leiner" vs "Alva Kjærstad Leiner"),
- * so fold them all away and compare the name parts as an unordered set.
+ * Re-exported so the login path and this importer fold names identically —
+ * a name that matches here but not there would be a fadder who is on the list
+ * and still gets a payment demand.
  */
-export function normaliseName(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .sort()
-    .join(" ");
-}
+export { normaliseFadderName as normaliseName };
 
 function findColumn(headers: string[], aliases: string[]): number {
   const exact = headers.findIndex((h) => aliases.includes(h));
@@ -207,6 +213,10 @@ function findColumn(headers: string[], aliases: string[]): number {
 interface ListedFadder {
   name: string;
   email: string;
+  /** Resolved MAJORS label, or null when the sheet used a code we don't know. */
+  studieretning: string | null;
+  /** Admission year derived from the sign-up-time class ordinal. */
+  kull: number | null;
 }
 
 /** Column letters in spreadsheet order, so header index maps back to a cell. */
@@ -218,7 +228,7 @@ function columnLetters(rows: Record<string, string>[]): string[] {
   );
 }
 
-function readFadderList(file: string): ListedFadder[] {
+function readFadderList(file: string, signupYear: number): ListedFadder[] {
   const rows = readSheetRows(file);
   const headerRow = rows[0];
   if (!headerRow) throw new Error("Tomt regneark.");
@@ -237,12 +247,19 @@ function readFadderList(file: string): ListedFadder[] {
 
   const nameLetter = letters[nameIndex];
   const emailLetter = letters[emailIndex];
+  const studieretningLetter = letters[findColumn(headers, COLUMN_ALIASES.studieretning)];
+  const klasseLetter = letters[findColumn(headers, COLUMN_ALIASES.klasse)];
+
+  const cell = (row: Record<string, string>, letter: string | undefined) =>
+    (letter ? (row[letter] ?? "") : "").trim();
 
   return rows
     .slice(1)
     .map((row) => ({
-      name: (nameLetter ? (row[nameLetter] ?? "") : "").trim(),
-      email: (emailLetter ? (row[emailLetter] ?? "") : "").trim().toLowerCase(),
+      name: cell(row, nameLetter),
+      email: cell(row, emailLetter).toLowerCase(),
+      studieretning: studyLabelForFormCode(cell(row, studieretningLetter)),
+      kull: admissionYearFromFormClass(cell(row, klasseLetter), signupYear),
     }))
     .filter((r) => r.name !== "" || r.email !== "");
 }
@@ -254,12 +271,74 @@ async function main() {
   const dryRun = flags.includes("--dry");
 
   if (!file) {
-    console.error("Bruk: bun run scripts/import-faddere.ts <fil.xlsx> [--dry]");
+    console.error(
+      "Bruk: bun run scripts/import-faddere.ts <fil.xlsx> [--dry] [--paameldingsar=ÅÅÅÅ]",
+    );
     process.exit(1);
   }
 
-  const listed = readFadderList(file);
-  console.log(`Leste ${listed.length} rader fra ${file}.\n`);
+  /**
+   * The year the form was filled in, which is what turns its class ordinal
+   * into an admission year. Defaults to now because the list is imported in
+   * the same year it is collected; overridable for re-running an old sheet.
+   */
+  const signupYear = Number(
+    flags.find((f) => f.startsWith("--paameldingsar="))?.split("=")[1] ??
+      new Date().getFullYear(),
+  );
+
+  const listed = readFadderList(file, signupYear);
+  console.log(
+    `Leste ${listed.length} rader fra ${file} (påmeldingsår ${signupYear}).\n`,
+  );
+
+  /**
+   * Store the list first, and unconditionally.
+   *
+   * Most of the sheet has no user row yet — the form is filled in during
+   * spring, and a fadder who has not signed in cannot be flagged. Persisting
+   * the list is what lets her first login recognise her instead of FadderKom
+   * having to re-run this script at exactly the right moment.
+   */
+  const unnamed = listed.filter((r) => r.name === "").length;
+  const named = listed.filter((r) => r.name !== "");
+  let stored = 0;
+  for (const row of named) {
+    if (!dryRun) {
+      await db.fadderListEntry.upsert({
+        where: { normalisedName: normaliseFadderName(row.name) },
+        create: {
+          name: row.name,
+          normalisedName: normaliseFadderName(row.name),
+          studieretning: row.studieretning,
+          kull: row.kull,
+          email: row.email || null,
+        },
+        update: {
+          name: row.name,
+          studieretning: row.studieretning,
+          kull: row.kull,
+          email: row.email || null,
+        },
+        select: { id: true },
+      });
+    }
+    stored++;
+  }
+  console.log(
+    `${dryRun ? "[tørrkjøring] " : ""}Lagret ${stored} rader i fadderlista` +
+      (unnamed > 0 ? ` (${unnamed} rader uten navn hoppet over)` : "") +
+      ".\n",
+  );
+
+  const uresolvedStudy = named.filter((r) => r.studieretning === null);
+  if (uresolvedStudy.length > 0) {
+    console.log(
+      `Uten gjenkjent linje (${uresolvedStudy.length}) – disse matcher på navn alene:\n  ` +
+        uresolvedStudy.map((r) => r.name).join("\n  ") +
+        "\n",
+    );
+  }
 
   const users = await db.user.findMany({
     select: {
@@ -278,7 +357,7 @@ async function main() {
   );
   const byName = new Map<string, typeof users>();
   for (const user of users) {
-    const key = normaliseName(user.name);
+    const key = normaliseFadderName(user.name);
     byName.set(key, [...(byName.get(key) ?? []), user]);
   }
 
@@ -293,7 +372,7 @@ async function main() {
 
     let user = row.email ? byEmail.get(row.email) : undefined;
     if (!user && row.name) {
-      const candidates = byName.get(normaliseName(row.name)) ?? [];
+      const candidates = byName.get(normaliseFadderName(row.name)) ?? [];
       if (candidates.length > 1) {
         ambiguous.push(`${label} — ${candidates.length} brukere med samme navn`);
         continue;
@@ -350,7 +429,8 @@ async function main() {
   }
   if (unregistered.length > 0) {
     console.log(
-      `\nIkke registrert i appen ennå (${unregistered.length}) – kjør skriptet på nytt når de har logget inn:\n  ` +
+      `\nIkke registrert i appen ennå (${unregistered.length}) – de står i fadderlista ` +
+        `og blir satt som fadder automatisk første gang de logger inn:\n  ` +
         unregistered.join("\n  "),
     );
   }
