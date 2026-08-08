@@ -56,6 +56,34 @@ export function slugForStudyLabel(
   );
 }
 
+/**
+ * The abbreviations FadderKom's sign-up form uses for "Hvilken linje går du?".
+ *
+ * The form offers four fixed choices and not one of them is spelled the way
+ * MAJORS spells it, so the fadder list has to be translated on import before
+ * it can be compared against a `studieretning` that came from TIHLDE.
+ */
+const FORM_STUDY_CODES: Record<string, Major> = {
+  data: "Dataingeniør",
+  digfor: "Digital Forretningsutvikling",
+  digsec: "Digital Infrastruktur og Cybersikkerhet",
+  digtrans: "Digital transformasjon",
+};
+
+/**
+ * Resolve a sign-up form "linje" answer to its canonical MAJORS label.
+ *
+ * Falls back to `findMajor` so a sheet that spells the programme out in full
+ * still resolves, and returns null for an answer we do not recognise — which
+ * the importer records as-is rather than guessing at.
+ */
+export function studyLabelForFormCode(
+  code: string | null | undefined,
+): Major | null {
+  if (!code) return null;
+  return FORM_STUDY_CODES[code.trim().toLowerCase()] ?? findMajor(code);
+}
+
 export const UKJENT_STUDIERETNING = "Ukjent studieretning";
 
 /** TIHLDE's casing for studieretning names isn't guaranteed, so match case-insensitively. */
