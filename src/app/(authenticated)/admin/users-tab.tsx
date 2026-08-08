@@ -106,6 +106,14 @@ function StudieVelger({
 export function UsersTab() {
   const [search, setSearch] = useState("");
   const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
+  // Tom streng = «Uten gruppe», og det er med vilje utgangspunktet: å verifisere
+  // er det viktige, plasseringen kan komme senere fra Faddergrupper-fanen.
+  const [valgtGruppeId, setValgtGruppeId] = useState("");
+  /** Åpner (eller lukker) verifiseringspanelet, alltid med gruppevalget nullstilt. */
+  const settVerifisering = (userId: string | null) => {
+    setVerifyingUserId(userId);
+    setValgtGruppeId("");
+  };
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [expandedMajor, setExpandedMajor] = useState<string | null>(null);
   // While searching, every group with a hit opens by itself — collapsing one
@@ -123,7 +131,7 @@ export function UsersTab() {
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
       void utils.admin.getGrupper.invalidate();
-      setVerifyingUserId(null);
+      settVerifisering(null);
       toast("Bruker verifisert og lagt til i gruppe som fadderbarn");
     },
     onError: (error) => {
@@ -136,7 +144,7 @@ export function UsersTab() {
   const verifyOnlyMutation = api.admin.setUserVerified.useMutation({
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
-      setVerifyingUserId(null);
+      settVerifisering(null);
       toast("Bruker verifisert uten gruppe", {
         description:
           "Legg brukeren i en faddergruppe senere fra Faddergrupper-fanen.",
@@ -230,6 +238,9 @@ export function UsersTab() {
       toast("Rolle oppdatert");
     },
   });
+
+  const verifiseringPagar =
+    verifyAndAssignMutation.isPending || verifyOnlyMutation.isPending;
 
   const unverifiedUsers = users?.filter((u) => !u.isVerified) ?? [];
   const verifiedUsers = users?.filter((u) => u.isVerified) ?? [];
@@ -338,56 +349,51 @@ export function UsersTab() {
                     <p className="text-muted-foreground text-xs font-medium">
                       Velg faddergruppe:
                     </p>
-                    <div className="flex flex-wrap !gap-2">
-                      {grupper?.map((gruppe) => (
-                        <button
-                          key={gruppe.id}
-                          type="button"
-                          onClick={() =>
-                            verifyAndAssignMutation.mutate({
-                              userId: user.id,
-                              gruppeId: gruppe.id,
-                            })
-                          }
-                          disabled={
-                            verifyAndAssignMutation.isPending ||
-                            verifyOnlyMutation.isPending
-                          }
-                          className="border-border bg-secondary text-foreground hover:bg-secondary/80 rounded-lg border !px-3 !py-1.5 text-xs font-medium transition disabled:opacity-60"
-                        >
-                          {gruppe.name}
-                        </button>
-                      ))}
+                    <div className="flex flex-wrap items-center !gap-2">
+                      <select
+                        value={valgtGruppeId}
+                        onChange={(e) => setValgtGruppeId(e.target.value)}
+                        disabled={verifiseringPagar}
+                        className="border-border bg-background text-foreground focus:ring-ring max-w-[13rem] rounded-lg border !px-2 !py-1.5 text-xs transition focus:ring-2 focus:outline-none disabled:opacity-60"
+                      >
+                        <option value="">Uten gruppe</option>
+                        {grupper?.map((gruppe) => (
+                          <option key={gruppe.id} value={gruppe.id}>
+                            {gruppe.name}
+                          </option>
+                        ))}
+                      </select>
                       <button
                         type="button"
                         onClick={() =>
-                          verifyOnlyMutation.mutate({
-                            userId: user.id,
-                            isVerified: true,
-                          })
+                          valgtGruppeId
+                            ? verifyAndAssignMutation.mutate({
+                                userId: user.id,
+                                gruppeId: valgtGruppeId,
+                              })
+                            : verifyOnlyMutation.mutate({
+                                userId: user.id,
+                                isVerified: true,
+                              })
                         }
-                        disabled={
-                          verifyAndAssignMutation.isPending ||
-                          verifyOnlyMutation.isPending
-                        }
-                        className="border-border text-muted-foreground hover:text-foreground hover:bg-secondary/60 rounded-lg border border-dashed !px-3 !py-1.5 text-xs font-medium transition disabled:opacity-60"
+                        disabled={verifiseringPagar}
+                        className="border-border bg-secondary text-foreground hover:bg-secondary/80 rounded-lg border !px-3 !py-1.5 text-xs font-semibold transition disabled:opacity-60"
                       >
-                        Uten gruppe
+                        {verifiseringPagar ? "Verifiserer..." : "Verifiser"}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setVerifyingUserId(null)}
+                        onClick={() => settVerifisering(null)}
                         className="text-muted-foreground hover:text-foreground rounded-lg !px-3 !py-1.5 text-xs transition"
                       >
                         Avbryt
                       </button>
                     </div>
-                    {(!grupper || grupper.length === 0) && (
-                      <p className="text-muted-foreground text-xs sm:text-right">
-                        Ingen faddergrupper enda — verifiser «Uten gruppe»,
-                        eller opprett en i Faddergrupper-fanen.
-                      </p>
-                    )}
+                    <p className="text-muted-foreground text-xs sm:text-right">
+                      {valgtGruppeId
+                        ? "Brukeren blir lagt til som fadderbarn i gruppa."
+                        : "Brukeren slipper inn nå, og kan plasseres i en gruppe senere."}
+                    </p>
                   </div>
                 ) : deletingUserId === user.id ? (
                   <div className="flex flex-col !gap-2 sm:items-end">
@@ -422,7 +428,7 @@ export function UsersTab() {
                   <div className="flex flex-wrap !gap-2 sm:shrink-0">
                     <button
                       type="button"
-                      onClick={() => setVerifyingUserId(user.id)}
+                      onClick={() => settVerifisering(user.id)}
                       className="border-success/40 bg-success/10 text-success hover:bg-success/20 inline-flex items-center !gap-2 rounded-xl border !px-4 !py-2 text-sm font-semibold transition"
                     >
                       <UserCheck className="h-4 w-4" />
