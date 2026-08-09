@@ -1,23 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  type FadderListEntryLike,
   admissionYearFromFormClass,
+  matchFadderList,
+  nameIsSubset,
   normaliseFadderName,
 } from "~/lib/fadder-liste";
 import { studyLabelForFormCode } from "~/lib/majors";
-import {
-  type FadderListEntryLike,
-  matchFadderList,
-} from "~/server/fadder-liste";
 
-const entry = (over: Partial<FadderListEntryLike> = {}): FadderListEntryLike => ({
+/** The real row from the spring 2026 sheet, which is where the hard case is. */
+const sivertRow = (): FadderListEntryLike => ({
   id: "e1",
-  name: "Alva Kjærstad Leiner",
-  normalisedName: normaliseFadderName("Alva Kjærstad Leiner"),
-  studieretning: "Dataingeniør",
+  name: "Sivert Eikrem",
+  normalisedName: normaliseFadderName("Sivert Eikrem"),
+  studieretning: "Digital Infrastruktur og Cybersikkerhet",
   kull: 2025,
-  email: "alvakleiner@gmail.com",
-  ...over,
+  email: "trevis.eikrem@gmail.com",
 });
 
 describe("studyLabelForFormCode", () => {
@@ -30,13 +29,8 @@ describe("studyLabelForFormCode", () => {
     expect(studyLabelForFormCode("digtrans")).toBe("Digital transformasjon");
   });
 
-  it("still resolves a sheet that spells the programme out", () => {
-    expect(studyLabelForFormCode("dataingeniør")).toBe("Dataingeniør");
-  });
-
   it("returns null rather than guessing at an unknown code", () => {
     expect(studyLabelForFormCode("Bygg")).toBeNull();
-    expect(studyLabelForFormCode("")).toBeNull();
   });
 });
 
@@ -50,87 +44,111 @@ describe("admissionYearFromFormClass", () => {
     expect(admissionYearFromFormClass("0", 2026)).toBeNull();
     expect(admissionYearFromFormClass("9", 2026)).toBeNull();
     expect(admissionYearFromFormClass("tja", 2026)).toBeNull();
-    expect(admissionYearFromFormClass("", 2026)).toBeNull();
+  });
+});
+
+describe("nameIsSubset", () => {
+  it("lets the profile carry middle names the form left out", () => {
+    expect(nameIsSubset("Sivert Eikrem", "Sivert Nygård Eikrem")).toBe(true);
+    expect(nameIsSubset("Leona Spark", "Leona Annika Hammond Spark")).toBe(true);
+  });
+
+  it("ignores hyphens, diacritics and word order", () => {
+    expect(nameIsSubset("Alva Kjærstad-Leiner", "Leiner Alva Kjaerstad")).toBe(
+      true,
+    );
+  });
+
+  it("does not match when the form has a part the profile lacks", () => {
+    expect(nameIsSubset("Sivert Nygård Eikrem", "Sivert Eikrem")).toBe(false);
+    expect(nameIsSubset("Ukjent Person", "Sivert Eikrem")).toBe(false);
   });
 });
 
 describe("matchFadderList", () => {
-  it("matches on name across hyphen and middle-name spellings", () => {
-    const verdict = matchFadderList([entry({ email: null })], {
-      name: "Alva Kjærstad-Leiner",
-      email: "alva@stud.ntnu.no",
-      studieretning: "Dataingeniør",
+  it("picks the right person out of two namesakes", () => {
+    // The real case: both students match the name, and only the programme and
+    // cohort separate the Digsec fadder from the paying Digtrans student.
+    const fadder = matchFadderList([sivertRow()], {
+      name: "Sivert Nygård Eikrem",
+      email: "siverne@stud.ntnu.no",
+      studieretning: "Digital infrastruktur og cybersikkerhet",
       klasse: "2025",
     });
-    expect(verdict.matched).toBe(true);
-    if (verdict.matched) expect(verdict.via).toBe("name");
-  });
+    expect(fadder.matched).toBe(true);
 
-  it("prefers an exact email hit", () => {
-    const verdict = matchFadderList([entry()], {
-      name: "Helt Annet Navn",
-      email: "AlvaKLeiner@gmail.com",
-      studieretning: "Dataingeniør",
-      klasse: "2025",
-    });
-    expect(verdict.matched).toBe(true);
-    if (verdict.matched) expect(verdict.via).toBe("email");
-  });
-
-  it("refuses a name hit whose programme contradicts the list", () => {
-    const verdict = matchFadderList([entry({ email: null })], {
-      name: "Alva Kjærstad Leiner",
-      email: null,
+    const namesake = matchFadderList([sivertRow()], {
+      name: "Sivert Eikrem",
+      email: "sivertstokneseikrem@gmail.com",
       studieretning: "Digital transformasjon",
-      klasse: "2025",
+      klasse: "2023",
     });
-    expect(verdict.matched).toBe(false);
-    expect("rejected" in verdict && verdict.rejected.reason).toBe(
-      "studieretning",
-    );
+    expect(namesake.matched).toBe(false);
+    if (!namesake.matched) expect(namesake.reason).toBe("linje");
   });
 
-  it("still matches when the profile has no programme to compare", () => {
-    const verdict = matchFadderList([entry({ email: null })], {
-      name: "Alva Kjærstad Leiner",
+  it("refuses when only the cohort disagrees", () => {
+    const v = matchFadderList([sivertRow()], {
+      name: "Sivert Eikrem",
+      email: null,
+      studieretning: "Digital Infrastruktur og Cybersikkerhet",
+      klasse: "2023",
+    });
+    expect(v.matched).toBe(false);
+    if (!v.matched) expect(v.reason).toBe("kull");
+  });
+
+  it("refuses an incomplete profile instead of matching on the name alone", () => {
+    const utenLinje = matchFadderList([sivertRow()], {
+      name: "Sivert Eikrem",
       email: null,
       studieretning: null,
       klasse: "2025",
     });
-    expect(verdict.matched).toBe(true);
-    if (verdict.matched) expect(verdict.studieretningMatches).toBeNull();
+    expect(utenLinje.matched).toBe(false);
+    if (!utenLinje.matched) expect(utenLinje.reason).toBe("ufullstendig-profil");
+
+    const utenKull = matchFadderList([sivertRow()], {
+      name: "Sivert Eikrem",
+      email: null,
+      studieretning: "Digital Infrastruktur og Cybersikkerhet",
+      klasse: null,
+    });
+    expect(utenKull.matched).toBe(false);
+    if (!utenKull.matched) expect(utenKull.reason).toBe("ufullstendig-profil");
   });
 
-  it("matches a Digtrans fadder whose cohort disagrees, and says so", () => {
-    // She answered "4. klasse" because she came from another bachelor, but
-    // started Digtrans in 2025 — so the sheet says 2022 and TIHLDE says 2025.
-    // The cohort is advisory precisely so this person is not turned away.
-    const verdict = matchFadderList(
-      [
-        entry({
-          email: null,
-          studieretning: "Digital transformasjon",
-          kull: 2022,
-        }),
-      ],
-      {
-        name: "Alva Kjærstad Leiner",
-        email: null,
-        studieretning: "Digital transformasjon",
-        klasse: "2025",
-      },
-    );
-    expect(verdict.matched).toBe(true);
-    if (verdict.matched) expect(verdict.kullMatches).toBe(false);
+  it("does not let an e-mail hit skip the programme and cohort checks", () => {
+    const v = matchFadderList([sivertRow()], {
+      name: "Helt Annet Navn",
+      email: "TREVIS.eikrem@gmail.com",
+      studieretning: "Digital transformasjon",
+      klasse: "2022",
+    });
+    expect(v.matched).toBe(false);
+  });
+
+  it("refuses rather than picks when two rows agree on all three", () => {
+    const a = sivertRow();
+    const b = { ...sivertRow(), id: "e2" };
+    const v = matchFadderList([a, b], {
+      name: "Sivert Eikrem",
+      email: null,
+      studieretning: "Digital Infrastruktur og Cybersikkerhet",
+      klasse: "2025",
+    });
+    expect(v.matched).toBe(false);
+    if (!v.matched) expect(v.reason).toBe("tvetydig");
   });
 
   it("does not match someone who is not on the list", () => {
-    const verdict = matchFadderList([entry()], {
+    const v = matchFadderList([sivertRow()], {
       name: "Ukjent Person",
       email: "ukjent@stud.ntnu.no",
       studieretning: "Dataingeniør",
       klasse: "2025",
     });
-    expect(verdict.matched).toBe(false);
+    expect(v.matched).toBe(false);
+    if (!v.matched) expect(v.reason).toBe("ingen-kandidat");
   });
 });

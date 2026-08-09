@@ -37,9 +37,10 @@ import { PrismaClient } from "@prisma/client";
 
 import {
   admissionYearFromFormClass,
+  matchFadderList,
   normaliseFadderName,
 } from "../src/lib/fadder-liste";
-import { findMajor, studyLabelForFormCode } from "../src/lib/majors";
+import { studyLabelForFormCode } from "../src/lib/majors";
 
 const db = new PrismaClient();
 
@@ -353,66 +354,61 @@ async function main() {
     },
   });
 
-  const byEmail = new Map(
-    users.flatMap((u) => (u.email ? [[u.email.toLowerCase(), u] as const] : [])),
-  );
-  const byName = new Map<string, typeof users>();
-  for (const user of users) {
-    const key = normaliseFadderName(user.name);
-    byName.set(key, [...(byName.get(key) ?? []), user]);
-  }
-
   const toUpdate = new Map<string, (typeof users)[number]>();
   const alreadySet: string[] = [];
   const unregistered: string[] = [];
-  const ambiguous: string[] = [];
   const mismatched: string[] = [];
   const needsRefund: string[] = [];
 
-  for (const row of listed) {
-    const label = `${row.name || "(uten navn)"} <${row.email || "uten e-post"}>`;
+  /**
+   * Match users against the list with the exact same function the login path
+   * uses. Two implementations of "is this the same person" would drift, and
+   * the one that drifts is the one that quietly exempts the wrong student.
+   */
+  const listEntries = named.map((row) => ({
+    id: normaliseFadderName(row.name),
+    name: row.name,
+    normalisedName: normaliseFadderName(row.name),
+    studieretning: row.studieretning,
+    kull: row.kull,
+    email: row.email || null,
+  }));
 
-    let user = row.email ? byEmail.get(row.email) : undefined;
-    if (!user && row.name) {
-      const candidates = byName.get(normaliseFadderName(row.name)) ?? [];
-      if (candidates.length > 1) {
-        ambiguous.push(`${label} — ${candidates.length} brukere med samme navn`);
-        continue;
+  const traff = new Set<string>();
+  for (const user of users) {
+    const verdict = matchFadderList(listEntries, {
+      name: user.name,
+      email: user.email,
+      studieretning: user.studieretning,
+      klasse: user.klasse,
+    });
+
+    if (!verdict.matched) {
+      // A near miss is a row worth a human's attention, not a silent skip.
+      if (verdict.reason !== "ingen-kandidat" && verdict.entry) {
+        mismatched.push(
+          `${user.name} <${user.email ?? "-"}> ligner "${verdict.entry.name}" — ` +
+            `${verdict.reason} stemmer ikke (lista: ${verdict.entry.studieretning ?? "-"} / ` +
+            `${verdict.entry.kull ?? "-"}, brukeren: ${user.studieretning ?? "-"} / ${user.klasse ?? "-"})`,
+        );
       }
-      user = candidates[0];
-    }
-
-    if (!user) {
-      unregistered.push(label);
       continue;
     }
 
-    /**
-     * The same veto the login path applies, and for the same reason: a name is
-     * not an identity. Two students called Sivert Eikrem exist — one a Digsec
-     * fadder on this list, one a paying Digital transformasjon student who is
-     * not — and matching on the name alone exempted the wrong one, wiping out
-     * a payment that had actually been made. A programme that contradicts the
-     * list means this is a different person, so leave them alone and say so.
-     */
-    const listMajor = findMajor(row.studieretning);
-    const userMajor = findMajor(user.studieretning);
-    if (listMajor && userMajor && listMajor !== userMajor) {
-      mismatched.push(
-        `${label} — lista sier ${row.studieretning}, brukeren går ${user.studieretning}`,
-      );
-      continue;
-    }
-
+    traff.add(verdict.entry.id);
+    const label = `${user.name} <${user.email ?? "-"}>`;
     if (user.isFadder && user.fadderOverride === true) {
       alreadySet.push(label);
       continue;
     }
-
     toUpdate.set(user.id, user);
     // A fadder who already paid is owed the money back; the admin panel's
     // payment overview is where that refund is issued.
-    if (user.hasPaid) needsRefund.push(`${user.name} <${user.email ?? ""}>`);
+    if (user.hasPaid) needsRefund.push(label);
+  }
+
+  for (const e of listEntries) {
+    if (!traff.has(e.id)) unregistered.push(`${e.name} <${e.email ?? "-"}>`);
   }
 
   for (const user of toUpdate.values()) {
@@ -435,7 +431,7 @@ async function main() {
 
   console.log(
     `\nFerdig. Satt som fadder: ${toUpdate.size}, allerede fadder: ${alreadySet.length}, ` +
-      `ikke registrert i appen: ${unregistered.length}, tvetydige navn: ${ambiguous.length}`,
+      `ikke registrert i appen: ${unregistered.length}`,
   );
 
   if (needsRefund.length > 0) {
@@ -449,9 +445,6 @@ async function main() {
         `Sannsynligvis en annen person med samme navn:\n  ` +
         mismatched.join("\n  "),
     );
-  }
-  if (ambiguous.length > 0) {
-    console.log(`\nTvetydige – sett manuelt i adminpanelet:\n  ${ambiguous.join("\n  ")}`);
   }
   if (unregistered.length > 0) {
     console.log(
