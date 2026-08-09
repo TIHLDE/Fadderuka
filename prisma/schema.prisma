@@ -133,6 +133,37 @@ model AppSetting {
     updatedAt         DateTime  @updatedAt
 }
 
+model FadderListEntry {
+    // FadderKom's fadder sign-up list, imported from their Google Form export.
+    //
+    // Stored rather than applied-and-forgotten because most of the list has no
+    // user record yet: the sheet is filled in during spring, and a fadder who
+    // has not signed into this app cannot be flagged until she does. Keeping
+    // the list means the very first login can recognise her, instead of an
+    // admin having to re-run the import and hope the timing lines up.
+    id String @id @default(cuid())
+    // The name exactly as written in the form, so the admin panel and the
+    // import log stay readable.
+    name String
+    // `normaliseFadderName(name)` — the key logins actually match on. Unique
+    // because a collision means two faddere share a name, and silently
+    // exempting the wrong one is worse than reporting it: the importer sets
+    // this aside as "tvetydig" for a human to resolve.
+    normalisedName String @unique
+    // The MAJORS label the form's abbreviation resolved to, or null when the
+    // sheet used a code we do not know. Second factor on the login match.
+    studieretning String?
+    // Admission year derived from the form's class-year answer. Advisory only:
+    // it is a self-reported ordinal from months earlier, so a mismatch is
+    // logged for FadderKom rather than used to refuse the exemption.
+    kull Int?
+    // Usually a private address, so a poor key on its own — but an exact hit
+    // is strong evidence, and it is free to keep.
+    email     String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
 model FadderGruppe {
     id            String   @id @default(cuid())
     name          String

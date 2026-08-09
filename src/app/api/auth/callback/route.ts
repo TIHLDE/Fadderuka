@@ -16,6 +16,7 @@ import {
 } from "~/server/auth/photon";
 import { db } from "~/server/db";
 import { deriveIsFadder } from "~/server/fadder";
+import { isOnFadderList } from "~/server/fadder-liste";
 
 /**
  * Where "Logg inn med TIHLDE" comes back to.
@@ -175,8 +176,32 @@ export async function GET(request: Request) {
     const klasse =
       profile.studyStartYear === null ? null : String(profile.studyStartYear);
 
+    /**
+     * FadderKom's sign-up list — the path that makes a fadder exempt on her
+     * very first login, before any admin has touched her and regardless of
+     * what her cohort says.
+     *
+     * Consulted only when nothing else has already decided: a pinned
+     * `fadderOverride` is an admin's explicit call and outranks a spreadsheet,
+     * and a "nytt studium i høst" declaration means she has just told us she
+     * is a fadderbarn. Skipping the query in those cases is also why a
+     * returning fadder costs no extra round-trip — the pin from her first
+     * login is what answers on every login after it.
+     */
+    const listedAsFadder =
+      existing?.fadderOverride == null && !declaredStudy
+        ? await isOnFadderList({
+            name: name ?? null,
+            email: email ?? null,
+            studieretning: profile.studyProgram ?? null,
+            klasse,
+          })
+        : false;
+
     const isFadder = deriveIsFadder({
-      fadderOverride: declaredStudy ? false : existing?.fadderOverride,
+      fadderOverride: declaredStudy
+        ? false
+        : listedAsFadder || existing?.fadderOverride,
       klasse,
       hasPaid: existing?.hasPaid === true,
       hasFadderMembership,
@@ -209,6 +234,11 @@ export async function GET(request: Request) {
       ? { studieretningOverride: declaredStudy, fadderOverride: false }
       : {};
 
+    // Pin the list's verdict. Without this the lookup would repeat on every
+    // login, and — worse — a fadder later un-flagged by an admin would be
+    // silently re-exempted the next time she signed in.
+    const listGrant = listedAsFadder ? { fadderOverride: true } : {};
+
     // Keyed on the row we resolved above rather than on `tihldeUserId`, since
     // an adopted row is still stored under the username the student typed.
     const user = existing
@@ -230,6 +260,7 @@ export async function GET(request: Request) {
             // so the bridge comes down rather than living on as a second,
             // weaker way in.
             passwordHash: null,
+            ...listGrant,
             ...studyGrant,
             ...accessGrant,
           },
@@ -244,6 +275,7 @@ export async function GET(request: Request) {
             klasse,
             isAdmin,
             isFadder,
+            ...listGrant,
             ...studyGrant,
             ...accessGrant,
           },
