@@ -5,8 +5,9 @@ import Logo from "~/components/ui/logo";
 import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
 import { cn } from "~/lib/utils";
 import { auth } from "~/server/auth/config";
+import { db } from "~/server/db";
 import { NotificationBell } from "./notification-bell";
-import { NAV_LINKS, getGroupLink } from "./nav-links";
+import { NAV_LINKS, getGroupLinks } from "./nav-links";
 import { UserArea } from "../user-area";
 
 const HeaderButtonsWrapper = async ({
@@ -16,6 +17,13 @@ const HeaderButtonsWrapper = async ({
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+
+  const isGruppeMember = session?.user
+    ? !!(await db.fadderGruppeMember.findFirst({
+        where: { userId: session.user.id },
+        select: { id: true },
+      }))
+    : false;
 
   return (
     <div
@@ -33,7 +41,10 @@ const HeaderButtonsWrapper = async ({
         >
           <Logo />
         </HeaderLink>
-        {[...NAV_LINKS, getGroupLink(session?.user?.isAdmin)].map(
+        {[
+          ...NAV_LINKS,
+          ...getGroupLinks(session?.user?.isAdmin, isGruppeMember),
+        ].map(
           ({ href, label }) => (
             <HeaderLink
               key={href}

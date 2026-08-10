@@ -8,10 +8,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { NAV_LINKS, getGroupLink } from "./nav-links";
+import { NAV_LINKS, getGroupLinks } from "./nav-links";
 
-export function MobileNavMenu({ isAdmin }: { isAdmin?: boolean }) {
-  const links = [...NAV_LINKS, getGroupLink(isAdmin)];
+export function MobileNavMenu({
+  isAdmin,
+  isGruppeMember,
+}: {
+  isAdmin?: boolean;
+  isGruppeMember?: boolean;
+}) {
+  const links = [...NAV_LINKS, ...getGroupLinks(isAdmin, isGruppeMember)];
 
   return (
     <DropdownMenu>
