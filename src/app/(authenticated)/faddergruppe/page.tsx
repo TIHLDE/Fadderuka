@@ -21,11 +21,6 @@ export default async function FaddergroupPage() {
     redirect("/registrering");
   }
 
-  // Admins see the admin panel instead
-  if (session.user.isAdmin) {
-    redirect("/admin");
-  }
-
   // Find the user's group membership
   const membership = await db.fadderGruppeMember.findFirst({
     where: { userId: session.user.id },

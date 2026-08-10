@@ -45,3 +45,8 @@ yarn-error.log*
 # idea files
 .idea
 .env*
+
+# lockfiles fra andre pakkeforvaltere (prosjektet bruker bun)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
