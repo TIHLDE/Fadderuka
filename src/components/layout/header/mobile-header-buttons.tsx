@@ -1,24 +1,13 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import Logo from "~/components/ui/logo";
 import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
-import { auth } from "~/server/auth/config";
-import { db } from "~/server/db";
+import getHeaderUserContext from "./get-header-user-context";
 import { MobileNavMenu } from "./mobile-nav-menu";
 import { NotificationBell } from "./notification-bell";
 import { UserArea } from "../user-area";
 
 export default async function MobileHeaderButtons() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  const isGruppeMember = session?.user
-    ? !!(await db.fadderGruppeMember.findFirst({
-        where: { userId: session.user.id },
-        select: { id: true },
-      }))
-    : false;
+  const { session, isGruppeMember } = await getHeaderUserContext();
 
   return (
     <div className="flex w-full items-center justify-between">

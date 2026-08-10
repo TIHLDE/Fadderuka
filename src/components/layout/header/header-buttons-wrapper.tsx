@@ -1,29 +1,18 @@
-import { headers } from "next/headers";
 import React from "react";
 import HeaderLink from "~/components/ui/header-link";
 import Logo from "~/components/ui/logo";
 import { ThemeToggle } from "~/components/ui/theme-mode-toggler";
 import { cn } from "~/lib/utils";
-import { auth } from "~/server/auth/config";
-import { db } from "~/server/db";
 import { NotificationBell } from "./notification-bell";
 import { NAV_LINKS, getGroupLinks } from "./nav-links";
+import getHeaderUserContext from "./get-header-user-context";
 import { UserArea } from "../user-area";
 
 const HeaderButtonsWrapper = async ({
   className,
   ...props
 }: React.HTMLProps<HTMLDivElement>) => {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  const isGruppeMember = session?.user
-    ? !!(await db.fadderGruppeMember.findFirst({
-        where: { userId: session.user.id },
-        select: { id: true },
-      }))
-    : false;
+  const { session, isGruppeMember } = await getHeaderUserContext();
 
   return (
     <div
