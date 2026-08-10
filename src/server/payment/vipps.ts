@@ -26,7 +26,9 @@ export class VippsError extends Error {
 /** Raised when the server is missing the Vipps credentials it needs. */
 export class VippsNotConfiguredError extends VippsError {
   constructor() {
-    super("Vipps er ikke konfigurert på serveren");
+    super(
+      "Betaling er midlertidig utilgjengelig. Si fra til en fadder — det er ikke noe galt med Vipps-en din.",
+    );
     this.name = "VippsNotConfiguredError";
   }
 }
@@ -116,7 +118,9 @@ async function getAccessToken(cfg: VippsConfig): Promise<string> {
       response.status,
       await response.text(),
     );
-    throw new VippsError("Kunne ikke hente Vipps tilgangstoken");
+    throw new VippsError(
+            "Får ikke kontakt med Vipps akkurat nå. Vent litt og prøv igjen.",
+        );
   }
 
   const data = (await response.json()) as { access_token: string };
@@ -199,7 +203,9 @@ export async function createPayment(
       response.status,
       await response.text(),
     );
-    throw new VippsError("Kunne ikke opprette Vipps betaling");
+    throw new VippsError(
+            "Klarte ikke å starte betalingen i Vipps. Vent litt og prøv igjen.",
+        );
   }
 
   const data = (await response.json()) as { redirectUrl: string };
@@ -279,8 +285,111 @@ async function capture(
   }
 }
 
+/**
+ * Refund a captured payment in full.
+ *
+ * Vipps only refunds money that has actually been captured, so the caller must
+ * check the snapshot first — this function assumes that has happened. The
+ * idempotency key is derived from the orderId, so a double-click or a retry
+ * refunds once, not twice.
+ */
+async function refund(
+  cfg: VippsConfig,
+  accessToken: string,
+  orderId: string,
+  amountOre: number,
+): Promise<void> {
+  const response = await fetch(
+    `${cfg.apiUrl}/epayment/v1/payments/${orderId}/refund`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "Ocp-Apim-Subscription-Key": cfg.subscriptionKey,
+        "Merchant-Serial-Number": cfg.merchantSerialNumber,
+        "Idempotency-Key": idempotencyKey(orderId, "refund"),
+      },
+      body: JSON.stringify({
+        modificationAmount: { currency: "NOK", value: amountOre },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    console.error("Vipps refund error:", response.status, body);
+    // 403 here almost always means the API key lacks refund permission on the
+    // merchant account — say so, since no amount of retrying will fix it.
+    if (response.status === 403) {
+      throw new VippsError(
+        "Vipps avviste refusjonen (403). Sjekk at API-nøkkelen har refusjonstilgang på salgsstedet.",
+      );
+    }
+    throw new VippsError("Kunne ikke refundere betalingen i Vipps");
+  }
+}
+
+/**
+ * Refund a payment in full and unmark the owning user as paid.
+ *
+ * Vipps is the source of truth: we read the live payment first and refuse if
+ * there is nothing left to refund, so a double submit can't move money twice.
+ * `isVerified` is deliberately left alone — it also gates account access that
+ * an admin may have granted for other reasons, and revoking it here would be a
+ * surprising side effect of a payment action.
+ */
+export async function refundPayment(
+  orderId: string,
+): Promise<{ refunded: number }> {
+  const cfg = requireConfig();
+  const accessToken = await getAccessToken(cfg);
+  const payment = await getPayment(cfg, accessToken, orderId);
+
+  const { capturedAmount, refundedAmount } = payment.aggregate;
+  const refundable = capturedAmount.value - refundedAmount.value;
+
+  if (capturedAmount.value <= 0) {
+    throw new VippsError(
+      "Betalingen er ikke trukket i Vipps, så det finnes ingenting å refundere.",
+    );
+  }
+  if (refundable <= 0) {
+    throw new VippsError("Betalingen er allerede refundert i sin helhet.");
+  }
+
+  await refund(cfg, accessToken, orderId, refundable);
+
+  const order = await db.payment.findUnique({
+    where: { orderId },
+    select: { userId: true },
+  });
+  const userId = order?.userId ?? parseUserIdFromOrderId(orderId);
+
+  await db.payment.updateMany({
+    where: { orderId },
+    data: { status: "REFUNDED" },
+  });
+
+  if (userId) {
+    await db.user.update({ where: { id: userId }, data: { hasPaid: false } });
+  }
+
+  return { refunded: refundable };
+}
+
 /** Map a live Vipps payment to our stored status. */
 function toStatus(payment: VippsPayment): PaymentStatus {
+  // Checked before the capture branch: a fully refunded order still reports a
+  // non-zero `capturedAmount`, so without this a later sync would flip it back
+  // to CAPTURED and re-mark the user as paid.
+  if (
+    payment.aggregate.refundedAmount.value > 0 &&
+    payment.aggregate.refundedAmount.value >=
+      payment.aggregate.capturedAmount.value
+  ) {
+    return "REFUNDED";
+  }
   if (payment.aggregate.capturedAmount.value >= PAYMENT_AMOUNT_ORE) {
     return "CAPTURED";
   }
@@ -296,6 +405,99 @@ function toStatus(payment: VippsPayment): PaymentStatus {
     default:
       return "CREATED";
   }
+}
+
+/** A single entry from the Vipps payment event log, normalised for the admin UI. */
+export interface VippsPaymentEvent {
+  /** What happened: CREATED, AUTHORIZED, CAPTURED, ABORTED, … */
+  action: string;
+  /** Amount in øre this event applied to, when Vipps reports one. */
+  amount: number | null;
+  /** ISO timestamp of the event. */
+  timestamp: string | null;
+  success: boolean;
+}
+
+/** Live view of a payment, straight from Vipps. */
+export interface VippsPaymentSnapshot {
+  state: VippsPayment["state"];
+  /** Amounts in øre. */
+  authorized: number;
+  captured: number;
+  refunded: number;
+  cancelled: number;
+}
+
+/**
+ * Read a payment's current state from Vipps. Vipps — not our database — is the
+ * source of truth, so this is what the admin detail view shows when an order
+ * looks wrong locally.
+ */
+export async function fetchPaymentSnapshot(
+  orderId: string,
+): Promise<VippsPaymentSnapshot> {
+  const cfg = requireConfig();
+  const accessToken = await getAccessToken(cfg);
+  const payment = await getPayment(cfg, accessToken, orderId);
+
+  return {
+    state: payment.state,
+    authorized: payment.aggregate.authorizedAmount.value,
+    captured: payment.aggregate.capturedAmount.value,
+    refunded: payment.aggregate.refundedAmount.value,
+    cancelled: payment.aggregate.cancelledAmount.value,
+  };
+}
+
+/**
+ * Fetch the payment's event log — the same timeline the Vipps portal shows
+ * (reserved → captured → …), with timestamps. This is where an admin sees
+ * exactly *when* something happened, including failed attempts.
+ *
+ * Vipps has used both `name` and `paymentAction` for the event label across API
+ * revisions, so we accept either.
+ */
+export async function fetchPaymentEvents(
+  orderId: string,
+): Promise<VippsPaymentEvent[]> {
+  const cfg = requireConfig();
+  const accessToken = await getAccessToken(cfg);
+
+  const response = await fetch(
+    `${cfg.apiUrl}/epayment/v1/payments/${orderId}/events`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Ocp-Apim-Subscription-Key": cfg.subscriptionKey,
+        "Merchant-Serial-Number": cfg.merchantSerialNumber,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    console.error(
+      "Vipps payment events error:",
+      response.status,
+      await response.text(),
+    );
+    throw new VippsError("Kunne ikke hente hendelsesloggen fra Vipps");
+  }
+
+  const data = (await response.json()) as {
+    name?: string;
+    paymentAction?: string;
+    amount?: { value?: number };
+    timestamp?: string;
+    timeStamp?: string;
+    success?: boolean;
+  }[];
+
+  return data.map((event) => ({
+    action: event.name ?? event.paymentAction ?? "UKJENT",
+    amount: event.amount?.value ?? null,
+    timestamp: event.timestamp ?? event.timeStamp ?? null,
+    success: event.success ?? true,
+  }));
 }
 
 /**
@@ -335,6 +537,15 @@ export async function settlePayment(
 
   // No-op when the row is absent (updateMany avoids a P2025 on a missing order).
   await db.payment.updateMany({ where: { orderId }, data: { status } });
+
+  // Stamp the capture time once. Scoped to `capturedAt: null` so a re-settle
+  // (webhook retry, admin sync) never moves an already-recorded payment time.
+  if (paid) {
+    await db.payment.updateMany({
+      where: { orderId, capturedAt: null },
+      data: { capturedAt: new Date() },
+    });
+  }
 
   if (paid && userId) {
     await db.user.update({

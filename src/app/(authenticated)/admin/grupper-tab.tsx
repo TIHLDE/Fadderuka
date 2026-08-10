@@ -3,6 +3,8 @@
 import {
   ChevronDown,
   ChevronUp,
+  Eye,
+  EyeOff,
   Plus,
   Trash2,
   UserMinus,
@@ -10,7 +12,7 @@ import {
 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { compareMajorLabels, findMajor, UKJENT_STUDIERETNING } from "~/lib/majors";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
@@ -43,14 +45,14 @@ export function GrupperTab() {
     onSuccess: () => {
       void utils.admin.getGrupper.invalidate();
       setNewGruppeName("");
-      toast({ title: "Faddergruppe opprettet" });
+      toast("Faddergruppe opprettet");
     },
   });
 
   const deleteMutation = api.admin.deleteGruppe.useMutation({
     onSuccess: () => {
       void utils.admin.getGrupper.invalidate();
-      toast({ title: "Faddergruppe slettet" });
+      toast("Faddergruppe slettet");
     },
   });
 
@@ -59,10 +61,10 @@ export function GrupperTab() {
       void utils.admin.getGrupper.invalidate();
       void utils.admin.getUsers.invalidate();
       setAddMemberState(null);
-      toast({ title: "Medlem lagt til" });
+      toast("Medlem lagt til");
     },
     onError: (err) => {
-      toast({ title: err.message, variant: "destructive" });
+      toast.error(err.message);
     },
   });
 
@@ -70,7 +72,7 @@ export function GrupperTab() {
     onSuccess: () => {
       void utils.admin.getGrupper.invalidate();
       void utils.admin.getUsers.invalidate();
-      toast({ title: "Medlem fjernet" });
+      toast("Medlem fjernet");
     },
   });
 
@@ -78,7 +80,7 @@ export function GrupperTab() {
     onSuccess: () => {
       void utils.admin.getGrupper.invalidate();
       void utils.admin.getUsers.invalidate();
-      toast({ title: "Rolle oppdatert" });
+      toast("Rolle oppdatert");
     },
   });
 
@@ -88,12 +90,12 @@ export function GrupperTab() {
     createMutation.mutate({ name: newGruppeName.trim() });
   };
 
-  // Get verified users who are not in the currently expanded group
-  const getAvailableUsers = (gruppeId: string) => {
-    if (!users || !grupper) return [];
-    const gruppe = grupper.find((g) => g.id === gruppeId);
-    const memberIds = new Set(gruppe?.members.map((m) => m.userId) ?? []);
-    return users.filter((u) => u.isVerified && !memberIds.has(u.id));
+  // Verified users who are not in a faddergruppe at all. A user belongs to
+  // exactly one group, so someone already placed elsewhere must be removed
+  // from that group before they can be added here.
+  const getAvailableUsers = () => {
+    if (!users) return [];
+    return users.filter((u) => u.isVerified && u.memberships.length === 0);
   };
 
   // Categorize grupper by major, sorted in canonical major order
@@ -111,26 +113,28 @@ export function GrupperTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center !py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#73aac4] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-transparent" />
       </div>
     );
   }
 
   return (
     <div className="!space-y-6">
+      <PublicationBanner />
+
       {/* Create new gruppe */}
-      <form onSubmit={handleCreateGruppe} className="flex !gap-3">
+      <form onSubmit={handleCreateGruppe} className="flex flex-wrap !gap-3">
         <input
           type="text"
           placeholder="Ny faddergruppe navn..."
           value={newGruppeName}
           onChange={(e) => setNewGruppeName(e.target.value)}
-          className="flex-1 max-w-sm rounded-xl border border-[#73aac4]/40 bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+          className="flex-1 max-w-sm rounded-xl border border-border bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <button
           type="submit"
           disabled={createMutation.isPending || !newGruppeName.trim()}
-          className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-secondary !px-4 !py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2.5 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus className="h-4 w-4" />
           Opprett
@@ -142,7 +146,7 @@ export function GrupperTab() {
         {groupsByMajor.map(([major, grupperIMajor]) => (
           <section key={major} className="!space-y-4">
             <div className="flex items-center !gap-3">
-              <h3 className="text-base font-semibold text-[#90dfed]">
+              <h3 className="text-base font-semibold text-primary">
                 {major}
               </h3>
               <span className="text-sm text-muted-foreground">
@@ -163,18 +167,18 @@ export function GrupperTab() {
                 return (
                   <div
                     key={gruppe.id}
-                    className="rounded-xl border border-[#73aac4]/40 bg-[color:var(--surface-soft)] backdrop-blur overflow-hidden"
+                    className="rounded-xl border border-border bg-card overflow-hidden"
                   >
                     {/* Gruppe header */}
                     <button
                       type="button"
-                      className="flex w-full items-center justify-between !px-5 !py-4 text-left transition hover:bg-muted/50"
+                      className="flex w-full items-center justify-between !gap-3 !px-5 !py-4 text-left transition hover:bg-muted/50"
                       onClick={() =>
                         setExpandedGruppe(isExpanded ? null : gruppe.id)
                       }
                     >
-                      <div className="flex items-center !gap-3">
-                        <h3 className="text-lg font-semibold text-foreground">
+                      <div className="flex min-w-0 flex-wrap items-center !gap-x-3">
+                        <h3 className="text-lg font-semibold break-words text-foreground">
                           {gruppe.name}
                         </h3>
                         <span className="text-sm text-muted-foreground">
@@ -182,17 +186,17 @@ export function GrupperTab() {
                         </span>
                       </div>
                       {isExpanded ? (
-                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                        <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                        <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground" />
                       )}
                     </button>
 
                     {isExpanded && (
-                      <div className="border-t border-[#73aac4]/20 !px-5 !py-4 !space-y-5">
+                      <div className="border-t border-border !px-5 !py-4 !space-y-5">
                         {/* Faddere section */}
                         <div className="!space-y-2">
-                          <h4 className="text-sm font-semibold text-[#90dfed]">
+                          <h4 className="text-sm font-semibold text-primary">
                             Faddere ({faddere.length})
                           </h4>
                           {faddere.length > 0 ? (
@@ -200,17 +204,20 @@ export function GrupperTab() {
                               {faddere.map((member) => (
                                 <li
                                   key={member.id}
-                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
+                                  className="flex items-center justify-between !gap-3 rounded-lg !px-3 !py-2 hover:bg-muted/50"
                                 >
-                                  <div>
+                                  {/* E-postene er lange nok til å skyve
+                                      knappene ut av kortet på mobil, så navn og
+                                      e-post legger seg under hverandre der. */}
+                                  <div className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:!gap-2">
                                     <span className="text-sm text-foreground">
                                       {member.user.name}
                                     </span>
-                                    <span className="!ml-2 text-xs text-muted-foreground">
+                                    <span className="text-xs break-all text-muted-foreground">
                                       {member.user.email}
                                     </span>
                                   </div>
-                                  <div className="flex items-center !gap-2">
+                                  <div className="flex shrink-0 items-center !gap-2">
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -231,7 +238,7 @@ export function GrupperTab() {
                                           membershipId: member.id,
                                         })
                                       }
-                                      className="!p-1 text-red-400/70 hover:text-red-400 transition"
+                                      className="!p-1 text-destructive/70 hover:text-destructive transition"
                                       title="Fjern fra gruppen"
                                     >
                                       <UserMinus className="h-4 w-4" />
@@ -249,7 +256,7 @@ export function GrupperTab() {
 
                         {/* Fadderbarn section */}
                         <div className="!space-y-2">
-                          <h4 className="text-sm font-semibold text-[#6495e6]">
+                          <h4 className="text-sm font-semibold text-primary">
                             Fadderbarn ({fadderbarn.length})
                           </h4>
                           {fadderbarn.length > 0 ? (
@@ -257,17 +264,20 @@ export function GrupperTab() {
                               {fadderbarn.map((member) => (
                                 <li
                                   key={member.id}
-                                  className="flex items-center justify-between rounded-lg !px-3 !py-2 hover:bg-muted/50"
+                                  className="flex items-center justify-between !gap-3 rounded-lg !px-3 !py-2 hover:bg-muted/50"
                                 >
-                                  <div>
+                                  {/* E-postene er lange nok til å skyve
+                                      knappene ut av kortet på mobil, så navn og
+                                      e-post legger seg under hverandre der. */}
+                                  <div className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:!gap-2">
                                     <span className="text-sm text-foreground">
                                       {member.user.name}
                                     </span>
-                                    <span className="!ml-2 text-xs text-muted-foreground">
+                                    <span className="text-xs break-all text-muted-foreground">
                                       {member.user.email}
                                     </span>
                                   </div>
-                                  <div className="flex items-center !gap-2">
+                                  <div className="flex shrink-0 items-center !gap-2">
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -288,7 +298,7 @@ export function GrupperTab() {
                                           membershipId: member.id,
                                         })
                                       }
-                                      className="!p-1 text-red-400/70 hover:text-red-400 transition"
+                                      className="!p-1 text-destructive/70 hover:text-destructive transition"
                                       title="Fjern fra gruppen"
                                     >
                                       <UserMinus className="h-4 w-4" />
@@ -309,7 +319,7 @@ export function GrupperTab() {
                           <AddMemberForm
                             gruppeId={gruppe.id}
                             role={addMemberState.role}
-                            availableUsers={getAvailableUsers(gruppe.id)}
+                            availableUsers={getAvailableUsers()}
                             onAdd={(userId) =>
                               addMemberMutation.mutate({
                                 userId,
@@ -330,7 +340,7 @@ export function GrupperTab() {
                                   role: "FADDER",
                                 })
                               }
-                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#90dfed] transition hover:bg-muted"
+                              className="inline-flex items-center !gap-1.5 rounded-lg border border-border !px-3 !py-1.5 text-xs font-medium text-primary transition hover:bg-muted"
                             >
                               <UserPlus className="h-3.5 w-3.5" />
                               Legg til fadder
@@ -343,7 +353,7 @@ export function GrupperTab() {
                                   role: "FADDERBARN",
                                 })
                               }
-                              className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 !px-3 !py-1.5 text-xs font-medium text-[#6495e6] transition hover:bg-muted"
+                              className="inline-flex items-center !gap-1.5 rounded-lg border border-border !px-3 !py-1.5 text-xs font-medium text-primary transition hover:bg-muted"
                             >
                               <UserPlus className="h-3.5 w-3.5" />
                               Legg til fadderbarn
@@ -352,7 +362,7 @@ export function GrupperTab() {
                         )}
 
                         {/* Delete gruppe button */}
-                        <div className="border-t border-[#73aac4]/10 !pt-3">
+                        <div className="border-t border-border !pt-3">
                           <button
                             type="button"
                             onClick={() => {
@@ -365,7 +375,7 @@ export function GrupperTab() {
                               }
                             }}
                             disabled={deleteMutation.isPending}
-                            className="inline-flex items-center !gap-1.5 text-xs text-red-400/70 transition hover:text-red-400"
+                            className="inline-flex items-center !gap-1.5 text-xs text-destructive/70 transition hover:text-destructive"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Slett gruppe
@@ -389,6 +399,103 @@ export function GrupperTab() {
       </div>
     </div>
   );
+}
+
+/**
+ * Bryteren som slipper faddergruppene til fadderbarna — alle på én gang.
+ *
+ * Ligger øverst i fanen fordi den er statusen man vil se før man rører noe
+ * annet: er gruppene fortsatt hemmelige, eller er de ute?
+ */
+function PublicationBanner() {
+  const utils = api.useUtils();
+  const { data, isLoading } = api.admin.getGruppePublication.useQuery();
+
+  const setPublication = api.admin.setGruppePublication.useMutation({
+    onSuccess: (result) => {
+      void utils.admin.getGruppePublication.invalidate();
+      toast(
+        result.published
+          ? "Faddergruppene er publisert"
+          : "Faddergruppene er skjult igjen",
+      );
+    },
+    onError: (err) => {
+      toast.error(err.message);
+    },
+  });
+
+  if (isLoading || !data) return null;
+
+  const { published, publishedAt } = data;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between !gap-4 rounded-xl border border-border bg-card !px-5 !py-4">
+      <div className="!space-y-1">
+        <div className="flex items-center !gap-2">
+          {published ? (
+            <Eye className="h-4 w-4 text-primary" />
+          ) : (
+            <EyeOff className="h-4 w-4 text-muted-foreground" />
+          )}
+          <h3 className="text-base font-semibold text-foreground">
+            {published
+              ? "Faddergruppene er publisert"
+              : "Faddergruppene er skjult"}
+          </h3>
+        </div>
+        <p className="max-w-xl text-sm text-muted-foreground">
+          {published
+            ? `Fadderbarna ser gruppa si, medlemmene og meldingene. Publisert ${formatDateTime(publishedAt)}.`
+            : "Fadderbarna ser hverken gruppa, medlemmene eller meldingene. Faddere og admins ser alt hele tiden."}
+        </p>
+      </div>
+      <button
+        type="button"
+        disabled={setPublication.isPending}
+        onClick={() => {
+          if (
+            published &&
+            !confirm(
+              "Skjule faddergruppene igjen? Fadderbarna mister tilgangen til gruppa si.",
+            )
+          ) {
+            return;
+          }
+          setPublication.mutate({ published: !published });
+        }}
+        className={`inline-flex items-center !gap-2 rounded-xl !px-4 !py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+          published
+            ? "border border-border bg-secondary text-foreground hover:bg-secondary/80"
+            : "bg-primary text-primary-foreground hover:bg-primary/90"
+        }`}
+      >
+        {published ? (
+          <>
+            <EyeOff className="h-4 w-4" />
+            Skjul igjen
+          </>
+        ) : (
+          <>
+            <Eye className="h-4 w-4" />
+            Publiser til fadderbarna
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+/** Dato på norsk format, eller «—» når tidspunktet mangler. */
+function formatDateTime(value: Date | string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleString("no-NO", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function AddMemberForm({
@@ -434,7 +541,7 @@ function AddMemberForm({
   });
 
   return (
-    <div className="rounded-lg border border-[#73aac4]/30 bg-background !p-4 !space-y-3">
+    <div className="rounded-lg border border-border bg-background !p-4 !space-y-3">
       <p className="text-sm font-medium text-foreground">
         Legg til {role === "FADDER" ? "fadder" : "fadderbarn"}
       </p>
@@ -449,7 +556,7 @@ function AddMemberForm({
           className={`rounded-full border !px-2.5 !py-1 text-xs font-medium transition ${
             selectedMajor === null
               ? "border-primary bg-primary text-primary-foreground"
-              : "border-[#73aac4]/30 text-muted-foreground hover:bg-muted"
+              : "border-border text-muted-foreground hover:bg-muted"
           }`}
         >
           Alle ({availableUsers.length})
@@ -465,7 +572,7 @@ function AddMemberForm({
             className={`rounded-full border !px-2.5 !py-1 text-xs font-medium transition ${
               selectedMajor === major
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-[#73aac4]/30 text-muted-foreground hover:bg-muted"
+                : "border-border text-muted-foreground hover:bg-muted"
             }`}
           >
             {major} ({usersByMajor.get(major)?.length ?? 0})
@@ -478,7 +585,7 @@ function AddMemberForm({
         placeholder="Sok etter bruker..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[#73aac4]"
+        className="w-full rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
       />
       <div className="max-h-40 overflow-y-auto !space-y-1">
         {filtered.map((user) => (
@@ -498,7 +605,8 @@ function AddMemberForm({
         ))}
         {filtered.length === 0 && (
           <p className="text-center text-xs text-muted-foreground !py-2">
-            Ingen tilgjengelige brukere
+            Ingen tilgjengelige brukere. Brukere som allerede er i en
+            faddergruppe må fjernes derfra først.
           </p>
         )}
       </div>

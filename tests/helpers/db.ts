@@ -1,0 +1,150 @@
+import { db } from "~/server/db";
+import { setGrupperPublished } from "~/server/gruppe-visibility";
+
+/**
+ * Every table, ordered so the single TRUNCATE covers them all. CASCADE handles
+ * the foreign keys, but listing them explicitly keeps the reset honest: a new
+ * model that isn't added here will show up as leaked rows between tests.
+ */
+const TABLES = [
+  "AppSetting",
+  "PasswordResetToken",
+  "LoginAttempt",
+  "Payment",
+  "Notification",
+  "GroupMessage",
+  "FadderGruppeMember",
+  "Session",
+  "Post",
+  "Activity",
+  "FadderGruppe",
+  "User",
+] as const;
+
+/** Wipe all data between tests. Fast enough to run per test. */
+export async function resetDb(): Promise<void> {
+  await db.$executeRawUnsafe(
+    `TRUNCATE TABLE ${TABLES.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`,
+  );
+}
+
+let seq = 0;
+/** Unique-per-run suffix so parallel-ish fixtures never collide on unique keys. */
+const uniq = () => `${Date.now().toString(36)}${(seq += 1)}`;
+
+export async function createUser(
+  overrides: Partial<{
+    tihldeUserId: string;
+    name: string;
+    email: string | null;
+    isAdmin: boolean;
+    adminOverride: boolean | null;
+    isVerified: boolean;
+    hasPaid: boolean;
+    studieretning: string | null;
+    studieretningOverride: string | null;
+    klasse: string | null;
+    isFadder: boolean;
+    fadderOverride: boolean | null;
+    passwordHash: string | null;
+    createdAt: Date;
+  }> = {},
+) {
+  const id = uniq();
+  return db.user.create({
+    data: {
+      tihldeUserId: overrides.tihldeUserId ?? `bruker${id}`,
+      name: overrides.name ?? `Test Bruker ${id}`,
+      email: overrides.email === undefined ? `${id}@test.no` : overrides.email,
+      isAdmin: overrides.isAdmin ?? false,
+      adminOverride: overrides.adminOverride ?? null,
+      isVerified: overrides.isVerified ?? false,
+      hasPaid: overrides.hasPaid ?? false,
+      studieretning: overrides.studieretning ?? null,
+      studieretningOverride: overrides.studieretningOverride ?? null,
+      klasse: overrides.klasse ?? null,
+      isFadder: overrides.isFadder ?? false,
+      fadderOverride: overrides.fadderOverride ?? null,
+      passwordHash: overrides.passwordHash ?? null,
+      ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
+    },
+  });
+}
+
+/**
+ * A user who has completed registration and therefore has access to the app —
+ * what almost every content test means by "a user". `createUser` deliberately
+ * defaults to unverified, because that models a fresh sign-up sitting behind
+ * the paywall, and the procedures serving fadderuka content reject those.
+ */
+export async function createMember(
+  overrides: Parameters<typeof createUser>[0] = {},
+) {
+  return createUser({ isVerified: true, ...overrides });
+}
+
+export async function createAdmin(
+  overrides: Parameters<typeof createUser>[0] = {},
+) {
+  return createUser({
+    isAdmin: true,
+    isVerified: true,
+    hasPaid: true,
+    ...overrides,
+  });
+}
+
+export async function createGruppe(name?: string) {
+  return db.fadderGruppe.create({ data: { name: name ?? `Gruppe ${uniq()}` } });
+}
+
+export async function addMember(
+  userId: string,
+  gruppeId: string,
+  role: "FADDER" | "FADDERBARN",
+) {
+  return db.fadderGruppeMember.create({ data: { userId, gruppeId, role } });
+}
+
+/**
+ * Release the faddergrupper to their fadderbarn.
+ *
+ * The reset leaves publication off, which mirrors production before FadderKom
+ * flips the switch — so any test about what a fadderbarn can actually see has
+ * to say so out loud.
+ */
+export async function publishGrupper() {
+  return setGrupperPublished(db, true);
+}
+
+export async function createPayment(
+  userId: string,
+  overrides: Partial<{
+    orderId: string;
+    status:
+      | "CREATED"
+      | "AUTHORIZED"
+      | "CAPTURED"
+      | "ABORTED"
+      | "EXPIRED"
+      | "TERMINATED"
+      | "FAILED"
+      | "REFUNDED";
+    amount: number;
+    capturedAt: Date | null;
+    createdAt: Date;
+  }> = {},
+) {
+  return db.payment.create({
+    data: {
+      orderId: overrides.orderId ?? `fadderuka-${userId}-${uniq()}`,
+      userId,
+      amount: overrides.amount ?? 38_000,
+      status: overrides.status ?? "CREATED",
+      capturedAt: overrides.capturedAt ?? null,
+      ...(overrides.createdAt ? { createdAt: overrides.createdAt } : {}),
+    },
+  });
+}
+
+export { db };

@@ -13,6 +13,7 @@ import { ZodError } from "zod";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import { hasAppAccess } from "~/server/fadder";
 
 /**
  * 1. CONTEXT
@@ -89,7 +90,9 @@ export const createTRPCRouter = t.router;
 const timingMiddleware = t.middleware(async ({ next, path }) => {
   const start = Date.now();
 
-  if (t._config.isDev) {
+  // The artificial delay is a dev-only waterfall detector. Skipped under test,
+  // where it would add hundreds of ms to every procedure call for no benefit.
+  if (t._config.isDev && process.env.NODE_ENV !== "test") {
     // artificial delay in dev
     const waitMs = Math.floor(Math.random() * 400) + 100;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
@@ -129,6 +132,37 @@ export const protectedProcedure = t.procedure
     return next({
       ctx: {
         // infers the `session` as non-nullable
+        session: { ...ctx.session, user: ctx.session.user },
+      },
+    });
+  });
+
+/**
+ * Verified (paid-or-exempt) procedure
+ *
+ * The server-side half of the paywall. The Vipps overlay is a client component
+ * layered over the page, so on its own it hides nothing: the data behind it is
+ * fetched and rendered regardless, and dismissing the overlay in devtools was
+ * enough to use the app without paying. Anything that serves fadderuka content
+ * belongs on this procedure, not on `protectedProcedure`.
+ *
+ * Access means the user has paid (`isVerified`) or owes nothing at all —
+ * faddere and admins. See `hasAppAccess`.
+ */
+export const verifiedProcedure = t.procedure
+  .use(timingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.session?.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED" });
+    }
+    if (!hasAppAccess(ctx.session.user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Du må fullføre registreringen for å se dette.",
+      });
+    }
+    return next({
+      ctx: {
         session: { ...ctx.session, user: ctx.session.user },
       },
     });

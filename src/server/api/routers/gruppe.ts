@@ -2,14 +2,26 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
   createTRPCRouter,
-  protectedProcedure,
+  verifiedProcedure,
 } from "~/server/api/trpc";
+import { areGrupperPublished, canSeeGruppe } from "~/server/gruppe-visibility";
 
 const channelSchema = z.enum(["ANNOUNCEMENT", "CHAT"]);
 
 export const gruppeRouter = createTRPCRouter({
-  /** Get the current user's faddergruppe membership(s) */
-  getMyGruppe: protectedProcedure.query(async ({ ctx }) => {
+  /** Whether the faddergrupper have been released to fadderbarn. */
+  getPublication: verifiedProcedure.query(async ({ ctx }) => {
+    return { published: await areGrupperPublished(ctx.db) };
+  }),
+
+  /**
+   * Get the current user's faddergruppe membership(s).
+   *
+   * A fadderbarn gets `null` until the grupper are published — the same answer
+   * as "you have no gruppe yet", which is deliberate: before publication the
+   * assignment simply doesn't exist as far as they're concerned.
+   */
+  getMyGruppe: verifiedProcedure.query(async ({ ctx }) => {
     const membership = await ctx.db.fadderGruppeMember.findFirst({
       where: { userId: ctx.session.user.id },
       include: {
@@ -25,11 +37,18 @@ export const gruppeRouter = createTRPCRouter({
         },
       },
     });
-    return membership;
+    if (!membership) return null;
+
+    const visible = canSeeGruppe({
+      isAdmin: ctx.session.user.isAdmin,
+      role: membership.role,
+      published: await areGrupperPublished(ctx.db),
+    });
+    return visible ? membership : null;
   }),
 
   /** Get messages for a group (user must be a member or admin) */
-  getMessages: protectedProcedure
+  getMessages: verifiedProcedure
     .input(z.object({ gruppeId: z.string(), channel: channelSchema }))
     .query(async ({ ctx, input }) => {
       // Check access: must be admin or member of the group
@@ -49,6 +68,16 @@ export const gruppeRouter = createTRPCRouter({
             message: "Du har ikke tilgang til denne gruppen",
           });
         }
+        // An unpublished gruppe is closed to its fadderbarn, messages included:
+        // the announcements are written by the faddere before release, and
+        // reading them would give away the gruppe the page still hides.
+        const published = await areGrupperPublished(ctx.db);
+        if (!canSeeGruppe({ role: membership.role, published })) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Faddergruppene er ikke publisert enda",
+          });
+        }
       }
 
       return ctx.db.groupMessage.findMany({
@@ -65,7 +94,7 @@ export const gruppeRouter = createTRPCRouter({
    * ANNOUNCEMENT channel: only FADDER role or admin.
    * CHAT channel: any member (FADDER or FADDERBARN) or admin.
    */
-  postMessage: protectedProcedure
+  postMessage: verifiedProcedure
     .input(
       z.object({
         gruppeId: z.string(),
@@ -97,6 +126,13 @@ export const gruppeRouter = createTRPCRouter({
             message: "Kun faddere kan poste meldinger",
           });
         }
+        const published = await areGrupperPublished(ctx.db);
+        if (!canSeeGruppe({ role: membership.role, published })) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Faddergruppene er ikke publisert enda",
+          });
+        }
       }
 
       const created = await ctx.db.groupMessage.create({
@@ -111,10 +147,15 @@ export const gruppeRouter = createTRPCRouter({
         },
       });
 
+      // Faddere write their welcome messages before the grupper are released.
+      // Notifying the fadderbarn then would announce the very gruppe we are
+      // still hiding, so they only get pinged once publication has happened.
+      const published = await areGrupperPublished(ctx.db);
       const otherMembers = await ctx.db.fadderGruppeMember.findMany({
         where: {
           gruppeId: input.gruppeId,
           userId: { not: ctx.session.user.id },
+          ...(published ? {} : { role: "FADDER" as const }),
         },
         select: { userId: true },
       });
@@ -135,7 +176,7 @@ export const gruppeRouter = createTRPCRouter({
     }),
 
   /** Delete a message (author or admin only) */
-  deleteMessage: protectedProcedure
+  deleteMessage: verifiedProcedure
     .input(z.object({ messageId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const message = await ctx.db.groupMessage.findUnique({

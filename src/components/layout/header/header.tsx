@@ -1,25 +1,20 @@
-import HeaderButtonsWrapper from "./header-buttons-wrapper";
-import HeaderSkeleton from "./header-skeleton";
-import HeaderWrapper from "./header-wrapper";
-import MobileHeaderButtons from "./mobile-header-buttons";
-import MobileHeaderSkeleton from "./mobile-header-skeleton";
 import React, { Suspense } from "react";
 
-type HeaderProps = React.HTMLProps<HTMLHeadElement>;
+import HeaderButtonsWrapper from "./header-buttons-wrapper";
+import HeaderSkeleton from "./header-skeleton";
 
-export default async function Header({ className, ...props }: HeaderProps) {
+/**
+ * Sticky, gjennomskinnelig header uten bunnkant — samme oppsett som Photon.
+ * Nav-lenkene skjules under md, der bunnlinja (SiteBottomBar) tar over.
+ */
+export default function Header() {
   return (
-    <HeaderWrapper {...props}>
-      <div className="hidden h-full w-full md:block">
+    <header className="sticky top-0 z-40 w-full bg-background/80 backdrop-blur">
+      <div className="container mx-auto flex h-14 items-center justify-between gap-4 px-4">
         <Suspense fallback={<HeaderSkeleton />}>
           <HeaderButtonsWrapper />
         </Suspense>
       </div>
-      <div className="flex w-full md:hidden">
-        <Suspense fallback={<MobileHeaderSkeleton />}>
-          <MobileHeaderButtons />
-        </Suspense>
-      </div>
-    </HeaderWrapper>
+    </header>
   );
 }

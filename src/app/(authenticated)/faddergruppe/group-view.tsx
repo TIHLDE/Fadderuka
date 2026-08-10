@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
 type GroupViewProps = {
@@ -44,17 +44,17 @@ export function GroupView({
       void utils.gruppe.getMessages.invalidate({ gruppeId, channel });
       setComposerMessage("");
       setIsComposerOpen(false);
-      toast({ title: "Melding sendt" });
+      toast("Melding sendt");
     },
     onError: (err) => {
-      toast({ title: err.message, variant: "destructive" });
+      toast.error(err.message);
     },
   });
 
   const deleteMutation = api.gruppe.deleteMessage.useMutation({
     onSuccess: () => {
       void utils.gruppe.getMessages.invalidate({ gruppeId, channel });
-      toast({ title: "Melding slettet" });
+      toast("Melding slettet");
     },
   });
 
@@ -87,12 +87,13 @@ export function GroupView({
   return (
     <section className="!space-y-6">
       <div className="flex flex-wrap items-end justify-between !gap-4">
-        <h2 className="text-3xl font-extrabold tracking-[-0.02em] text-foreground sm:text-[36px]">
+        {/* Seksjonsoverskrift — skal ligge under sidens h1 (text-3xl/4xl). */}
+        <h2 className="font-heading text-foreground text-2xl font-semibold tracking-tight">
           {title}
         </h2>
         {canPost && (
           <button
-            className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4] bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 sm:text-base"
+            className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 sm:text-base"
             type="button"
             onClick={() => setIsComposerOpen(true)}
           >
@@ -104,17 +105,17 @@ export function GroupView({
 
       {isLoading ? (
         <div className="flex items-center justify-center !py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#73aac4] border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-transparent" />
         </div>
       ) : messages && messages.length > 0 ? (
         <div className="!space-y-4">
           {messages.map((message) => (
             <article
               key={message.id}
-              className="rounded-xl border border-[#73aac4]/70 bg-[color:var(--surface-soft)] !p-6 shadow-[0_24px_60px_rgba(4,10,23,0.35)] backdrop-blur"
+              className="rounded-xl border border-border bg-card !p-6"
             >
               <div className="flex flex-wrap items-start justify-between !gap-3">
-                <h3 className="text-lg font-extrabold text-foreground sm:text-xl">
+                <h3 className="font-heading text-foreground text-base leading-snug font-medium">
                   {message.author.name}
                 </h3>
                 <div className="flex items-center !gap-2">
@@ -127,7 +128,7 @@ export function GroupView({
                       onClick={() =>
                         deleteMutation.mutate({ messageId: message.id })
                       }
-                      className="!p-1 text-red-400/50 hover:text-red-400 transition"
+                      className="!p-1 text-destructive/50 hover:text-destructive transition"
                       title="Slett melding"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -157,16 +158,18 @@ export function GroupView({
               setComposerMessage("");
             }}
           />
-          <div className="relative w-full max-w-lg rounded-2xl border border-[#73aac4]/70 bg-[color:var(--surface-strong)] !p-6 text-foreground shadow-[0_40px_90px_rgba(2,6,23,0.6)] backdrop-blur sm:!p-8">
+          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card !p-6 text-foreground sm:!p-8">
             <div className="flex items-start justify-between !gap-4">
               <div>
-                <h3 className="text-xl font-semibold">{composerTitle}</h3>
+                <h3 className="font-heading text-base leading-snug font-medium">
+                  {composerTitle}
+                </h3>
                 <p className="!mt-1 text-sm text-muted-foreground">
                   {composerSubtitle}
                 </p>
               </div>
               <button
-                className="rounded-full border border-[#73aac4]/50 !px-3 !py-1 text-sm text-foreground transition hover:bg-foreground/10"
+                className="rounded-full border border-border !px-3 !py-1 text-sm text-foreground transition hover:bg-foreground/10"
                 type="button"
                 onClick={() => {
                   setIsComposerOpen(false);
@@ -181,7 +184,7 @@ export function GroupView({
               <label className="block !space-y-2 text-sm font-medium text-foreground">
                 Melding
                 <textarea
-                  className="min-h-[140px] w-full rounded-xl border border-[#73aac4]/40 bg-background !px-4 !py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+                  className="min-h-[140px] w-full rounded-xl border border-border bg-background !px-4 !py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   placeholder={composerPlaceholder}
                   value={composerMessage}
                   onChange={(e) => setComposerMessage(e.target.value)}
@@ -190,7 +193,7 @@ export function GroupView({
 
               <div className="flex flex-wrap items-center justify-end !gap-3">
                 <button
-                  className="rounded-xl border border-[#73aac4]/50 !px-4 !py-2 text-sm text-foreground transition hover:bg-foreground/10"
+                  className="rounded-xl border border-border !px-4 !py-2 text-sm text-foreground transition hover:bg-foreground/10"
                   type="button"
                   onClick={() => {
                     setIsComposerOpen(false);

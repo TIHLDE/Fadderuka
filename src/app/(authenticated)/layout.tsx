@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import React from "react";
 import { auth } from "~/server/auth/config";
+import { hasAppAccess } from "~/server/fadder";
 import AllergySync from "~/components/allergy-sync";
 import VippsPaymentOverlay from "~/components/vipps-payment-overlay";
 
@@ -18,10 +19,13 @@ export default async function AuthenticatedLayout({
     redirect("/registrering");
   }
 
-  if (!session.user.isVerified) {
+  // No access yet: show the payment prompt INSTEAD of the app, not on top of
+  // it. Rendering `children` here server-rendered the whole app behind the
+  // overlay, so removing one element in devtools was enough to read everything
+  // without paying. Faddere and admins owe nothing and never reach this branch.
+  if (!hasAppAccess(session.user)) {
     return (
       <>
-        {children}
         <AllergySync />
         <VippsPaymentOverlay />
       </>

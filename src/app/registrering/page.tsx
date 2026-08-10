@@ -1,8 +1,9 @@
 "use client";
 
+import { TRPCClientError } from "@trpc/client";
 import Link from "next/link";
 import { useState } from "react";
-import Footer from "~/components/layout/footer/footer";
+import type { AppRouter } from "~/server/api/root";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
@@ -15,6 +16,8 @@ import { api } from "~/trpc/react";
 export default function RegistreringPage() {
   const [error, setError] = useState<string | null>(null);
   const [errorField, setErrorField] = useState<string | null>(null);
+  /** Set when they already have an account, so we can link straight to login. */
+  const [existingUserId, setExistingUserId] = useState<string | null>(null);
   const [study, setStudy] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +29,7 @@ export default function RegistreringPage() {
     e.preventDefault();
     setError(null);
     setErrorField(null);
+    setExistingUserId(null);
 
     const formData = new FormData(e.currentTarget);
     const full_name = (formData.get("full_name") as string)?.trim();
@@ -42,7 +46,11 @@ export default function RegistreringPage() {
 
     setLoading(true);
 
-    const { error: registerError, field } = await authClient.register({
+    const {
+      error: registerError,
+      field,
+      existingUserId: existing,
+    } = await authClient.register({
       full_name,
       email,
       user_id,
@@ -53,6 +61,7 @@ export default function RegistreringPage() {
     if (registerError) {
       setError(registerError);
       setErrorField(field ?? null);
+      setExistingUserId(existing ?? null);
       setLoading(false);
       return;
     }
@@ -73,6 +82,16 @@ export default function RegistreringPage() {
       const { redirectUrl } = await initiatePayment.mutateAsync();
       window.location.href = redirectUrl;
     } catch (err) {
+      // The server refuses to charge anyone who owes nothing. Someone who
+      // turns out to be a fadder is simply let into the app instead of being
+      // shown a payment error for a bill that doesn't exist.
+      if (
+        err instanceof TRPCClientError &&
+        (err as TRPCClientError<AppRouter>).data?.code === "FORBIDDEN"
+      ) {
+        window.location.href = "/";
+        return;
+      }
       setError(
         err instanceof Error
           ? err.message
@@ -83,195 +102,192 @@ export default function RegistreringPage() {
   };
 
   return (
-    <div
-      className="flex min-h-screen flex-col"
-      style={{
-        backgroundColor: "var(--page-bg)",
-        backgroundImage: "var(--page-bg-image)",
-      }}
-    >
-      <main className="flex flex-1 items-center justify-center px-4 py-8">
-        <div className="w-full max-w-xl">
-          <Card>
-            <form onSubmit={handleRegister} style={{ padding: "3rem" }}>
+    <div className="flex flex-1 items-center justify-center px-4 py-8">
+      <div className="w-full max-w-xl">
+        <Card>
+          <form
+            onSubmit={handleRegister}
+            className="flex flex-col gap-6 p-6 sm:p-8"
+          >
+            <div className="flex flex-col gap-2">
+              <CardTitle className="text-3xl font-bold">
+                Registrer deg for Fadderuka
+              </CardTitle>
+              <CardDescription>
+                Opprett en TIHLDE-bruker og betal med Vipps. Brukeren kan du
+                senere bruke på tihlde.org. Har du allerede laget bruker på
+                tihlde.org — for eksempel med Feide — skal du{" "}
+                <Link href="/logg-inn" className="underline">
+                  logge inn
+                </Link>{" "}
+                i stedet.
+              </CardDescription>
+            </div>
+
+            {error && (
               <div
-                style={{
-                  marginBottom: "1.5rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.5rem",
-                }}
+                className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm"
+                role="alert"
               >
-                <CardTitle className="text-3xl font-bold">
-                  Registrer deg for Fadderuka
-                </CardTitle>
-                <CardDescription>
-                  Opprett en TIHLDE-bruker og betal med Vipps. Brukeren kan du
-                  senere bruke på tihlde.org.
-                </CardDescription>
-              </div>
-
-              {error && (
-                <div
-                  className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm"
-                  style={{ marginBottom: "1.5rem" }}
-                >
-                  {error}
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.5rem",
-                  marginBottom: "2rem",
-                }}
-              >
-                <div className="grid gap-2">
-                  <Label htmlFor="reg-full-name">
-                    Fullt navn <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="reg-full-name"
-                    name="full_name"
-                    type="text"
-                    autoComplete="name"
-                    required
-                    placeholder="Ola Nordmann"
-                    className="h-12"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="reg-email">
-                    E-post <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="reg-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    placeholder="din@epost.no"
-                    aria-invalid={errorField === "email"}
-                    className="h-12"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="reg-user-id">
-                    Feide-brukernavn <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="reg-user-id"
-                    name="user_id"
-                    type="text"
-                    autoComplete="username"
-                    required
-                    maxLength={15}
-                    placeholder="Skriv her..."
-                    aria-invalid={errorField === "user_id"}
-                    className="h-12"
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Ditt brukernavn på NTNU
-                  </p>
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="reg-password">
-                    Passord <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="reg-password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    placeholder="minst 8 tegn"
-                    className="h-12"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <span className="text-sm font-medium">
-                    Hvilken linje har du kommet inn på?{" "}
-                    <span className="text-destructive">*</span>
-                  </span>
-                  <div
-                    className="grid gap-2"
-                    role="radiogroup"
-                    aria-label="Linje"
+                {error}
+                {/* Når feilen er "du har alt en bruker", er innlogging det
+                      eneste som hjelper — så vi tilbyr veien dit i stedet for
+                      å la dem gjette hvilket felt de skal endre. */}
+                {existingUserId && (
+                  <Link
+                    href="/logg-inn"
+                    className="mt-2 block font-semibold underline"
                   >
-                    {REGISTRATION_STUDIES.map((option) => (
-                      <label
-                        key={option.slug}
-                        className="flex cursor-pointer items-center gap-3 rounded-md border border-input px-4 py-3 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-                      >
-                        <input
-                          type="radio"
-                          name="study"
-                          value={option.slug}
-                          checked={study === option.slug}
-                          onChange={(e) => {
-                            setStudy(e.target.value);
-                            if (errorField === "study") {
-                              setError(null);
-                              setErrorField(null);
-                            }
-                          }}
-                          className="h-4 w-4"
-                        />
-                        {option.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                    Logg inn med TIHLDE som «{existingUserId}»
+                  </Link>
+                )}
+              </div>
+            )}
 
-                <div className="grid gap-2">
-                  <Label htmlFor="reg-allergies">Matallergier</Label>
-                  <Input
-                    id="reg-allergies"
-                    name="allergies"
-                    type="text"
-                    maxLength={500}
-                    placeholder="F.eks. nøtter, laktose, gluten"
-                    className="h-12"
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    Fyll ut kun hvis du har allergier – la stå tomt ellers.
-                  </p>
-                </div>
+            <div className="flex flex-col gap-6">
+              <div className="grid gap-2">
+                <Label htmlFor="reg-full-name">
+                  Fullt navn <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="reg-full-name"
+                  name="full_name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  placeholder="Ola Nordmann"
+                  className="h-12"
+                />
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.25rem",
-                }}
-              >
-                <Button
-                  type="submit"
-                  className="h-12 w-full text-base"
-                  disabled={loading}
-                >
-                  {loading ? "Registrerer..." : "Registrer og betal med Vipps"}
-                </Button>
-                <p className="text-muted-foreground text-center text-sm">
-                  Har du allerede TIHLDE-bruker?{" "}
-                  <Link href="/logg-inn" className="underline">
-                    Logg inn
-                  </Link>
+              <div className="grid gap-2">
+                <Label htmlFor="reg-email">
+                  E-post <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="reg-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="olanord@stud.ntnu.no"
+                  aria-invalid={errorField === "email"}
+                  className="h-12"
+                />
+                <p className="text-muted-foreground text-xs">
+                  Bruk NTNU-e-posten din hvis du har fått den. Har du ikke det
+                  ennå, går det fint med en privat adresse.
                 </p>
               </div>
-            </form>
-          </Card>
-        </div>
-      </main>
-      <Footer />
+
+              <div className="grid gap-2">
+                <Label htmlFor="reg-user-id">
+                  Brukernavn <span className="text-destructive">*</span>{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (helst Feide)
+                  </span>
+                </Label>
+                <Input
+                  id="reg-user-id"
+                  name="user_id"
+                  autoComplete="username"
+                  required
+                  maxLength={15}
+                  placeholder="olanord"
+                  aria-invalid={errorField === "user_id"}
+                  className="h-12"
+                />
+                <p className="text-muted-foreground text-xs">
+                  Dette blir brukernavnet ditt på tihlde.org. Bruk Feide-brukernavnet
+                  ditt — da blir det samme konto når du senere logger inn med Feide.
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="reg-password">
+                  Passord <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="reg-password"
+                  name="password"
+                  type="password"
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  placeholder="minst 8 tegn"
+                  className="h-12"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <span className="text-sm font-medium">
+                  Hvilken linje har du kommet inn på?{" "}
+                  <span className="text-destructive">*</span>
+                </span>
+                <div
+                  className="grid gap-2"
+                  role="radiogroup"
+                  aria-label="Linje"
+                >
+                  {REGISTRATION_STUDIES.map((option) => (
+                    <label
+                      key={option.slug}
+                      className="border-input has-[:checked]:border-primary has-[:checked]:bg-primary/5 flex cursor-pointer items-center gap-3 rounded-md border px-4 py-3 text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="study"
+                        value={option.slug}
+                        checked={study === option.slug}
+                        onChange={(e) => {
+                          setStudy(e.target.value);
+                          if (errorField === "study") {
+                            setError(null);
+                            setErrorField(null);
+                          }
+                        }}
+                        className="h-4 w-4"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="reg-allergies">Matallergier</Label>
+                <Input
+                  id="reg-allergies"
+                  name="allergies"
+                  type="text"
+                  maxLength={500}
+                  placeholder="F.eks. nøtter, laktose, gluten"
+                  className="h-12"
+                />
+                <p className="text-muted-foreground text-xs">
+                  Fyll ut kun hvis du har allergier – la stå tomt ellers.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-5">
+              <Button
+                type="submit"
+                className="h-12 w-full text-base"
+                disabled={loading}
+              >
+                {loading ? "Registrerer..." : "Registrer og betal med Vipps"}
+              </Button>
+              <p className="text-muted-foreground text-center text-sm">
+                Har du allerede TIHLDE-bruker?{" "}
+                <Link href="/logg-inn" className="underline">
+                  Logg inn
+                </Link>
+              </p>
+            </div>
+          </form>
+        </Card>
+      </div>
     </div>
   );
 }

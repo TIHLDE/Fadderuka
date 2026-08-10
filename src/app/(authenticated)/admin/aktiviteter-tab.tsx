@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { MapPin, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api } from "~/trpc/react";
-import { toast } from "~/components/ui/use-toast";
+import { toast } from "sonner";
 import { DateTimePicker } from "~/components/ui/date-time-picker";
 import { stripMarkdown } from "~/lib/utils";
 
@@ -35,7 +35,7 @@ export function AktiviteterTab() {
       void utils.activity.getAll.invalidate();
       setShowForm(false);
       setForm(makeEmptyForm());
-      toast({ title: "Aktivitet opprettet" });
+      toast("Aktivitet opprettet");
     },
   });
 
@@ -44,14 +44,14 @@ export function AktiviteterTab() {
       void utils.activity.getAll.invalidate();
       setEditingId(null);
       setForm(makeEmptyForm());
-      toast({ title: "Aktivitet oppdatert" });
+      toast("Aktivitet oppdatert");
     },
   });
 
   const deleteMutation = api.activity.delete.useMutation({
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
-      toast({ title: "Aktivitet slettet" });
+      toast("Aktivitet slettet");
     },
   });
 
@@ -100,7 +100,7 @@ export function AktiviteterTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center !py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#73aac4] border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-transparent" />
       </div>
     );
   }
@@ -115,7 +115,7 @@ export function AktiviteterTab() {
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center !gap-2 rounded-xl border border-[#73aac4]/40 bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
+            className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
           >
             <Plus className="h-4 w-4" />
             Ny aktivitet
@@ -126,7 +126,7 @@ export function AktiviteterTab() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="!space-y-4 rounded-xl border border-[#73aac4]/30 bg-secondary !p-5"
+          className="!space-y-4 rounded-xl border border-border bg-secondary !p-5"
         >
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-foreground">
@@ -149,7 +149,7 @@ export function AktiviteterTab() {
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 placeholder="Navn på aktiviteten"
-                className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+                className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="flex flex-col !gap-1.5">
@@ -174,7 +174,7 @@ export function AktiviteterTab() {
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
               placeholder="F.eks. Gløshaugen eller https://maps.google.com/..."
-              className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+              className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
@@ -184,7 +184,7 @@ export function AktiviteterTab() {
               value={form.imageUrl}
               onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
               placeholder="https://..."
-              className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+              className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
@@ -198,7 +198,7 @@ export function AktiviteterTab() {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder="Beskriv aktiviteten..."
-              className="rounded-lg border border-[#73aac4]/30 bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#73aac4]"
+              className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
@@ -215,7 +215,7 @@ export function AktiviteterTab() {
               disabled={
                 !isValid || createMutation.isPending || updateMutation.isPending
               }
-              className="rounded-xl border border-[#73aac4]/40 bg-primary !px-4 !py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl border border-border bg-primary !px-4 !py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {editingId ? "Lagre endringer" : "Opprett aktivitet"}
             </button>
@@ -228,9 +228,9 @@ export function AktiviteterTab() {
           {activities.map((activity) => (
             <div
               key={activity.id}
-              className="flex flex-col !gap-3 rounded-xl border border-[#73aac4]/20 bg-[color:var(--surface-soft)] !p-4 sm:flex-row sm:items-start sm:justify-between"
+              className="flex flex-col !gap-3 rounded-xl border border-border bg-card !p-4 sm:flex-row sm:items-start sm:justify-between"
             >
-              <div className="flex !gap-4">
+              <div className="flex min-w-0 !gap-4">
                 {activity.imageUrl ? (
                   <img
                     src={activity.imageUrl}
@@ -238,14 +238,16 @@ export function AktiviteterTab() {
                     className="h-16 w-16 flex-shrink-0 rounded-lg object-cover"
                   />
                 ) : (
-                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-900/60 to-blue-900/60">
-                    <span className="text-xs font-bold text-sky-300">
+                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <span className="text-xs font-bold text-primary">
                       {activity.title.slice(0, 2).toUpperCase()}
                     </span>
                   </div>
                 )}
-                <div className="!space-y-1">
-                  <p className="font-semibold text-foreground">{activity.title}</p>
+                <div className="min-w-0 !space-y-1">
+                  <p className="font-semibold break-words text-foreground">
+                    {activity.title}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(activity.date).toLocaleDateString("no-NO", {
                       weekday: "short",
@@ -264,11 +266,11 @@ export function AktiviteterTab() {
                 </div>
               </div>
 
-              <div className="flex items-center !gap-2 sm:flex-shrink-0">
+              <div className="flex flex-wrap items-center !gap-2 sm:flex-shrink-0">
                 <button
                   type="button"
                   onClick={() => openEdit(activity)}
-                  className="inline-flex items-center !gap-1.5 rounded-lg border border-[#73aac4]/30 bg-secondary !px-3 !py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary/80"
+                  className="inline-flex items-center !gap-1.5 rounded-lg border border-border bg-secondary !px-3 !py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary/80"
                 >
                   <Pencil className="h-3 w-3" />
                   Rediger
@@ -277,7 +279,7 @@ export function AktiviteterTab() {
                   type="button"
                   onClick={() => deleteMutation.mutate({ id: activity.id })}
                   disabled={deleteMutation.isPending}
-                  className="inline-flex items-center !gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 !px-3 !py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/20 disabled:opacity-60"
+                  className="inline-flex items-center !gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 !px-3 !py-1.5 text-xs font-medium text-destructive transition hover:bg-destructive/20 disabled:opacity-60"
                 >
                   <Trash2 className="h-3 w-3" />
                   Slett
@@ -287,7 +289,7 @@ export function AktiviteterTab() {
           ))}
         </div>
       ) : (
-        <p className="rounded-xl border border-[#73aac4]/20 bg-[color:var(--surface-soft)] !px-4 !py-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-xl border border-border bg-card !px-4 !py-6 text-center text-sm text-muted-foreground">
           Ingen aktiviteter lagt til ennå
         </p>
       )}

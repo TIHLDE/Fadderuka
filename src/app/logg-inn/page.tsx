@@ -1,140 +1,273 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import Footer from "~/components/layout/footer/footer";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Card, CardDescription, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { authClient } from "~/lib/auth-client";
+import { REGISTRATION_STUDIES } from "~/lib/majors";
 
-export default function LoggInnPage() {
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+/**
+ * "Logg inn med TIHLDE", plus the local fallback.
+ *
+ * Almost everyone types their password on tihlde.org and comes back with a
+ * scoped token. The exception is students who registered here without an
+ * @stud.ntnu.no address: their TIHLDE account is not usable until it is
+ * activated, so they get the username/password form at the bottom.
+ */
+function LoggInnSkjema() {
   const router = useRouter();
+  const [lokal, setLokal] = useState(false);
+  const [laster, setLaster] = useState(false);
+  // Den som begynner på et nytt studium i høst må si fra selv: TIHLDE-profilen
+  // deres viser fortsatt bachelorlinja og bachelorkullet, så uten dette valget
+  // leses de som 2. klassing — altså fadder — og slipper å betale.
+  const [nyttStudium, setNyttStudium] = useState(false);
+  const [study, setStudy] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  // Settes når serveren ber om at passordet må fornyes, så meldingen kan vises
+  // med «Glemt passord» som lenke i stedet for som ren tekst.
+  const [feilkode, setFeilkode] = useState<string | null>(null);
+  const feilFraTihlde = useSearchParams().get("error");
 
-  const handleLogin = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const vist = error ?? feilFraTihlde;
+
+  const href =
+    nyttStudium && study
+      ? `/api/auth/logg-inn?study=${encodeURIComponent(study)}`
+      : "/api/auth/logg-inn";
+
+  async function handleLokalInnlogging(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
+    setFeilkode(null);
+    setLaster(true);
 
-    const formData = new FormData(e.currentTarget);
-    const userId = (formData.get("user_id") as string)?.trim();
-    const password = formData.get("password") as string;
+    const data = new FormData(e.currentTarget);
+    const { error: innloggingsfeil, code } = await authClient.localLogin({
+      user_id: (data.get("user_id") as string)?.trim(),
+      password: data.get("password") as string,
+    });
 
-    const { error } = await authClient.signIn(userId, password);
-
-    if (error) {
-      setError(error);
-      setLoading(false);
+    if (innloggingsfeil) {
+      setError(innloggingsfeil);
+      setFeilkode(code ?? null);
+      setLaster(false);
       return;
     }
 
+    // Forsiden uansett: betalingsmuren der slipper inn den som har betalt og
+    // tar imot den som ikke har, så det er ikke denne siden sin avgjørelse.
     router.push("/");
     router.refresh();
-  };
+  }
 
   return (
-    <div
-      className="flex min-h-screen flex-col"
-      style={{
-        backgroundColor: "var(--page-bg)",
-        backgroundImage: "var(--page-bg-image)",
-      }}
-    >
-      <main className="flex flex-1 items-center justify-center px-4 py-8">
-        <div className="w-full max-w-xl">
-          <Card>
-            <form onSubmit={handleLogin} style={{ padding: "3rem" }}>
-              <div
-                style={{
-                  marginBottom: "1.5rem",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.5rem",
-                }}
-              >
-                <CardTitle className="text-3xl font-bold">Logg inn</CardTitle>
-                <CardDescription>
-                  Logg inn med ditt TIHLDE-brukernavn og passord
-                </CardDescription>
-              </div>
+    <div className="flex flex-1 items-center justify-center px-4 py-8">
+      <div className="w-full max-w-xl">
+        <Card>
+          <div className="flex flex-col gap-6 p-6 sm:p-8">
+            <div className="flex flex-col gap-2">
+              <CardTitle className="text-3xl font-bold">Logg inn</CardTitle>
+              <CardDescription>
+                Du logger inn med TIHLDE-brukeren din på tihlde.org.
+              </CardDescription>
+            </div>
 
-              {error && (
+            {vist && (
+              <div className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm">
+                {/* Samme setning som serveren sender, men med «Glemt passord»
+                    som lenke. Å plukke teksten fra hverandre på klienten ville
+                    knekt neste gang noen retter et komma, så koden styrer
+                    hvilken variant som vises. */}
+                {feilkode === "ma_sette_nytt_passord" ? (
+                  <>
+                    Vi har lansert ny hovedside, og du må sette nytt passord via{" "}
+                    <Link href="/glemt-passord" className="font-semibold underline">
+                      Glemt passord
+                    </Link>
+                    . Om du har godkjent TIHLDE-bruker, logg inn med den i
+                    stedet.
+                  </>
+                ) : (
+                  vist
+                )}
+              </div>
+            )}
+
+            <div className="border-input grid gap-3 rounded-md border px-4 py-3">
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={nyttStudium}
+                  onChange={(e) => {
+                    setNyttStudium(e.target.checked);
+                    setError(null);
+                  }}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>
+                  <span className="font-medium">
+                    Jeg begynner på et nytt studium i høst
+                  </span>
+                  <span className="text-muted-foreground block">
+                    For eksempel Digital transformasjon etter fullført bachelor.
+                  </span>
+                </span>
+              </label>
+
+              {nyttStudium && (
                 <div
-                  className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm"
-                  style={{ marginBottom: "1.5rem" }}
+                  className="grid gap-2"
+                  role="radiogroup"
+                  aria-label="Ny linje"
                 >
-                  {error}
+                  {REGISTRATION_STUDIES.map((option) => (
+                    <label
+                      key={option.slug}
+                      className="border-input has-[:checked]:border-primary has-[:checked]:bg-primary/5 flex cursor-pointer items-center gap-3 rounded-md border px-4 py-3 text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="study"
+                        value={option.slug}
+                        checked={study === option.slug}
+                        onChange={(e) => {
+                          setStudy(e.target.value);
+                          setError(null);
+                        }}
+                        className="h-4 w-4"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
                 </div>
               )}
+            </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.5rem",
-                  marginBottom: "2rem",
-                }}
-              >
-                <div className="grid gap-2">
-                  <Label htmlFor="login-user-id">
-                    Brukernavn <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="login-user-id"
-                    name="user_id"
-                    type="text"
-                    autoComplete="username"
-                    required
-                    placeholder="ditt TIHLDE-brukernavn"
-                    className="h-12"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="login-password">
-                    Passord <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="login-password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    placeholder="••••••••"
-                    className="h-12"
-                  />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1.25rem",
-                }}
-              >
+            <div className="flex flex-col gap-5">
+              {/* En lenke, ikke et skjema: innloggingen skjer på tihlde.org.
+                  Mangler linjevalget, blir det en knapp som sier fra i stedet
+                  — å sende dem videre uten det ville gitt feil svar på hvem
+                  som skal betale. */}
+              {nyttStudium && !study ? (
                 <Button
-                  type="submit"
+                  type="button"
                   className="h-12 w-full text-base"
-                  disabled={loading}
+                  onClick={() => setError("Velg hvilken linje du begynner på.")}
                 >
-                  {loading ? "Logger inn..." : "Logg inn"}
+                  Logg inn med TIHLDE
                 </Button>
-                <p className="text-muted-foreground text-center text-sm">
-                  Ny student uten TIHLDE-bruker?{" "}
-                  <Link href="/registrering" className="underline">
-                    Registrer deg her
-                  </Link>
-                </p>
+              ) : (
+                <a
+                  href={href}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-12 w-full items-center justify-center rounded-md text-base font-medium"
+                >
+                  Logg inn med TIHLDE
+                </a>
+              )}
+              <p className="text-muted-foreground text-center text-sm">
+                Ny student uten TIHLDE-bruker?{" "}
+                <Link href="/registrering" className="underline">
+                  Registrer deg her
+                </Link>
+              </p>
+
+              {/* Broen for de som registrerte seg her uten NTNU-e-post.
+                  TIHLDE-brukeren deres er ikke aktivert ennå, så «Logg inn med
+                  TIHLDE» avviser dem — men de har allerede betalt. Bevisst
+                  nedtonet: alle andre skal bruke knappen over. */}
+              <div className="border-input border-t pt-5">
+                {!lokal ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLokal(true);
+                      setError(null);
+                    }}
+                    className="text-muted-foreground w-full text-center text-sm underline"
+                  >
+                    Registrerte du deg her uten NTNU-e-post? Logg inn med
+                    brukernavn og passord
+                  </button>
+                ) : (
+                  <form onSubmit={handleLokalInnlogging} className="grid gap-4">
+                    {/* De som registrerte seg før cutoveren har ikke lenger et
+                        passord — hashen deres ble slettet. De kommer hit,
+                        prøver det gamle passordet, og må få vite hvorfor det
+                        ikke virker før de gir opp. */}
+                    <div className="bg-muted rounded-md px-4 py-3 text-sm">
+                      <p className="font-medium">
+                        Registrerte du deg før vi lanserte ny hovedside?
+                      </p>
+                      <p className="text-muted-foreground mt-1">
+                        Da må du sette nytt passord før du kommer inn.{" "}
+                        <Link
+                          href="/glemt-passord"
+                          className="font-semibold underline"
+                        >
+                          Sett nytt passord
+                        </Link>
+                      </p>
+                    </div>
+
+                    <p className="text-muted-foreground text-sm">
+                      Bruk brukernavnet og passordet du valgte da du registrerte
+                      deg. Når TIHLDE-brukeren din er aktivert, logger du inn
+                      med TIHLDE i stedet.
+                    </p>
+                    <div className="grid gap-2">
+                      <Label htmlFor="lokal-user-id">Brukernavn</Label>
+                      <Input
+                        id="lokal-user-id"
+                        name="user_id"
+                        autoComplete="username"
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="lokal-passord">Passord</Label>
+                      <Input
+                        id="lokal-passord"
+                        name="password"
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        className="h-12"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      disabled={laster}
+                      className="h-12 w-full text-base"
+                    >
+                      {laster ? "Logger inn …" : "Logg inn"}
+                    </Button>
+                  </form>
+                )}
               </div>
-            </form>
-          </Card>
-        </div>
-      </main>
-      <Footer />
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
+  );
+}
+
+/**
+ * `useSearchParams` opts the tree into client-side rendering, so Next requires
+ * a Suspense boundary around it. Without one the whole page would have to be
+ * dynamic.
+ */
+export default function LoggInnPage() {
+  return (
+    <Suspense>
+      <LoggInnSkjema />
+    </Suspense>
   );
 }

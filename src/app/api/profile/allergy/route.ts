@@ -3,15 +3,20 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "~/server/auth/config";
-import { TihldeAuthError, tihldeUpdateAllergy } from "~/server/auth/tihlde";
+import { db } from "~/server/db";
 
 /**
- * Persist a user's food allergies onto their TIHLDE profile (Lepton owns the
- * data — we don't store it locally). Self-registration collects the allergy but
- * the fresh account is pending and has no TIHLDE token, so the client buffers it
- * and POSTs here on later authenticated loads. We only succeed once the session
- * carries a real TIHLDE token (i.e. after activation + a TIHLDE login); until
- * then we report `synced: false` so the client keeps the buffer and retries.
+ * Store a user's food allergies.
+ *
+ * These used to be written onto the TIHLDE profile, because Lepton held them as
+ * free text. Photon does not: it models allergies as a fixed list of slugs, and
+ * "laktose, litt nøtter" has nowhere to go in that. So the answer is kept here,
+ * which is also where it gets used — FadderKom orders the food.
+ *
+ * Self-registration collects the allergy before the session exists, so the
+ * client buffers it and POSTs on a later authenticated load. It always
+ * succeeds now; `synced` stays in the response so the client contract is
+ * unchanged.
  */
 
 const bodySchema = z.object({
@@ -29,20 +34,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ugyldig allergi." }, { status: 400 });
   }
 
-  // Pending accounts have no TIHLDE token yet — nothing we can do until the user
-  // is activated and logs in via TIHLDE. Tell the client to keep buffering.
-  const token = session.session.tihldeToken;
-  if (!token) {
-    return NextResponse.json({ synced: false });
-  }
-
   try {
-    await tihldeUpdateAllergy(token, session.user.tihldeUserId, parsed.data.allergy);
+    await db.user.update({
+      where: { id: session.user.id },
+      data: { allergy: parsed.data.allergy },
+    });
     return NextResponse.json({ synced: true });
   } catch (err) {
-    if (err instanceof TihldeAuthError) {
-      return NextResponse.json({ error: err.message }, { status: err.status });
-    }
     console.error("[profile/allergy] unexpected error", err);
     return NextResponse.json(
       { error: "Kunne ikke lagre allergiene dine." },

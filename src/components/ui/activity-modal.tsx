@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { MapPin, X } from "lucide-react";
 
 import Markdown from "~/components/ui/markdown";
+import { ActivityImage } from "~/components/ui/activity-image";
 
 export interface ModalActivity {
   id: string;
@@ -21,6 +23,13 @@ export default function ActivityModal({
   activity: ModalActivity | null;
   onClose: () => void;
 }) {
+  // Rendered into `document.body` via a portal: an ancestor with a transform,
+  // filter or `will-change` (e.g. the `Reveal` wrappers the lists sit inside)
+  // becomes the containing block for `position: fixed`, which offsets the modal
+  // and shrinks its backdrop so clicks outside it stop closing.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!activity) return;
 
@@ -36,7 +45,7 @@ export default function ActivityModal({
     };
   }, [activity, onClose]);
 
-  if (!activity) return null;
+  if (!activity || !mounted) return null;
 
   const date = new Date(activity.date);
   const dateStr = date.toLocaleDateString("no-NO", {
@@ -50,40 +59,32 @@ export default function ActivityModal({
     minute: "2-digit",
   });
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-in fade-in-0 duration-200 ease-out"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 supports-[backdrop-filter]:backdrop-blur-xs animate-in fade-in-0 duration-100 ease-out"
       onClick={onClose}
     >
       <div
-        className="relative flex h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-2xl bg-[color:var(--panel-bg)] shadow-2xl animate-in fade-in-0 zoom-in-95 duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]"
+        className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-xl bg-popover text-popover-foreground ring-1 ring-foreground/10 animate-in fade-in-0 zoom-in-95 duration-100"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Lukk"
-          className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/40 text-white transition hover:bg-black/60"
+          className="absolute right-4 top-4 z-10 grid size-8 place-items-center rounded-lg bg-background/60 text-foreground ring-1 ring-foreground/10 transition-colors hover:bg-accent"
         >
           <X className="h-5 w-5" />
         </button>
 
-        {activity.imageUrl ? (
-          <img
-            src={activity.imageUrl}
-            alt={activity.title}
-            className="h-64 w-full shrink-0 object-cover sm:h-80"
-          />
-        ) : (
-          <div className="flex h-64 w-full shrink-0 items-center justify-center bg-gradient-to-br from-slate-900 via-sky-900/70 to-slate-800 sm:h-80">
-            <span className="px-6 text-center text-3xl font-extrabold tracking-wide text-white">
-              {activity.title}
-            </span>
-          </div>
-        )}
+        <ActivityImage
+          src={activity.imageUrl}
+          alt={activity.title}
+          className="h-64 w-full shrink-0 object-cover sm:h-80"
+        />
 
         <div className="flex-1 space-y-6 p-6 sm:p-10">
-          <h2 className="text-3xl font-bold capitalize text-foreground sm:text-4xl">
+          <h2 className="font-heading text-3xl font-semibold tracking-tight capitalize text-foreground sm:text-4xl">
             {activity.title}
           </h2>
 
@@ -114,6 +115,7 @@ export default function ActivityModal({
           </Markdown>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,22 +1,100 @@
+import { randomBytes } from "node:crypto";
+
 import { TRPCError } from "@trpc/server";
+import type { PaymentStatus, PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { MAJORS, slugForStudyLabel } from "~/lib/majors";
+import { photonCreateUser } from "~/server/auth/photon";
+import { deriveIsFadder } from "~/server/fadder";
+import {
+  getGruppePublishedAt,
+  setGrupperPublished,
+} from "~/server/gruppe-visibility";
 import {
   adminProcedure,
   createTRPCRouter,
 } from "~/server/api/trpc";
+import {
+  PAYMENT_AMOUNT_ORE,
+  VippsError,
+  VippsNotConfiguredError,
+  fetchPaymentEvents,
+  fetchPaymentSnapshot,
+  refundPayment,
+  settlePayment,
+} from "~/server/payment/vipps";
+
+/** Translate a Vipps-layer error into the tRPC error shown to the admin. */
+function toTRPCError(err: unknown): TRPCError {
+  if (err instanceof TRPCError) return err;
+  if (err instanceof VippsNotConfiguredError) {
+    return new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err.message });
+  }
+  if (err instanceof VippsError) {
+    return new TRPCError({ code: "BAD_GATEWAY", message: err.message });
+  }
+  console.error("[admin] unexpected Vipps error", err);
+  return new TRPCError({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Noe gikk galt mot Vipps.",
+  });
+}
+
+/**
+ * Recompute a user's `isFadder` from their current state and store it.
+ *
+ * Called after anything that changes a group membership, so giving someone the
+ * FADDER role exempts them from payment immediately instead of only at their
+ * next login — and taking it away puts them back on the paying side unless the
+ * study cohort or a manual override says otherwise. Grants access alongside the
+ * exemption, since no payment is coming to verify them.
+ */
+async function resyncFadderStatus(
+  db: PrismaClient,
+  userId: string,
+): Promise<void> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      fadderOverride: true,
+      klasse: true,
+      hasPaid: true,
+      memberships: { where: { role: "FADDER" }, select: { id: true } },
+    },
+  });
+  if (!user) return;
+
+  const isFadder = deriveIsFadder({
+    fadderOverride: user.fadderOverride,
+    klasse: user.klasse,
+    hasPaid: user.hasPaid,
+    hasFadderMembership: user.memberships.length > 0,
+  });
+
+  await db.user.update({
+    where: { id: userId },
+    data: { isFadder, ...(isFadder ? { isVerified: true } : {}) },
+  });
+}
 
 export const adminRouter = createTRPCRouter({
   /** List all users with their verification/admin status and group memberships */
   getUsers: adminProcedure.query(async ({ ctx }) => {
-    return ctx.db.user.findMany({
+    const users = await ctx.db.user.findMany({
       select: {
         id: true,
+        tihldeUserId: true,
         name: true,
         email: true,
         klasse: true,
         studieretning: true,
+        studieretningOverride: true,
         isVerified: true,
         isAdmin: true,
+        hasPaid: true,
+        isFadder: true,
+        fadderOverride: true,
+        passwordHash: true,
         createdAt: true,
         memberships: {
           select: {
@@ -28,7 +106,86 @@ export const adminRouter = createTRPCRouter({
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // The hash itself never leaves the server — only the one fact the panel
+    // acts on: this account signs in with a local password, so TIHLDE has not
+    // taken it over and the "aktiver"-button still applies. A login through
+    // TIHLDE clears the hash, which is what makes the button disappear on its
+    // own once the student is a real member.
+    return users.map(({ passwordHash, ...user }) => ({
+      ...user,
+      harLokalKonto: passwordHash !== null,
+    }));
   }),
+
+  /**
+   * Give a self-registered student a real TIHLDE account.
+   *
+   * This is the "aktiver"-button FadderKom presses when the student turns up in
+   * person. Everyone who signs up here without an @stud.ntnu.no address gets a
+   * local account only; they can pay and use the app, but they are not TIHLDE
+   * members and cannot sign in through tihlde.org.
+   *
+   * There is no approval queue to put them in: Photon's register endpoint gives
+   * the `member` role outright (`syncBaselineRoles`), so creating the account IS
+   * the activation. The old Lepton model — created pending, approved later in
+   * Kvark — no longer exists.
+   *
+   * The password is random and never shown to anyone. The student sets their
+   * own through "glemt passord" on tihlde.org, and Photon's verification mail
+   * goes out as it does for any other sign-up. Handing an admin a password to
+   * read aloud would be worse than making them do that.
+   *
+   * The username we pass is the one already stored here, so the two systems
+   * agree and a later Feide login lands on this same account rather than a
+   * second one.
+   */
+  createTihldeAccount: adminProcedure
+    .input(z.object({ userId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: {
+          tihldeUserId: true,
+          name: true,
+          email: true,
+          studieretning: true,
+        },
+      });
+      if (!user) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Bruker ikke funnet" });
+      }
+      if (!user.email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Brukeren har ingen e-postadresse å opprette kontoen med.",
+        });
+      }
+
+      const study = slugForStudyLabel(user.studieretning);
+      if (!study) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Brukeren mangler en linje vi kan melde dem inn i. Sett linje først.",
+        });
+      }
+
+      try {
+        const created = await photonCreateUser({
+          name: user.name,
+          email: user.email,
+          // Never stored, never shown. "Glemt passord" på tihlde.org is how
+          // they get one they know.
+          password: randomBytes(24).toString("base64url"),
+          studyProgramSlug: study,
+          username: user.tihldeUserId,
+        });
+        return { username: created.username, email: created.email };
+      } catch (err) {
+        throw toTRPCError(err);
+      }
+    }),
 
   /** Verify or unverify a user */
   setUserVerified: adminProcedure
@@ -40,14 +197,121 @@ export const adminRouter = createTRPCRouter({
       });
     }),
 
-  /** Promote or demote admin status */
+  /**
+   * Promote or demote admin status.
+   *
+   * `pin` controls what happens on the next login. Pinned (the default) writes
+   * `adminOverride` so the decision survives — without it, login re-derives
+   * admin status from TIHLDE and overwrites whatever was set here. Unpinning
+   * clears the override instead, handing control back to TIHLDE group
+   * membership; that is the only way out of a pin, and without it an
+   * accidental demotion locked a FadderKom member out of admin permanently.
+   */
   setUserAdmin: adminProcedure
-    .input(z.object({ userId: z.string(), isAdmin: z.boolean() }))
+    .input(
+      z.object({
+        userId: z.string(),
+        isAdmin: z.boolean(),
+        pin: z.boolean().default(true),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.user.update({
         where: { id: input.userId },
-        data: { isAdmin: input.isAdmin },
+        data: {
+          isAdmin: input.isAdmin,
+          adminOverride: input.pin ? input.isAdmin : null,
+        },
       });
+    }),
+
+  /**
+   * Mark a user as a fadder, or as someone who owes payment after all.
+   *
+   * Faddere never pay, so this is the manual escape hatch for the cases the
+   * automatic rule cannot see: a fadder whose TIHLDE profile has no study
+   * cohort, or a 2. klasse student who is actually attending as a fadderbarn.
+   * The decision is pinned in `fadderOverride` and therefore survives every
+   * later login, exactly like `adminOverride`.
+   *
+   * Marking someone a fadder also grants access, since there is no payment
+   * coming that would otherwise verify them. It deliberately does NOT touch
+   * `hasPaid`: if they already paid, that stays true and the admin gets a
+   * refund prompt from the payment overview rather than a silently rewritten
+   * record.
+   */
+  setUserFadder: adminProcedure
+    .input(z.object({ userId: z.string(), isFadder: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.update({
+        where: { id: input.userId },
+        data: {
+          isFadder: input.isFadder,
+          fadderOverride: input.isFadder,
+          ...(input.isFadder ? { isVerified: true } : {}),
+        },
+        select: { id: true, name: true, hasPaid: true },
+      });
+
+      // Surfaced by the client so a fadder who paid before being marked is
+      // never quietly left out of pocket.
+      return { ...user, needsRefund: input.isFadder && user.hasPaid };
+    }),
+
+  /**
+   * Correct which programme a user is on.
+   *
+   * TIHLDE owns this field by default, and for almost everyone that is right.
+   * The exception is anyone whose profile has fallen behind reality — Digital
+   * transformasjon being the standing case, since its students keep the
+   * bachelor STUDY group they came from. Users can say so themselves at login,
+   * and this is the same decision from the admin side: for the ones who never
+   * did, and for undoing a mis-click.
+   *
+   * Passing `null` hands the field back to TIHLDE. The stored value is left
+   * alone rather than blanked, so the user stays grouped where they are until
+   * their next login refreshes it from the profile.
+   *
+   * Deliberately does NOT touch payment status. Being on DT does not by itself
+   * make someone a fadderbarn — a second-year DT student is a fadder — so that
+   * stays the separate, explicit decision `setUserFadder` makes.
+   */
+  setUserStudieretning: adminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        studieretning: z.enum(MAJORS).nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.user.update({
+        where: { id: input.userId },
+        data: {
+          studieretningOverride: input.studieretning,
+          ...(input.studieretning ? { studieretning: input.studieretning } : {}),
+        },
+        select: { id: true, name: true, studieretning: true },
+      });
+    }),
+
+  /** Whether fadderbarn can see their faddergruppe yet, and since when. */
+  getGruppePublication: adminProcedure.query(async ({ ctx }) => {
+    const publishedAt = await getGruppePublishedAt(ctx.db);
+    return { published: publishedAt !== null, publishedAt };
+  }),
+
+  /**
+   * Release every faddergruppe to its fadderbarn — or take them back.
+   *
+   * One switch for all grupper at once, which is how FadderKom runs it: the
+   * groups are announced together, and publishing them one by one would leave
+   * some fadderbarn staring at an empty page while others got theirs.
+   */
+  setGruppePublication: adminProcedure
+    .input(z.object({ published: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const publishedAt = await setGrupperPublished(ctx.db, input.published);
+      return { published: publishedAt !== null, publishedAt };
     }),
 
   /** List all faddergrupper with member counts */
@@ -95,7 +359,14 @@ export const adminRouter = createTRPCRouter({
       });
     }),
 
-  /** Add a user to a faddergruppe with a role */
+  /**
+   * Add a user to a faddergruppe with a role.
+   *
+   * A user belongs to exactly one faddergruppe: the schema only stops the same
+   * user being added to the *same* group twice, so this is where "one group per
+   * person" is enforced. Moving someone means removing the old membership
+   * first, which keeps the fadderbarn lists unambiguous.
+   */
   addMember: adminProcedure
     .input(
       z.object({
@@ -105,36 +376,41 @@ export const adminRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const existing = await ctx.db.fadderGruppeMember.findUnique({
-        where: {
-          userId_gruppeId: {
-            userId: input.userId,
-            gruppeId: input.gruppeId,
-          },
-        },
+      const existing = await ctx.db.fadderGruppeMember.findFirst({
+        where: { userId: input.userId },
+        select: { gruppeId: true, gruppe: { select: { name: true } } },
       });
       if (existing) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Brukeren er allerede medlem av denne gruppen",
+          message:
+            existing.gruppeId === input.gruppeId
+              ? "Brukeren er allerede medlem av denne gruppen"
+              : `Brukeren er allerede medlem av «${existing.gruppe.name}». Fjern brukeren derfra først.`,
         });
       }
-      return ctx.db.fadderGruppeMember.create({
+      const membership = await ctx.db.fadderGruppeMember.create({
         data: {
           userId: input.userId,
           gruppeId: input.gruppeId,
           role: input.role,
         },
       });
+      await resyncFadderStatus(ctx.db, input.userId);
+      return membership;
     }),
 
   /** Remove a member from a faddergruppe */
   removeMember: adminProcedure
     .input(z.object({ membershipId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.fadderGruppeMember.delete({
+      const membership = await ctx.db.fadderGruppeMember.delete({
         where: { id: input.membershipId },
       });
+      // Losing a FADDER role can put someone back on the paying side, unless
+      // their cohort or a manual override still exempts them.
+      await resyncFadderStatus(ctx.db, membership.userId);
+      return membership;
     }),
 
   /** Change a member's role within a group */
@@ -146,10 +422,12 @@ export const adminRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.fadderGruppeMember.update({
+      const membership = await ctx.db.fadderGruppeMember.update({
         where: { id: input.membershipId },
         data: { role: input.role },
       });
+      await resyncFadderStatus(ctx.db, membership.userId);
+      return membership;
     }),
 
   /** Permanently delete an unverified user and all their data */
@@ -185,15 +463,18 @@ export const adminRouter = createTRPCRouter({
         where: { id: input.userId },
         data: { isVerified: true },
       });
-      // Only create membership if not already a member
-      const existing = await ctx.db.fadderGruppeMember.findUnique({
-        where: {
-          userId_gruppeId: {
-            userId: input.userId,
-            gruppeId: input.gruppeId,
-          },
-        },
+      // One group per person (see `addMember`): an existing membership in
+      // another group is a conflict, in the same group a no-op.
+      const existing = await ctx.db.fadderGruppeMember.findFirst({
+        where: { userId: input.userId },
+        select: { gruppeId: true, gruppe: { select: { name: true } } },
       });
+      if (existing && existing.gruppeId !== input.gruppeId) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Brukeren er allerede medlem av «${existing.gruppe.name}». Fjern brukeren derfra først.`,
+        });
+      }
       if (!existing) {
         await ctx.db.fadderGruppeMember.create({
           data: {
@@ -205,4 +486,178 @@ export const adminRouter = createTRPCRouter({
       }
       return { success: true };
     }),
+
+  /**
+   * The combined registration/payment overview: exactly one row per registered
+   * user, flat (not grouped by studieretning like `getUsers`). This is the
+   * single source for the admin table, the key figures and the CSV export, so
+   * the per-user payment facts are derived here rather than in the client.
+   */
+  getRegistrations: adminProcedure.query(async ({ ctx }) => {
+    const users = await ctx.db.user.findMany({
+      // Only fadderbarn pay. Admins and faddere would otherwise inflate both
+      // the sign-up count and the outstanding sum with people who never owed
+      // money. Filtering on `isFadder` rather than on group membership is what
+      // makes this agree with the actual payment guard: a fadder is exempt from
+      // their study cohort alone, long before anyone assigns them to a group.
+      where: {
+        isAdmin: false,
+        isFadder: false,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        klasse: true,
+        studieretning: true,
+        isVerified: true,
+        hasPaid: true,
+        createdAt: true,
+        memberships: {
+          select: { id: true, role: true, gruppe: { select: { id: true, name: true } } },
+        },
+        payments: {
+          select: {
+            orderId: true,
+            status: true,
+            amount: true,
+            createdAt: true,
+            capturedAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return users.map((user) => {
+      const captured = user.payments.filter((p) => p.status === "CAPTURED");
+
+      // A user can have several orders (abandoned attempts, retries). The
+      // captured one is what counts; otherwise report their most recent attempt.
+      const paidAt = captured.reduce<Date | null>((earliest, p) => {
+        if (!p.capturedAt) return earliest;
+        return !earliest || p.capturedAt < earliest ? p.capturedAt : earliest;
+      }, null);
+
+      const amountPaid = captured.reduce((sum, p) => sum + p.amount, 0);
+      const latest = user.payments[0];
+      const membership = user.memberships[0];
+
+      const paymentStatus: PaymentStatus | null =
+        captured.length > 0 ? "CAPTURED" : (latest?.status ?? null);
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        klasse: user.klasse,
+        studieretning: user.studieretning,
+        isVerified: user.isVerified,
+        hasPaid: user.hasPaid,
+        registeredAt: user.createdAt,
+        gruppe: membership?.gruppe.name ?? null,
+        rolle: membership?.role ?? null,
+        paymentStatus,
+        paidAt,
+        amountPaid,
+        orderId: captured[0]?.orderId ?? latest?.orderId ?? null,
+        attemptCount: user.payments.length,
+      };
+    });
+  }),
+
+  /** Raw Vipps orders (a user may have several), newest first. */
+  getPayments: adminProcedure.query(async ({ ctx }) => {
+    return ctx.db.payment.findMany({
+      select: {
+        id: true,
+        orderId: true,
+        status: true,
+        amount: true,
+        createdAt: true,
+        capturedAt: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }),
+
+  /** Live status and event timeline for one order, straight from Vipps. */
+  getPaymentDetails: adminProcedure
+    .input(z.object({ orderId: z.string() }))
+    .query(async ({ input }) => {
+      try {
+        const [snapshot, events] = await Promise.all([
+          fetchPaymentSnapshot(input.orderId),
+          fetchPaymentEvents(input.orderId),
+        ]);
+        return { snapshot, events };
+      } catch (err) {
+        throw toTRPCError(err);
+      }
+    }),
+
+  /**
+   * Refund one order in full and unmark the user as paid. Irreversible — the
+   * money leaves the merchant account — so the client must confirm first.
+   * All the guards (nothing captured, already refunded) live in the Vipps
+   * layer, which reads the live payment before moving anything.
+   */
+  refundPayment: adminProcedure
+    .input(z.object({ orderId: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const order = await ctx.db.payment.findUnique({
+        where: { orderId: input.orderId },
+        select: { user: { select: { name: true } } },
+      });
+
+      if (!order) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Fant ingen betaling med denne referansen.",
+        });
+      }
+
+      try {
+        const { refunded } = await refundPayment(input.orderId);
+        console.warn(
+          `[admin] refunded ${refunded} øre for ${input.orderId} (${order.user.name}) by ${ctx.session.user.id}`,
+        );
+        return { refunded, name: order.user.name };
+      } catch (err) {
+        throw toTRPCError(err);
+      }
+    }),
+
+  /**
+   * Reconcile every unsettled order against Vipps. The webhook normally does
+   * this, so this is the manual catch-up for orders whose webhook never landed.
+   * One failing order must not abort the run — mirrors `payment.checkMyPayment`.
+   */
+  syncPayments: adminProcedure.mutation(async ({ ctx }) => {
+    const orders = await ctx.db.payment.findMany({
+      where: { status: { in: ["CREATED", "AUTHORIZED"] } },
+      select: { orderId: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    let settled = 0;
+    let failed = 0;
+
+    for (const order of orders) {
+      try {
+        const { paid } = await settlePayment(order.orderId);
+        if (paid) settled += 1;
+      } catch (err) {
+        failed += 1;
+        console.error("[admin] settle failed for", order.orderId, err);
+      }
+    }
+
+    return { checked: orders.length, settled, failed };
+  }),
+
+  /** Fadderuka price in øre, so the client doesn't hardcode the amount. */
+  getPaymentAmount: adminProcedure.query(() => ({ amountOre: PAYMENT_AMOUNT_ORE })),
 });

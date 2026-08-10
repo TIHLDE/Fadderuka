@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 interface GameCardProps {
@@ -9,14 +10,26 @@ export default function GameCard({ title, href }: GameCardProps) {
   return (
     <Link
       href={href}
-      className="group relative flex h-[248px] w-full max-w-[358px] items-center justify-center overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#02376E] to-[#011830] p-4 shadow-lg transition-[transform,box-shadow,border-color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.99] hover:border-white/20 hover:shadow-xl hover:scale-[1.02]"
+      data-slot="card"
+      className="group ring-card-border hover:ring-primary/40 relative flex h-[200px] w-full items-center justify-center overflow-hidden rounded-xl bg-card p-6 text-card-foreground ring-1"
     >
-      {/* Glow effect on hover */}
-      <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 transition-opacity duration-300 group-hover:opacity-100 bg-gradient-to-br from-sky-400/10 to-transparent" />
-      
-      <h3 className="relative z-10 text-center text-2xl font-bold text-white">
-        {title}
-      </h3>
+      {/* Soft brand glow that blooms on hover */}
+      <div
+        aria-hidden
+        className="bg-primary/15 pointer-events-none absolute -top-10 -right-10 size-40 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
+      />
+
+      <div className="relative z-10 flex flex-col items-center gap-3 text-center">
+        <h3 className="font-heading text-foreground text-xl font-medium tracking-tight">
+          {title}
+        </h3>
+        {/* Skjult bare der hover finnes — på touch er det ingen hover-tilstand
+            å avsløre den i, så da står den synlig. */}
+        <span className="text-link inline-flex items-center gap-1 text-sm font-medium transition-all group-hover:translate-y-0 group-hover:opacity-100 [@media(hover:hover)]:-translate-y-1 [@media(hover:hover)]:opacity-0">
+          Spill nå
+          <ArrowRight className="size-4" />
+        </span>
+      </div>
     </Link>
   );
 }

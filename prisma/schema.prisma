@@ -28,6 +28,8 @@ enum PaymentStatus {
     EXPIRED
     TERMINATED
     FAILED
+    // Money was captured and then paid back in full via the admin panel.
+    REFUNDED
 }
 
 model Post {
@@ -53,9 +55,43 @@ model User {
     phone         String?
     klasse        String?
     studieretning String?
+    // The programme the user told us they are STARTING, when TIHLDE's profile
+    // still shows the one they came from. Digital transformasjon is the case
+    // this exists for: it is a 2-year continuation of a bachelor, so its new
+    // students keep their old STUDY group (and old cohort) on tihlde.org.
+    // `null` means "trust TIHLDE"; a value pins `studieretning` and survives
+    // every later login instead of being overwritten by the profile.
+    studieretningOverride String?
+    // Food allergies, as free text.
+    //
+    // Kept here rather than pushed onto the TIHLDE profile: Photon models
+    // allergies as a fixed list of slugs, so there is nowhere for "laktose,
+    // litt nøtter" to go. FadderKom is who orders the food during fadderuka
+    // anyway, so this is the copy that actually gets used.
+    allergy       String?
+    // Local password for students who registered here without an @stud.ntnu.no
+    // address. Photon requires them to verify their e-mail before it will let
+    // them sign in, and their TIHLDE membership is not activated until an admin
+    // or a Feide login does it — so without this they could register and pay,
+    // then be locked out of the app they just paid for. Set only at
+    // registration, and cleared the first time a real TIHLDE login succeeds
+    // (see `src/app/api/auth/callback/route.ts`), which is the handover.
+    passwordHash  String?
     isVerified    Boolean   @default(false)
     hasPaid       Boolean   @default(false)
     isAdmin       Boolean   @default(false)
+    // Manual admin decision from the admin panel. `null` means "derive from
+    // TIHLDE on every login" (the default); `true`/`false` pins the user and
+    // survives logins, so a manual grant or revocation is not overwritten.
+    adminOverride Boolean?
+    // Whether this user is a fadder — i.e. someone who never owes money for
+    // fadderuka. Derived on every login from the study cohort and any FADDER
+    // group membership (see `src/server/fadder.ts`), and persisted so every
+    // payment guard reads one field instead of re-deriving it.
+    isFadder      Boolean   @default(false)
+    // Manual fadder decision from the admin panel, same contract as
+    // `adminOverride`: `null` derives, `true`/`false` pins and survives logins.
+    fadderOverride Boolean?
     createdAt     DateTime  @default(now())
     updatedAt     DateTime  @updatedAt
     sessions      Session[]
@@ -64,6 +100,37 @@ model User {
     groupMessages GroupMessage[]
     notifications Notification[]
     payments      Payment[]
+    passwordResets PasswordResetToken[]
+}
+
+model PasswordResetToken {
+    // A "glemt passord"-link, for accounts that log in with the local password
+    // chosen at registration (tihlde.org owns the password for everyone else).
+    //
+    // Only the SHA-256 of the token is stored: the plaintext lives in the email
+    // and nowhere else, so a leaked database does not hand over live reset
+    // links. Single-use (`usedAt`) and short-lived (`expiresAt`).
+    id        String    @id @default(cuid())
+    tokenHash String    @unique
+    userId    String
+    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    expiresAt DateTime
+    usedAt    DateTime?
+    createdAt DateTime  @default(now())
+
+    @@index([userId])
+}
+
+model AppSetting {
+    // One row, always keyed "singleton": app-wide switches FadderKom flips by
+    // hand. A fixed id makes every read a primary-key lookup and an upsert
+    // instead of a "first row wins" gamble.
+    id String @id @default("singleton")
+    // When the faddergrupper were released to fadderbarn. `null` means they
+    // are still hidden, so faddere can be assigned and can prepare their
+    // gruppe before the fadderbarn get to see who they ended up with.
+    gruppePublishedAt DateTime?
+    updatedAt         DateTime  @updatedAt
 }
 
 model FadderGruppe {
@@ -134,6 +201,10 @@ model Payment {
     phone     String? // set only if we prefilled a number; Vipps collects it otherwise
     amount    Int // amount in øre
     status    PaymentStatus @default(CREATED)
+    // When the money was actually captured. Distinct from `updatedAt`, which any
+    // later status write would move: this is what the admin overview reports as
+    // the payment time, so it must stay pinned to the capture itself.
+    capturedAt DateTime?
     createdAt DateTime      @default(now())
     updatedAt DateTime      @updatedAt
     userId    String
@@ -143,16 +214,28 @@ model Payment {
 }
 
 model Session {
-    // Opaque app session. `tihldeToken` stores the TIHLDE API token so we can
-    // call Lepton on the user's behalf (e.g. refresh their profile).
-    id          String   @id @default(cuid())
-    expiresAt   DateTime
-    token       String   @unique
-    tihldeToken String?
+    // Opaque app session. `photonAccessToken` holds the OAuth access token
+    // Photon issued for this login, so we can act on the member's behalf (their
+    // allergies) without ever having held their password.
+    id                String   @id @default(cuid())
+    expiresAt         DateTime
+    token             String   @unique
+    photonAccessToken String?
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
     ipAddress   String?
     userAgent   String?
     userId      String
     user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LoginAttempt {
+    // One row per failed login, keyed by "user:<username>" or "ip:<address>".
+    // Deliberately not linked to User: most failures are for usernames that
+    // don't exist here, and the whole point is to count them before we know.
+    id        String   @id @default(cuid())
+    key       String
+    createdAt DateTime @default(now())
+
+    @@index([key, createdAt])
 }
