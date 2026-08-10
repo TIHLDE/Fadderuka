@@ -22,31 +22,36 @@ import { cn } from "~/lib/utils";
 import {
   NAV_LINKS,
   SECONDARY_NAV_LINKS,
-  getGroupLink,
+  getGroupLinks,
   type NavLink,
 } from "../header/nav-links";
 
 type SiteBottomBarProps = {
   isAdmin: boolean;
+  isGruppeMember: boolean;
   isAuthenticated: boolean;
 };
 
 export function SiteBottomBar({
   isAdmin,
+  isGruppeMember,
   isAuthenticated,
 }: SiteBottomBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const closeMenu = () => setMenuOpen(false);
 
-  const groupLink = getGroupLink(isAdmin);
+  // En admin kan også være fadder, så begge lenkene kan gjelde samtidig.
+  // Raden har bare plass til én: admin vinner, resten ligger i menyen.
+  const groupLinks = getGroupLinks(isAdmin, isGruppeMember);
+  const primaryGroupLink = groupLinks[0];
   const activityLink = NAV_LINKS[1]!;
 
   // Menyen samler alt som ikke fikk plass i raden, så ingen side er
   // utilgjengelig fra telefon slik de var da headeren var lg-only.
   const menuLinks: NavLink[] = [
     ...NAV_LINKS,
-    groupLink,
+    ...groupLinks,
     ...SECONDARY_NAV_LINKS,
   ];
 
@@ -65,13 +70,15 @@ export function SiteBottomBar({
           <activityLink.icon />
         </BottomBarLink>
 
-        <BottomBarLink
-          href={groupLink.href}
-          label={isAdmin ? "Admin" : "Gruppe"}
-          pathname={pathname}
-        >
-          <groupLink.icon />
-        </BottomBarLink>
+        {primaryGroupLink ? (
+          <BottomBarLink
+            href={primaryGroupLink.href}
+            label={primaryGroupLink.href === "/admin" ? "Admin" : "Gruppe"}
+            pathname={pathname}
+          >
+            <primaryGroupLink.icon />
+          </BottomBarLink>
+        ) : null}
 
         <Drawer open={menuOpen} onOpenChange={setMenuOpen}>
           <DrawerTrigger asChild>

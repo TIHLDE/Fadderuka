@@ -1,10 +1,4 @@
-import {
-  Beer,
-  CalendarDays,
-  Info,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { Beer, CalendarDays, Info, Users, type LucideIcon } from "lucide-react";
 
 export type NavLink = {
   href: string;
@@ -18,11 +12,27 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/aktiviteter", label: "Aktiviteter", icon: CalendarDays },
 ];
 
-/** Siste nav-lenke avhenger av om brukeren er admin. */
-export function getGroupLink(isAdmin?: boolean): NavLink {
-  return isAdmin
-    ? { href: "/admin", label: "Adminpanel", icon: Users }
-    : { href: "/faddergruppe", label: "Min faddergruppe", icon: Users };
+/**
+ * Nav-lenker for admin/faddergruppe avhenger av rollene brukeren har.
+ * Disse er ikke gjensidig utelukkende: en admin som også er medlem av en
+ * faddergruppe skal se begge lenkene.
+ */
+export function getGroupLinks(
+  isAdmin?: boolean,
+  isGruppeMember?: boolean,
+): NavLink[] {
+  const links: NavLink[] = [];
+  if (isAdmin) {
+    links.push({ href: "/admin", label: "Adminpanel", icon: Users });
+  }
+  if (isGruppeMember) {
+    links.push({
+      href: "/faddergruppe",
+      label: "Min faddergruppe",
+      icon: Users,
+    });
+  }
+  return links;
 }
 
 /**

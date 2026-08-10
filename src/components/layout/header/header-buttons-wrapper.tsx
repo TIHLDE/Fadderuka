@@ -1,4 +1,3 @@
-import { headers } from "next/headers";
 import Link from "next/link";
 import React from "react";
 import {
@@ -9,17 +8,18 @@ import {
 } from "~/components/ui/navigation-menu";
 import { ThemeSwitcher } from "~/components/ui/theme-switcher";
 import { TihldeLogo } from "~/components/ui/icons/tihlde";
-import { auth } from "~/server/auth/config";
 import { NotificationBell } from "./notification-bell";
-import { NAV_LINKS, getGroupLink } from "./nav-links";
+import { NAV_LINKS, getGroupLinks } from "./nav-links";
+import getHeaderUserContext from "./get-header-user-context";
 import { UserArea } from "../user-area";
 
 const HeaderButtonsWrapper = async () => {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const { session, isGruppeMember } = await getHeaderUserContext();
 
-  const links = [...NAV_LINKS, getGroupLink(session?.user?.isAdmin)];
+  const links = [
+    ...NAV_LINKS,
+    ...getGroupLinks(session?.user?.isAdmin, isGruppeMember),
+  ];
 
   return (
     <>
