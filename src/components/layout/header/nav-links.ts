@@ -1,15 +1,33 @@
-import { CalendarDays, Info, Users, type LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  Info,
+  Megaphone,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export type NavLink = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Peker ut av appen — åpnes i ny fane og merkes med et eksternt-ikon. */
+  external?: boolean;
 };
 
 /** Nav-lenker som er felles for desktop-headeren og mobilmenyen. */
 export const NAV_LINKS: NavLink[] = [
   { href: "/informasjon", label: "Informasjon/FAQ", icon: Info },
   { href: "/aktiviteter", label: "Aktiviteter", icon: CalendarDays },
+];
+
+/** Eksterne lenker som ligger sist i navigasjonen, som i Photon. */
+export const EXTERNAL_NAV_LINKS: NavLink[] = [
+  {
+    href: "https://forms.gle/UE85Da8et8VJc7XWA",
+    label: "Varsling",
+    icon: Megaphone,
+    external: true,
+  },
 ];
 
 /**
