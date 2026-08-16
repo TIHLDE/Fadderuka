@@ -1,9 +1,18 @@
-import { Beer, CalendarDays, Info, Users, type LucideIcon } from "lucide-react";
+import {
+  Beer,
+  CalendarDays,
+  Info,
+  Megaphone,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 export type NavLink = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Peker ut av appen — åpnes i ny fane og merkes med et eksternt-ikon. */
+  external?: boolean;
 };
 
 /** Nav-lenker som er felles for desktop-headeren og mobilmenyen. */
@@ -34,6 +43,16 @@ export function getGroupLinks(
   }
   return links;
 }
+
+/** Eksterne lenker som ligger sist i navigasjonen, som i Photon. */
+export const EXTERNAL_NAV_LINKS: NavLink[] = [
+  {
+    href: "https://forms.gle/UE85Da8et8VJc7XWA",
+    label: "Varsling",
+    icon: Megaphone,
+    external: true,
+  },
+];
 
 /**
  * Lenker som bare vises i mobilmenyen. /drikkeleker har aldri hatt en vei inn

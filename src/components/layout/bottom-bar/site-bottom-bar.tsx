@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, LogIn, Menu } from "lucide-react";
+import { Home, LogIn, Menu, SquareArrowOutUpRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -20,6 +20,7 @@ import {
 import { ThemeSwitcher } from "~/components/ui/theme-switcher";
 import { cn } from "~/lib/utils";
 import {
+  EXTERNAL_NAV_LINKS,
   NAV_LINKS,
   SECONDARY_NAV_LINKS,
   getGroupLinks,
@@ -53,6 +54,7 @@ export function SiteBottomBar({
     ...NAV_LINKS,
     ...groupLinks,
     ...SECONDARY_NAV_LINKS,
+    ...EXTERNAL_NAV_LINKS,
   ];
 
   return (
@@ -161,19 +163,36 @@ function MenuLink({
   pathname: string | null;
   onNavigate: () => void;
 }) {
-  const active = pathname === link.href;
+  const active = !link.external && pathname === link.href;
+  const className = cn(
+    "flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm font-medium transition-colors",
+    active
+      ? "bg-muted text-foreground"
+      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+  );
+
+  if (link.external) {
+    return (
+      <a
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onNavigate}
+        className={className}
+      >
+        <link.icon className="size-4 shrink-0" />
+        {link.label}
+        <SquareArrowOutUpRight className="size-3.5 shrink-0" aria-hidden />
+      </a>
+    );
+  }
 
   return (
     <Link
       href={link.href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm font-medium transition-colors",
-        active
-          ? "bg-muted text-foreground"
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-      )}
+      className={className}
     >
       <link.icon className="size-4 shrink-0" />
       {link.label}
