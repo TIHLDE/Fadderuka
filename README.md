@@ -4,6 +4,11 @@ Nettside for fadderbarn og faddere under fadderuken.
 
 ## Tester
 
+Fadderuka bruker bun!
+For lokal testing, kjør:
+bun install
+bun dev
+
 Integrasjonstestene kjører serverkoden (tRPC-routere, route handlers,
 Vipps- og TIHLDE-klientene) mot en ekte Postgres. Ingen test treffer Vipps eller
 TIHLDE — `fetch` er stubbet.
