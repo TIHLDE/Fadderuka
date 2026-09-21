@@ -1,4 +1,4 @@
-import { Beer, CalendarDays, Info, Users, type LucideIcon } from "lucide-react";
+import { CalendarDays, Info, Users, type LucideIcon } from "lucide-react";
 
 export type NavLink = {
   href: string;
@@ -34,11 +34,3 @@ export function getGroupLinks(
   }
   return links;
 }
-
-/**
- * Lenker som bare vises i mobilmenyen. /drikkeleker har aldri hatt en vei inn
- * fra navigasjonen — siden var bare tilgjengelig ved å skrive URL-en.
- */
-export const SECONDARY_NAV_LINKS: NavLink[] = [
-  { href: "/drikkeleker", label: "Drikkeleker", icon: Beer },
-];
