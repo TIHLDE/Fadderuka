@@ -21,7 +21,6 @@ import { ThemeSwitcher } from "~/components/ui/theme-switcher";
 import { cn } from "~/lib/utils";
 import {
   NAV_LINKS,
-  SECONDARY_NAV_LINKS,
   getGroupLinks,
   type NavLink,
 } from "../header/nav-links";
@@ -49,11 +48,7 @@ export function SiteBottomBar({
 
   // Menyen samler alt som ikke fikk plass i raden, så ingen side er
   // utilgjengelig fra telefon slik de var da headeren var lg-only.
-  const menuLinks: NavLink[] = [
-    ...NAV_LINKS,
-    ...groupLinks,
-    ...SECONDARY_NAV_LINKS,
-  ];
+  const menuLinks: NavLink[] = [...NAV_LINKS, ...groupLinks];
 
   return (
     <BottomBar className="md:hidden">
