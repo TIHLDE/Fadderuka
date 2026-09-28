@@ -1,5 +1,11 @@
-import { PageShell } from "~/components/layout/page-shell";
-import { Card } from "~/components/ui/card";
+import { PageHeader, PageShell } from "~/components/layout/page-shell";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 
 const faqItems = [
   {
@@ -48,7 +54,8 @@ const faqItems = [
       "Fadderukene byr på to uker med et stort og variert sosialt program. Selv om arrangementene planlegges og gjennomføres av frivillige, koster det penger å leie lokaler, kjøpe inn utstyr og gjennomføre aktivitetene. Vi mottar noe støtte, men deltakerbetalingen er nødvendig for å få hele opplegget til å gå rundt. Til gjengjeld får du være med på en rekke sosiale arrangementer og aktiviteter gjennom begge ukene.",
   },
   {
-    question: "Hva skjer hvis jeg kommer for sent eller ikke finner gruppen min?",
+    question:
+      "Hva skjer hvis jeg kommer for sent eller ikke finner gruppen min?",
     answer:
       "Ta kontakt med fadderne dine eller kom bort til en av de blå TIHLDE-t-skjortene, så hjelper vi deg.",
   },
@@ -75,38 +82,39 @@ const packingList = [
 export default function InformasjonPage() {
   return (
     <PageShell>
+      <PageHeader
+        title="Informasjon og FAQ"
+        description="Det viktigste du lurer på før og under fadderuka."
+      />
+
       {/* Sidekolonnen er 22rem, som i Photons DetailPage, og limes fast rett
           under den 56px høye headeren. */}
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-        <div className="flex flex-col gap-8">
-          <h1 className="font-heading text-foreground text-3xl font-semibold tracking-tight sm:text-4xl">
-            FAQ
-          </h1>
+        <Accordion>
           {faqItems.map((item) => (
-            <div key={item.question} className="flex flex-col gap-2">
-              <h2 className="font-heading text-foreground text-lg font-medium tracking-tight sm:text-xl">
+            <AccordionItem key={item.question} value={item.question}>
+              <AccordionTrigger className="text-base">
                 {item.question}
-              </h2>
-              {/* Svarene er sidens hovedinnhold, så de står i --foreground.
-                  Photon mapper `.prose`-brødtekst til samme token og holder
-                  --muted-foreground til sekundær tekst. */}
-              <p className="text-foreground/90 text-base leading-relaxed">
+              </AccordionTrigger>
+              <AccordionContent className="text-base">
                 {item.answer}
-              </p>
-            </div>
+              </AccordionContent>
+            </AccordionItem>
           ))}
-        </div>
+        </Accordion>
 
         <aside className="lg:sticky lg:top-20">
-          <Card className="flex flex-col gap-4 p-4">
-            <h2 className="font-heading text-foreground text-lg font-medium tracking-tight">
-              Pakkeliste fadderuka
-            </h2>
-            <ul className="text-muted-foreground list-disc space-y-2 pl-5 text-sm">
-              {packingList.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+          <Card>
+            <CardHeader>
+              <CardTitle>Pakkeliste fadderuka</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-muted-foreground list-disc space-y-2 pl-5">
+                {packingList.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </CardContent>
           </Card>
         </aside>
       </div>
