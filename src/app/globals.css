@@ -165,19 +165,6 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-
-  --animate-glow-breathe: glow-breathe 7s ease-in-out infinite;
-  @keyframes glow-breathe {
-    0%,
-    100% {
-      opacity: 0.45;
-      transform: translateX(-50%) scale(1);
-    }
-    50% {
-      opacity: 0.75;
-      transform: translateX(-50%) scale(1.06);
-    }
-  }
 }
 
 /* ── Motion ───────────────────────────────────────────────────────────────
