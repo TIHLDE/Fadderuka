@@ -11,10 +11,10 @@ import { cn } from "~/lib/utils";
 import { TRPCReactProvider } from "~/trpc/react";
 import "./globals.css";
 
-// `variable` eksponerer snittet som --font-sans, som er tokenet
-// tailwind.config leser for både `font-sans` og `font-heading`. Uten det ville
+// `variable` eksponerer snittet som --font-inter, som `@theme inline` i
+// globals.css bygger både `font-sans` og `font-heading` på. Uten det ville
 // familienavnet next/font genererer ikke nå CSS-en.
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Fadderuke",
