@@ -52,7 +52,7 @@ export function SlideTabsBar<V extends string>({
   return (
     <div
       className={cn(
-        "no-scrollbar border-border bg-secondary relative flex items-center overflow-x-auto rounded-xl border !p-1",
+        "no-scrollbar relative flex items-center overflow-x-auto rounded-xl border border-border bg-secondary !p-1",
         stretch ? "w-full" : "w-fit max-w-full",
         className,
       )}
@@ -81,7 +81,7 @@ export function SlideTabsBar<V extends string>({
             {active && (
               <motion.span
                 layoutId={layoutId}
-                className="bg-primary absolute inset-0 -z-10 rounded-lg shadow-sm"
+                className="absolute inset-0 -z-10 rounded-lg bg-primary shadow-sm"
                 transition={{ type: "spring", stiffness: 420, damping: 34 }}
               />
             )}

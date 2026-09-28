@@ -7,17 +7,17 @@ import { cn } from "~/lib/utils";
 
 const components: Components = {
   h1: ({ children }) => (
-    <h1 className="text-foreground mt-4 text-2xl font-bold first:mt-0">
+    <h1 className="mt-4 text-2xl font-bold text-foreground first:mt-0">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-foreground mt-4 text-xl font-bold first:mt-0">
+    <h2 className="mt-4 text-xl font-bold text-foreground first:mt-0">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-foreground mt-4 text-lg font-semibold first:mt-0">
+    <h3 className="mt-4 text-lg font-semibold text-foreground first:mt-0">
       {children}
     </h3>
   ),
@@ -27,13 +27,13 @@ const components: Components = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-primary hover:text-primary/80 underline underline-offset-2 transition"
+      className="text-primary underline underline-offset-2 transition hover:text-primary/80"
     >
       {children}
     </a>
   ),
   strong: ({ children }) => (
-    <strong className="text-foreground font-semibold">{children}</strong>
+    <strong className="font-semibold text-foreground">{children}</strong>
   ),
   em: ({ children }) => <em className="italic">{children}</em>,
   ul: ({ children }) => (
@@ -48,16 +48,16 @@ const components: Components = {
   ),
   li: ({ children }) => <li className="leading-relaxed">{children}</li>,
   blockquote: ({ children }) => (
-    <blockquote className="border-foreground/20 my-3 border-l-2 pl-4 italic first:mt-0 last:mb-0">
+    <blockquote className="my-3 border-l-2 border-foreground/20 pl-4 italic first:mt-0 last:mb-0">
       {children}
     </blockquote>
   ),
   code: ({ children }) => (
-    <code className="bg-foreground/10 rounded px-1.5 py-0.5 font-mono text-sm">
+    <code className="rounded bg-foreground/10 px-1.5 py-0.5 font-mono text-sm">
       {children}
     </code>
   ),
-  hr: () => <hr className="border-foreground/15 my-4" />,
+  hr: () => <hr className="my-4 border-foreground/15" />,
 };
 
 export default function Markdown({
