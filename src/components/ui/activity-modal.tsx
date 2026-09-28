@@ -61,18 +61,18 @@ export default function ActivityModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 supports-[backdrop-filter]:backdrop-blur-xs animate-in fade-in-0 duration-100 ease-out"
+      className="animate-in fade-in-0 fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 duration-100 ease-out supports-[backdrop-filter]:backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-xl bg-popover text-popover-foreground ring-1 ring-foreground/10 animate-in fade-in-0 zoom-in-95 duration-100"
+        className="bg-popover text-popover-foreground ring-foreground/10 animate-in fade-in-0 zoom-in-95 relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-xl ring-1 duration-100"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Lukk"
-          className="absolute right-4 top-4 z-10 grid size-8 place-items-center rounded-lg bg-background/60 text-foreground ring-1 ring-foreground/10 transition-colors hover:bg-accent"
+          className="bg-background/60 text-foreground ring-foreground/10 hover:bg-accent absolute top-4 right-4 z-10 grid size-8 place-items-center rounded-lg ring-1 transition-colors"
         >
           <X className="h-5 w-5" />
         </button>
@@ -84,15 +84,15 @@ export default function ActivityModal({
         />
 
         <div className="flex-1 space-y-6 p-6 sm:p-10">
-          <h2 className="font-heading text-3xl font-semibold tracking-tight capitalize text-foreground sm:text-4xl">
+          <h2 className="font-heading text-foreground text-3xl font-semibold tracking-tight capitalize sm:text-4xl">
             {activity.title}
           </h2>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground sm:text-base">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-sm sm:text-base">
             <span className="capitalize">{dateStr}</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-foreground/30" />
+            <span className="bg-foreground/30 h-1.5 w-1.5 rounded-full" />
             <span>{timeStr}</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-foreground/30" />
+            <span className="bg-foreground/30 h-1.5 w-1.5 rounded-full" />
             <span className="flex items-center gap-1">
               <MapPin className="h-4 w-4" />
               {activity.location.startsWith("http") ? (
@@ -100,7 +100,7 @@ export default function ActivityModal({
                   href={activity.location}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary transition hover:text-primary/80"
+                  className="text-primary hover:text-primary/80 transition"
                 >
                   Vis på kart
                 </a>
@@ -110,7 +110,7 @@ export default function ActivityModal({
             </span>
           </div>
 
-          <Markdown className="text-base text-muted-foreground">
+          <Markdown className="text-muted-foreground text-base">
             {activity.description}
           </Markdown>
         </div>

@@ -11,7 +11,7 @@ export default function GameCard({ title, href }: GameCardProps) {
     <Link
       href={href}
       data-slot="card"
-      className="group ring-card-border hover:ring-primary/40 relative flex h-[200px] w-full items-center justify-center overflow-hidden rounded-xl bg-card p-6 text-card-foreground ring-1"
+      className="group ring-card-border hover:ring-primary/40 bg-card text-card-foreground relative flex h-[200px] w-full items-center justify-center overflow-hidden rounded-xl p-6 ring-1"
     >
       {/* Soft brand glow that blooms on hover */}
       <div

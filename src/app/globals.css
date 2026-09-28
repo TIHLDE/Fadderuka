@@ -208,13 +208,11 @@
      setter egen `duration-*` vinner fortsatt. */
   --animate-in: enter var(--tw-animation-duration, var(--tw-duration, 0.15s))
     var(--tw-ease, var(--ease-out)) var(--tw-animation-delay, 0s)
-    var(--tw-animation-iteration-count, 1)
-    var(--tw-animation-direction, normal)
+    var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
     var(--tw-animation-fill-mode, none);
   --animate-out: exit var(--tw-animation-duration, var(--tw-duration, 0.15s))
     var(--tw-ease, var(--ease-out)) var(--tw-animation-delay, 0s)
-    var(--tw-animation-iteration-count, 1)
-    var(--tw-animation-direction, normal)
+    var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
     var(--tw-animation-fill-mode, none);
 }
 
@@ -315,36 +313,263 @@
   * {
     @apply border-border outline-ring/50;
   }
-
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings:
-      "rlig" 1,
-      "calt" 1;
-  }
-
-  html {
-    /* Reserver plass til den vertikale scrollbaren så sentrerte layouter ikke
-       hopper horisontalt når innholdshøyden endrer seg. */
-    scrollbar-gutter: stable;
-  }
-
-  /* Everything clickable gets a pointer cursor (native <button> defaults to
-     the arrow cursor otherwise). Disabled controls keep the default cursor. */
-  button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [role="tab"],
-  [role="menuitem"],
-  label[for],
+  /* Musepekeren skal si at noe er klikkbart. Tailwind v4 fjernet nettleserens
+   * gamle `cursor: pointer` på knapper, så uten denne står markøren som en
+   * pil over knapper, brytere, avkryssingsbokser, menyvalg og faner — og
+   * hvert komponent måtte hatt sin egen `cursor-pointer`-klasse.
+   *
+   * Ligger i base-laget, så en `cursor-*`-verktøyklasse i en komponent
+   * (`cursor-text` i input-group, `cursor-w-resize` i sidebar) overstyrer den
+   * som før. Avslått tilstand kommer sist og vinner over resten. */
+  button,
   summary,
-  a[href] {
+  label[for],
+  [role="button"],
+  [role="tab"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="radio"],
+  [role="option"],
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"] {
     cursor: pointer;
   }
-
   :disabled,
-  [aria-disabled="true"] {
+  [aria-disabled="true"],
+  [data-disabled]:not([data-disabled="false"]) {
     cursor: default;
   }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    @apply bg-background text-foreground;
+    /* Brukerskrevet innhold inneholder ubrytelige ord: e-postadresser,
+       * URL-er, lange norske sammensetninger. Uten dette setter ett slikt
+       * ord min-content-bredden til en flex-boks, og hele sida blir
+       * bredere enn skjermen på mobil. `anywhere` (ikke `break-word`)
+       * fordi bare den påvirker intrinsic sizing — som er akkurat det
+       * flex- og grid-barn måles etter. Den slår først inn når ordet
+       * ellers ville flytt utenfor, så vanlig tekst er upåvirket. */
+    overflow-wrap: anywhere;
+  }
+  html {
+    @apply font-sans;
+    /* Reserve space for the vertical scrollbar so centered layouts
+       * don't shift horizontally when content height changes (e.g.
+       * switching between short and tall tabs). */
+    scrollbar-gutter: stable;
+    /* Siste skanse mot sidescroll på mobil. `clip`, ikke `hidden`:
+       * `hidden` gjør elementet til en scroll-container, og da bytter
+       * `position: sticky` scrollport — det ville brutt den klebrige
+       * headeren og sidebaren på detaljsidene. Dette skjuler ikke reelle
+       * feil for oss; overflow-sveipen måler geometrien direkte. */
+    overflow-x: clip;
+    overflow-y: visible;
+  }
+}
+
+/* Map @tailwindcss/typography to the project's theme tokens so prose
+ * follows light/dark via the same `--foreground` etc. variables that
+ * everything else uses. Kept unlayered so it overrides the plugin's
+ * own `.prose` defaults (which live in Tailwind's components layer). */
+.prose {
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-lead: var(--muted-foreground);
+  --tw-prose-links: var(--link);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--muted-foreground);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-code: var(--card-foreground);
+  --tw-prose-pre-bg: var(--muted);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
+  --tw-prose-kbd: var(--foreground);
+}
+
+/* ── Hero waves ───────────────────────────────────────────────────────────
+   Backing animation for <HeroSectionBackground>. Every moving part here is a
+   `transform` on its own layer, and nothing that moves is ever re-painted:
+   the whole thing is handed to the compositor once and then only translated.
+
+   That constraint is the entire point. The first version drove this with SMIL
+   inside the SVG — an `animateTransform` on the line groups plus one on a
+   gradient that fed a `<mask>`, with an `feGaussianBlur` on top. None of those
+   can be composited: an animated mask has to be regenerated and re-applied
+   every frame, over a full-viewport element, on the main thread. On a phone
+   that is a continuous full-screen repaint behind a `backdrop-blur` header,
+   which is why the sweep stuttered and why opening the menu on the front page
+   felt stuck — the animation was starving everything else.
+
+   The sweep is the interesting bit. A highlight window has to travel while the
+   lines it lights up stay put, so the band carries a *static* mask and moves,
+   and its child moves back by exactly the same amount. Net motion of the lines
+   is zero, both transforms are compositor-only, and the mask never changes.
+   The two keyframes below are inverses of each other and share a duration —
+   they must be edited as a pair or the highlighted lines will drift out of
+   register with the ones underneath. */
+@keyframes hero-waves-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    /* One full wavelength of the pattern, so the loop is seamless. The
+     distance is geometry, so it comes from the component that draws the
+     waves rather than being restated here. */
+    transform: translate3d(calc(-1 * var(--hero-waves-loop, 40%)), 0, 0);
+  }
+}
+
+@keyframes hero-waves-sweep {
+  0% {
+    transform: translate3d(160%, 0, 0);
+    animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+  }
+  /* Crosses in the first 57% of the cycle, then waits off-screen — the rest
+     is what makes it read as an occasional pass rather than a conveyor. */
+  57%,
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes hero-waves-sweep-counter {
+  0% {
+    transform: translate3d(-160%, 0, 0);
+    animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+  }
+  57%,
+  100% {
+    transform: translate3d(100%, 0, 0);
+  }
+}
+
+[data-slot="hero-waves-drift"] {
+  animation: hero-waves-drift var(--hero-waves-drift-duration, 18s) linear
+    infinite;
+  will-change: transform;
+}
+
+[data-slot="hero-waves-sweep"] {
+  animation: hero-waves-sweep var(--hero-waves-sweep-duration, 9s) infinite;
+  will-change: transform;
+}
+
+[data-slot="hero-waves-sweep-counter"] {
+  animation: hero-waves-sweep-counter var(--hero-waves-sweep-duration, 9s)
+    infinite;
+  will-change: transform;
+}
+
+/* Freeze the whole thing while the mobile menu is open. That drawer lays a
+   full-viewport `backdrop-filter` scrim over the page, and a backdrop filter
+   has to be re-sampled on every frame its backdrop moves — so the waves were
+   buying a full-screen blur recomputation per frame to animate something the
+   user cannot see through the blur anyway.
+
+   Keyed off the drawer's own `data-state` rather than <body>'s
+   `data-scroll-locked`: closing the menu by tapping a link navigates away
+   mid-close and vaul never removes that attribute, which would leave the hero
+   frozen for the rest of the session. This selector is correct on both close
+   paths, and if it ever stops matching the animation simply keeps running. */
+body:has([data-slot="drawer-content"][data-state="open"])
+  [data-slot^="hero-waves"] {
+  animation-play-state: paused;
+}
+
+/* Fades the lines out towards the edges and holds them well back behind the
+   hero copy. Painted once as a static mask; the layers underneath animate
+   inside it. `intersect` multiplies the two, so the centre keeps the 8% the
+   second gradient leaves and the outer falloff still applies on top. */
+[data-slot="hero-waves"] {
+  mask-image:
+    radial-gradient(120% 50% at 50% 50%, #000 0%, #000 50%, transparent 100%),
+    radial-gradient(
+      42% 42% at 50% 50%,
+      rgb(0 0 0 / 0.08) 0%,
+      rgb(0 0 0 / 0.08) 58%,
+      #000 100%
+    );
+  mask-composite: intersect;
+}
+
+/* Honour a user's reduced-motion preference globally: collapse movement-based
+   transitions and animations (slides, zooms, the spinner, the caret blink) to
+   effectively instant, while leaving final visual state intact — opacity and
+   colour still settle, just without travel. tw-animate-css ships no such guard,
+   so without this every overlay slide/zoom and infinite loop plays regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    /* Delays must go too, not just durations. A staggered entrance fills
+     `backwards` — opacity 0 — for the whole delay, so an untouched
+     320ms delay would leave the last cards in a grid blank for a third
+     of a second before snapping in. That reads as a loading bug, which
+     is the opposite of what reduced motion is asking for. */
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+}
+
+/* Autofyll: Chrome maler sin egen bakgrunn på utfylte felt, og i mørk modus er
+   den en lys blåtone som ikke ligner noe annet i grensesnittet. Den eneste
+   måten å overstyre den på er en `inset box-shadow` som dekker hele feltet.
+
+   Regelen må ligge her, utenfor `@layer`, og ikke som en `autofill:`-utility på
+   selve inputen: fokusringen er også en box-shadow, og med lik spesifisitet
+   vant `focus-visible:ring-3` over autofyll-skyggen — så feltet ble blått i det
+   øyeblikket det fikk fokus (issue #669). Ulagd CSS slår alle lag, og vi tar
+   med ring-variablene selv så ringen fortsatt tegnes.
+
+   Fargen etterligner et vanlig felt: gjennomsiktig over --card i lys modus,
+   `bg-input/30` over --card i mørk.
+
+   De to blokkene under er med vilje like. `:autofill` er den standardiserte
+   formen og `:-webkit-autofill` den gamle, og en nettleser som ikke kjenner
+   selektoren forkaster HELE regelen den står i — ikke bare den ene
+   selektoren. Slår vi dem sammen til én liste, mister vi altså regelen i den
+   nettleseren som bare kjenner den andre. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    0 0 0 1000px var(--input-autofill) inset;
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+  /* Chrome animerer bakgrunnen tilbake til sin egen etter autofyll; en
+     absurd lang transition parkerer den på vår. */
+  transition: background-color 99999s ease-in-out 0s;
+}
+
+input:autofill,
+input:autofill:hover,
+input:autofill:focus,
+input:autofill:active,
+textarea:autofill,
+select:autofill {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    0 0 0 1000px var(--input-autofill) inset;
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+  transition: background-color 99999s ease-in-out 0s;
 }
 
 .no-scrollbar {
@@ -354,24 +579,4 @@
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
-}
-
-/* Respekter reduced-motion globalt: kollaps bevegelsesbaserte overganger og
-   animasjoner til tilnærmet umiddelbart, men behold den endelige visuelle
-   tilstanden — opasitet og farge lander fortsatt, bare uten reise.
-
-   Nullstillingen av delay er bærende: en `backwards`-fylt stagger holder
-   opasitet 0 gjennom hele forsinkelsen, så lot vi delayene stå ville de siste
-   kortene vært blanke i en tredjedels sekund. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-    animation-delay: 0ms !important;
-    transition-delay: 0ms !important;
-  }
 }

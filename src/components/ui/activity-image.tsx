@@ -34,7 +34,10 @@ export function ActivityImage({ src, alt, className }: ActivityImageProps) {
 
   return (
     <span
-      className={cn("relative block overflow-hidden bg-cover bg-center", className)}
+      className={cn(
+        "relative block overflow-hidden bg-cover bg-center",
+        className,
+      )}
       style={{ backgroundImage: `url(${DEFAULT_ACTIVITY_IMAGE})` }}
     >
       {src && !failed ? (

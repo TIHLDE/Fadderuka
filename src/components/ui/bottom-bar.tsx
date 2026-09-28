@@ -9,7 +9,7 @@ function BottomBar({ className, ...props }: React.ComponentProps<"nav">) {
       className={cn(
         // `pb-[env(safe-area-inset-bottom)]` holder raden klar av iOS-
         // homeindikatoren, som ellers legger seg rett oppå etikettene.
-        "fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/70",
+        "bg-background/90 supports-[backdrop-filter]:bg-background/70 fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur",
         className,
       )}
       {...props}
