@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, LogIn, Menu } from "lucide-react";
+import { LogIn, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -17,13 +17,8 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "~/components/ui/drawer";
-import { ThemeSwitcher } from "~/components/ui/theme-switcher";
-import { cn } from "~/lib/utils";
-import {
-  NAV_LINKS,
-  getGroupLinks,
-  type NavLink,
-} from "../header/nav-links";
+import { TihldeLogo } from "~/components/ui/icons/tihlde";
+import { NAV_LINKS, getGroupLinks, type NavLink } from "../header/nav-links";
 
 type SiteBottomBarProps = {
   isAdmin: boolean;
@@ -51,10 +46,12 @@ export function SiteBottomBar({
   const menuLinks: NavLink[] = [...NAV_LINKS, ...groupLinks];
 
   return (
-    <BottomBar className="md:hidden">
+    <BottomBar className="lg:hidden">
       <div className="flex items-stretch justify-between gap-1 px-2 py-1">
         <BottomBarLink href="/" label="Hjem" pathname={pathname} exact>
-          <Home />
+          <div className="size-5">
+            <TihldeLogo />
+          </div>
         </BottomBarLink>
 
         <BottomBarLink
@@ -82,15 +79,17 @@ export function SiteBottomBar({
               Meny
             </BottomBarItem>
           </DrawerTrigger>
-          <DrawerContent className="max-h-[80vh]">
-            <DrawerHeader className="flex flex-row items-center justify-between gap-2">
+          <DrawerContent>
+            <DrawerHeader className="flex flex-row items-center gap-2">
+              <div className="size-7">
+                <TihldeLogo />
+              </div>
               <DrawerTitle>Meny</DrawerTitle>
-              <ThemeSwitcher className="size-9" />
             </DrawerHeader>
 
             {/* min-h-0 lar lista faktisk scrolle innenfor drawerens maks-høyde
                 i stedet for å bli klippet. */}
-            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 pb-[max(2rem,env(safe-area-inset-bottom))]">
+            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-4 pb-8">
               {menuLinks.map((link) => (
                 <MenuLink
                   key={link.href}
@@ -156,21 +155,13 @@ function MenuLink({
   pathname: string | null;
   onNavigate: () => void;
 }) {
-  const active = pathname === link.href;
-
   return (
     <Link
       href={link.href}
       onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex min-h-11 items-center gap-3 rounded-lg px-2 text-sm font-medium transition-colors",
-        active
-          ? "bg-muted text-foreground"
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-      )}
+      aria-current={pathname === link.href ? "page" : undefined}
+      className="flex items-center gap-2 py-2"
     >
-      <link.icon className="size-4 shrink-0" />
       {link.label}
     </Link>
   );

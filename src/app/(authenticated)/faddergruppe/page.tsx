@@ -1,7 +1,15 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { PageHeader, PageShell } from "~/components/layout/page-shell";
+import { Clock, Users } from "lucide-react";
 import { Card } from "~/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "~/components/ui/empty";
 import { auth } from "~/server/auth/config";
 import { db } from "~/server/db";
 import { areGrupperPublished, canSeeGruppe } from "~/server/gruppe-visibility";
@@ -35,13 +43,19 @@ export default async function FaddergroupPage() {
 
   if (!membership) {
     return (
-      <PageShell className="flex-1 items-center justify-center">
-        <PageHeader
-          centered
-          className="max-w-md"
-          title="Ingen faddergruppe"
-          description="Du er ikke tildelt en faddergruppe enda. Kontakt en administrator for å bli lagt til i en gruppe."
-        />
+      <PageShell className="flex-1 justify-center">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Users />
+            </EmptyMedia>
+            <EmptyTitle>Ingen faddergruppe</EmptyTitle>
+            <EmptyDescription>
+              Du er ikke tildelt en faddergruppe enda. Kontakt en administrator
+              for å bli lagt til i en gruppe.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </PageShell>
     );
   }
@@ -57,13 +71,19 @@ export default async function FaddergroupPage() {
     })
   ) {
     return (
-      <PageShell className="flex-1 items-center justify-center">
-        <PageHeader
-          centered
-          className="max-w-md"
-          title="Faddergruppene slippes snart"
-          description="Vi holder fortsatt gruppene hemmelige. Så snart de er klare finner du gruppa di, fadderne dine og resten av gjengen her."
-        />
+      <PageShell className="flex-1 justify-center">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Clock />
+            </EmptyMedia>
+            <EmptyTitle>Faddergruppene slippes snart</EmptyTitle>
+            <EmptyDescription>
+              Vi holder fortsatt gruppene hemmelige. Så snart de er klare finner
+              du gruppa di, fadderne dine og resten av gjengen her.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </PageShell>
     );
   }

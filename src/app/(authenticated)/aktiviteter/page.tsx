@@ -23,7 +23,6 @@ export default async function AktiviteterPage() {
     <PageShell>
       <Reveal>
         <PageHeader
-          centered
           title="Aktiviteter"
           description="Her finner du en oversikt over kommende aktiviteter i fadderuka!"
         />

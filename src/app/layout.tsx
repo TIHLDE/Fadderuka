@@ -39,8 +39,8 @@ export default async function RootLayout({
         className={cn(
           inter.variable,
           "bg-background text-foreground font-sans flex min-h-screen flex-col",
-          // Holder footeren klar av den faste bunnlinja, som bare finnes under md.
-          "pb-16 md:pb-0",
+          // Holder footeren klar av den faste bunnlinja, som bare finnes under lg.
+          "pb-16 lg:pb-0",
         )}
         suppressHydrationWarning
       >
