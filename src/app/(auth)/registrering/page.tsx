@@ -4,10 +4,26 @@ import { TRPCClientError } from "@trpc/client";
 import Link from "next/link";
 import { useState } from "react";
 import type { AppRouter } from "~/server/api/root";
-import { Button } from "~/components/ui/button";
-import { Card, CardDescription, CardTitle } from "~/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
+import { VippsButton } from "~/components/ui/vipps-button";
 import { REGISTRATION_STUDIES } from "~/lib/majors";
 import { authClient } from "~/lib/auth-client";
 import { PENDING_ALLERGY_KEY } from "~/lib/pending-allergy";
@@ -102,192 +118,166 @@ export default function RegistreringPage() {
   };
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-8">
-      <div className="w-full max-w-xl">
-        <Card>
-          <form
-            onSubmit={handleRegister}
-            className="flex flex-col gap-6 p-6 sm:p-8"
-          >
-            <div className="flex flex-col gap-2">
-              <CardTitle className="text-3xl font-bold">
-                Registrer deg for Fadderuka
-              </CardTitle>
-              <CardDescription>
-                Opprett en TIHLDE-bruker og betal med Vipps. Brukeren kan du
-                senere bruke på tihlde.org. Har du allerede laget bruker på
-                tihlde.org — for eksempel med Feide — skal du{" "}
-                <Link href="/logg-inn" className="underline">
-                  logge inn
-                </Link>{" "}
-                i stedet.
-              </CardDescription>
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Registrer deg for fadderuka</CardTitle>
+        <CardDescription>
+          Opprett en TIHLDE-bruker og betal med Vipps. Brukeren kan du senere
+          bruke på tihlde.org.
+        </CardDescription>
+      </CardHeader>
 
-            {error && (
-              <div
-                className="bg-destructive/10 text-destructive rounded-md px-4 py-3 text-sm"
-                role="alert"
-              >
+      <form onSubmit={handleRegister} className="flex flex-col gap-4">
+        <CardContent className="flex flex-col gap-5">
+          <Alert>
+            <AlertDescription>
+              Har du allerede laget bruker på tihlde.org — for eksempel med
+              Feide — skal du <Link href="/logg-inn">logge inn</Link> i stedet.
+            </AlertDescription>
+          </Alert>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>Registreringen gikk ikke gjennom</AlertTitle>
+              <AlertDescription>
                 {error}
                 {/* Når feilen er "du har alt en bruker", er innlogging det
-                      eneste som hjelper — så vi tilbyr veien dit i stedet for
-                      å la dem gjette hvilket felt de skal endre. */}
+                    eneste som hjelper — så vi tilbyr veien dit i stedet for
+                    å la dem gjette hvilket felt de skal endre. */}
                 {existingUserId && (
-                  <Link
-                    href="/logg-inn"
-                    className="mt-2 block font-semibold underline"
-                  >
+                  <Link href="/logg-inn" className="mt-1 block">
                     Logg inn med TIHLDE som «{existingUserId}»
                   </Link>
                 )}
-              </div>
-            )}
+              </AlertDescription>
+            </Alert>
+          )}
 
-            <div className="flex flex-col gap-6">
-              <div className="grid gap-2">
-                <Label htmlFor="reg-full-name">
-                  Fullt navn <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="reg-full-name"
-                  name="full_name"
-                  type="text"
-                  autoComplete="name"
-                  required
-                  placeholder="Ola Nordmann"
-                  className="h-12"
-                />
-              </div>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="reg-full-name">Fullt navn</FieldLabel>
+              <Input
+                id="reg-full-name"
+                name="full_name"
+                type="text"
+                autoComplete="name"
+                required
+                placeholder="Ola Nordmann"
+              />
+            </Field>
 
-              <div className="grid gap-2">
-                <Label htmlFor="reg-email">
-                  E-post <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="reg-email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  placeholder="olanord@stud.ntnu.no"
-                  aria-invalid={errorField === "email"}
-                  className="h-12"
-                />
-                <p className="text-muted-foreground text-xs">
-                  Bruk NTNU-e-posten din hvis du har fått den. Har du ikke det
-                  ennå, går det fint med en privat adresse.
-                </p>
-              </div>
+            <Field data-invalid={errorField === "email" || undefined}>
+              <FieldLabel htmlFor="reg-email">E-post</FieldLabel>
+              <Input
+                id="reg-email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="olanord@stud.ntnu.no"
+                aria-invalid={errorField === "email"}
+              />
+              <FieldDescription>
+                Bruk NTNU-e-posten din hvis du har fått den. Har du ikke det
+                ennå, går det fint med en privat adresse.
+              </FieldDescription>
+            </Field>
 
-              <div className="grid gap-2">
-                <Label htmlFor="reg-user-id">
-                  Brukernavn <span className="text-destructive">*</span>{" "}
-                  <span className="text-muted-foreground font-normal">
-                    (helst Feide)
-                  </span>
-                </Label>
-                <Input
-                  id="reg-user-id"
-                  name="user_id"
-                  autoComplete="username"
-                  required
-                  maxLength={15}
-                  placeholder="olanord"
-                  aria-invalid={errorField === "user_id"}
-                  className="h-12"
-                />
-                <p className="text-muted-foreground text-xs">
-                  Dette blir brukernavnet ditt på tihlde.org. Bruk Feide-brukernavnet
-                  ditt — da blir det samme konto når du senere logger inn med Feide.
-                </p>
-              </div>
+            <Field data-invalid={errorField === "user_id" || undefined}>
+              <FieldLabel htmlFor="reg-user-id">Brukernavn</FieldLabel>
+              <Input
+                id="reg-user-id"
+                name="user_id"
+                autoComplete="username"
+                required
+                maxLength={15}
+                placeholder="olanord"
+                aria-invalid={errorField === "user_id"}
+              />
+              <FieldDescription>
+                Dette blir brukernavnet ditt på tihlde.org. Bruk Feide-
+                brukernavnet ditt — da blir det samme konto når du senere logger
+                inn med Feide.
+              </FieldDescription>
+            </Field>
 
-              <div className="grid gap-2">
-                <Label htmlFor="reg-password">
-                  Passord <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="reg-password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                  placeholder="minst 8 tegn"
-                  className="h-12"
-                />
-              </div>
+            <Field>
+              <FieldLabel htmlFor="reg-password">Passord</FieldLabel>
+              <Input
+                id="reg-password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                placeholder="Minst 8 tegn"
+              />
+            </Field>
 
-              <div className="grid gap-2">
-                <span className="text-sm font-medium">
-                  Hvilken linje har du kommet inn på?{" "}
-                  <span className="text-destructive">*</span>
-                </span>
-                <div
-                  className="grid gap-2"
-                  role="radiogroup"
-                  aria-label="Linje"
-                >
-                  {REGISTRATION_STUDIES.map((option) => (
-                    <label
-                      key={option.slug}
-                      className="border-input has-[:checked]:border-primary has-[:checked]:bg-primary/5 flex cursor-pointer items-center gap-3 rounded-md border px-4 py-3 text-sm"
-                    >
-                      <input
-                        type="radio"
-                        name="study"
-                        value={option.slug}
-                        checked={study === option.slug}
-                        onChange={(e) => {
-                          setStudy(e.target.value);
-                          if (errorField === "study") {
-                            setError(null);
-                            setErrorField(null);
-                          }
-                        }}
-                        className="h-4 w-4"
-                      />
-                      {option.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="reg-allergies">Matallergier</Label>
-                <Input
-                  id="reg-allergies"
-                  name="allergies"
-                  type="text"
-                  maxLength={500}
-                  placeholder="F.eks. nøtter, laktose, gluten"
-                  className="h-12"
-                />
-                <p className="text-muted-foreground text-xs">
-                  Fyll ut kun hvis du har allergier – la stå tomt ellers.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-5">
-              <Button
-                type="submit"
-                className="h-12 w-full text-base"
-                disabled={loading}
+            <FieldSet data-invalid={errorField === "study" || undefined}>
+              <FieldLegend variant="label">
+                Hvilken linje har du kommet inn på?
+              </FieldLegend>
+              <RadioGroup
+                aria-label="Linje"
+                value={study}
+                onValueChange={(value) => {
+                  setStudy(value as string);
+                  if (errorField === "study") {
+                    setError(null);
+                    setErrorField(null);
+                  }
+                }}
               >
-                {loading ? "Registrerer..." : "Registrer og betal med Vipps"}
-              </Button>
-              <p className="text-muted-foreground text-center text-sm">
-                Har du allerede TIHLDE-bruker?{" "}
-                <Link href="/logg-inn" className="underline">
-                  Logg inn
-                </Link>
-              </p>
-            </div>
-          </form>
-        </Card>
-      </div>
-    </div>
+                {REGISTRATION_STUDIES.map((option) => (
+                  <Field key={option.slug} orientation="horizontal">
+                    <RadioGroupItem
+                      id={`reg-study-${option.slug}`}
+                      value={option.slug}
+                      aria-invalid={errorField === "study"}
+                    />
+                    <FieldLabel htmlFor={`reg-study-${option.slug}`}>
+                      {option.label}
+                    </FieldLabel>
+                  </Field>
+                ))}
+              </RadioGroup>
+            </FieldSet>
+
+            <Field>
+              <FieldLabel htmlFor="reg-allergies">
+                Matallergier (valgfritt)
+              </FieldLabel>
+              <Input
+                id="reg-allergies"
+                name="allergies"
+                type="text"
+                maxLength={500}
+                placeholder="F.eks. nøtter, laktose, gluten"
+              />
+              <FieldDescription>
+                Fyll ut kun hvis du har allergier – la stå tomt ellers.
+              </FieldDescription>
+            </Field>
+          </FieldGroup>
+
+          <div className="flex flex-col gap-2">
+            <VippsButton type="submit" loading={loading} className="w-full" />
+            <p className="text-muted-foreground text-center text-sm">
+              Brukeren opprettes først, så sendes du videre til Vipps.
+            </p>
+          </div>
+        </CardContent>
+      </form>
+
+      <CardFooter className="justify-center">
+        <p className="text-muted-foreground text-sm">
+          Har du allerede TIHLDE-bruker?{" "}
+          <Link href="/logg-inn" className="underline underline-offset-4">
+            Logg inn
+          </Link>
+        </p>
+      </CardFooter>
+    </Card>
   );
 }

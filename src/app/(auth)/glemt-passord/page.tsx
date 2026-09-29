@@ -2,10 +2,24 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { Card, CardDescription, CardTitle } from "~/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { Spinner } from "~/components/ui/spinner";
 
 /**
  * Ask for a reset link. Only useful for accounts with a local password — those
@@ -44,66 +58,74 @@ export default function GlemtPassordPage() {
   };
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-8">
-      <div className="w-full max-w-xl">
-        <Card>
-          <div className="flex flex-col gap-6 p-8 sm:p-12">
-            <div className="flex flex-col gap-2">
-              <CardTitle className="text-3xl font-bold">Glemt passord</CardTitle>
-              <CardDescription>
-                Skriv inn brukernavnet ditt, så sender vi en lenke til
-                e-postadressen som står på kontoen din.
-              </CardDescription>
-            </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Glemt passord</CardTitle>
+        <CardDescription>
+          Skriv inn brukernavnet ditt, så sender vi en lenke til e-postadressen
+          som står på kontoen din.
+        </CardDescription>
+      </CardHeader>
 
-            {sent ? (
-              <>
-                <p className="rounded-lg border border-border bg-secondary px-4 py-3 text-sm">
-                  {sent}
-                </p>
-                <Link href="/logg-inn" className="text-sm underline">
-                  Tilbake til innlogging
-                </Link>
-              </>
-            ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="user_id">Brukernavn</Label>
-                  <Input
-                    id="user_id"
-                    name="user_id"
-                    type="text"
-                    autoComplete="username"
-                    placeholder="ditt TIHLDE-brukernavn"
-                    required
-                    className="h-12"
-                  />
-                </div>
+      <CardContent className="flex flex-col gap-5">
+        {sent ? (
+          <Alert>
+            <AlertDescription>{sent}</AlertDescription>
+          </Alert>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <FieldGroup>
+              <Field data-invalid={error ? true : undefined}>
+                <FieldLabel htmlFor="user_id">Brukernavn</FieldLabel>
+                <Input
+                  id="user_id"
+                  name="user_id"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="Ditt TIHLDE-brukernavn"
+                  required
+                  aria-invalid={error ? true : undefined}
+                />
+                {error && <FieldError>{error}</FieldError>}
+              </Field>
+            </FieldGroup>
 
-                {error && <p className="text-destructive text-sm">{error}</p>}
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading ? (
+                <>
+                  <Spinner />
+                  Sender...
+                </>
+              ) : (
+                "Send lenke"
+              )}
+            </Button>
 
-                <Button type="submit" disabled={loading} className="h-12 w-full">
-                  {loading ? "Sender..." : "Send lenke"}
-                </Button>
+            <p className="text-muted-foreground text-sm">
+              Er TIHLDE-brukeren din godkjent på tihlde.org, logger du inn med
+              TIHLDE-passordet ditt — det tilbakestiller du på{" "}
+              <a
+                href="https://tihlde.org/glemt-passord"
+                className="underline underline-offset-4"
+                target="_blank"
+                rel="noreferrer"
+              >
+                tihlde.org
+              </a>
+              , ikke her.
+            </p>
+          </form>
+        )}
+      </CardContent>
 
-                <CardDescription>
-                  Er TIHLDE-brukeren din godkjent på tihlde.org, logger du inn
-                  med TIHLDE-passordet ditt — det tilbakestiller du på{" "}
-                  <a
-                    href="https://tihlde.org/glemt-passord"
-                    className="underline"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    tihlde.org
-                  </a>
-                  , ikke her.
-                </CardDescription>
-              </form>
-            )}
-          </div>
-        </Card>
-      </div>
-    </div>
+      <CardFooter className="justify-center">
+        <Link
+          href="/logg-inn"
+          className="text-muted-foreground text-sm underline underline-offset-4"
+        >
+          Tilbake til innlogging
+        </Link>
+      </CardFooter>
+    </Card>
   );
 }

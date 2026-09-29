@@ -1,20 +1,62 @@
 "use client";
 
-import { Check, Loader2 } from "lucide-react";
+import { Check, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "~/components/ui/empty";
+import { Spinner } from "~/components/ui/spinner";
 import { api } from "~/trpc/react";
 
-/** Sentrert enkeltmelding — samme ramme for alle fire tilstandene. */
+/** Samme kort for alle fire tilstandene, som i auth-layouten ellers. */
 function CallbackFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-16">
-      <div className="flex max-w-md flex-col items-center gap-6 text-center">
-        {children}
-      </div>
-    </div>
+    <Card>
+      <CardContent>
+        <Empty className="p-6">{children}</Empty>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Failed({ message }: { message: string }) {
+  return (
+    <CallbackFrame>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <X className="text-destructive" />
+        </EmptyMedia>
+        <EmptyTitle>Noe gikk galt</EmptyTitle>
+        <EmptyDescription>{message}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button variant="outline" render={<Link href="/" />}>
+          Gå til forsiden
+        </Button>
+      </EmptyContent>
+    </CallbackFrame>
+  );
+}
+
+function Pending({ text }: { text?: string }) {
+  return (
+    <CallbackFrame>
+      <EmptyHeader>
+        <EmptyMedia>
+          <Spinner className="size-6" />
+        </EmptyMedia>
+        {text ? <EmptyDescription>{text}</EmptyDescription> : null}
+      </EmptyHeader>
+    </CallbackFrame>
   );
 }
 
@@ -32,62 +74,45 @@ function PaymentCallback() {
   }, [orderId]);
 
   if (!orderId) {
-    return (
-      <CallbackFrame>
-        <p className="text-destructive">Ugyldig tilbakekobling fra Vipps.</p>
-        <Button render={<Link href="/">Gå til forsiden</Link>} variant="outline" />
-      </CallbackFrame>
-    );
+    return <Failed message="Ugyldig tilbakekobling fra Vipps." />;
   }
 
   if (confirm.isError) {
     return (
-      <CallbackFrame>
-        <p className="text-destructive">
-          Betalingen kunne ikke bekreftes: {confirm.error.message}
-        </p>
-        <Button render={<Link href="/">Gå til forsiden</Link>} variant="outline" />
-      </CallbackFrame>
+      <Failed
+        message={`Betalingen kunne ikke bekreftes: ${confirm.error.message}`}
+      />
     );
   }
 
   if (confirm.isSuccess) {
     return (
       <CallbackFrame>
-        <div className="bg-primary/10 grid size-14 place-items-center rounded-full">
-          <Check className="text-primary size-7" />
-        </div>
-        <div className="flex flex-col gap-2">
-          <h1 className="font-heading text-foreground text-2xl font-semibold tracking-tight">
-            Takk! Du er registrert 🎉
-          </h1>
-          <p className="text-muted-foreground text-pretty">
-            Betalingen din er bekreftet, og du er nå registrert for Fadderuka.
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <Check />
+          </EmptyMedia>
+          <EmptyTitle>Takk! Du er registrert 🎉</EmptyTitle>
+          <EmptyDescription>
+            Betalingen din er bekreftet, og du er nå registrert for fadderuka.
             Velkommen!
-          </p>
-        </div>
-        <Button render={<Link href="/">Gå til appen</Link>} className="h-11 w-full text-base" />
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button className="w-full" render={<Link href="/" />}>
+            Gå til appen
+          </Button>
+        </EmptyContent>
       </CallbackFrame>
     );
   }
 
-  return (
-    <CallbackFrame>
-      <Loader2 className="text-muted-foreground size-8 animate-spin" />
-      <p className="text-muted-foreground">Bekrefter betaling med Vipps...</p>
-    </CallbackFrame>
-  );
+  return <Pending text="Bekrefter betaling med Vipps..." />;
 }
 
 export default function PaymentCallbackPage() {
   return (
-    <Suspense
-      fallback={
-        <CallbackFrame>
-          <Loader2 className="text-muted-foreground size-8 animate-spin" />
-        </CallbackFrame>
-      }
-    >
+    <Suspense fallback={<Pending />}>
       <PaymentCallback />
     </Suspense>
   );
