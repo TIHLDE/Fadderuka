@@ -1,12 +1,9 @@
-import BottomBarNav from "~/components/layout/bottom-bar";
-import Footer from "~/components/layout/footer/footer";
-import Header from "~/components/layout/header/header";
 import { ThemeProvider } from "~/components/ui/theme-provider";
 import { Toaster } from "~/components/ui/sonner";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import React, { Suspense } from "react";
+import type React from "react";
 import { cn } from "~/lib/utils";
 import { TRPCReactProvider } from "~/trpc/react";
 import "./globals.css";
@@ -38,9 +35,7 @@ export default async function RootLayout({
       <body
         className={cn(
           inter.variable,
-          "bg-background text-foreground font-sans flex min-h-screen flex-col",
-          // Holder footeren klar av den faste bunnlinja, som bare finnes under lg.
-          "pb-16 lg:pb-0",
+          "bg-background text-foreground font-sans",
         )}
         suppressHydrationWarning
       >
@@ -52,12 +47,7 @@ export default async function RootLayout({
             storageKey="tihlde-theme"
             disableTransitionOnChange
           >
-            <Header />
-            <main className="flex flex-1 flex-col">{children}</main>
-            <Footer />
-            <Suspense fallback={null}>
-              <BottomBarNav />
-            </Suspense>
+            {children}
             <Toaster />
           </ThemeProvider>
         </TRPCReactProvider>
