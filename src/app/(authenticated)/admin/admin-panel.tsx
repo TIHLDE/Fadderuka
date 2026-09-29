@@ -1,44 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import {
-  AnimatedTabPanel,
-  SlideTabsBar,
-  type SlideTab,
-} from "~/components/ui/slide-tabs";
-import { UsersTab } from "./users-tab";
-import { GrupperTab } from "./grupper-tab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { AktiviteterTab } from "./aktiviteter-tab";
 import { BetalingerTab } from "./betalinger-tab";
-
-type TabValue = "users" | "grupper" | "aktiviteter" | "betalinger";
-
-const TABS: readonly SlideTab<TabValue>[] = [
-  { value: "users", label: "Brukere" },
-  { value: "grupper", label: "Faddergrupper" },
-  { value: "aktiviteter", label: "Aktiviteter" },
-  { value: "betalinger", label: "Betalinger" },
-];
+import { GrupperTab } from "./grupper-tab";
+import { UsersTab } from "./users-tab";
 
 export function AdminPanel() {
-  const [tab, setTab] = useState<TabValue>("users");
-
   return (
-    <div className="w-full">
-      <SlideTabsBar
-        tabs={TABS}
-        value={tab}
-        onValueChange={setTab}
-        stretch
-        className="max-w-2xl"
-      />
+    <Tabs defaultValue="users" className="gap-6">
+      {/* Fanelinja kan scrolle sidelengs på smale skjermer i stedet for å
+          presse fanene sammen. */}
+      <div className="no-scrollbar -mx-4 overflow-x-auto px-4">
+        <TabsList>
+          <TabsTrigger value="users">Brukere</TabsTrigger>
+          <TabsTrigger value="grupper">Faddergrupper</TabsTrigger>
+          <TabsTrigger value="aktiviteter">Aktiviteter</TabsTrigger>
+          <TabsTrigger value="betalinger">Betalinger</TabsTrigger>
+        </TabsList>
+      </div>
 
-      <AnimatedTabPanel activeKey={tab} className="!mt-6">
-        {tab === "users" && <UsersTab />}
-        {tab === "grupper" && <GrupperTab />}
-        {tab === "aktiviteter" && <AktiviteterTab />}
-        {tab === "betalinger" && <BetalingerTab />}
-      </AnimatedTabPanel>
-    </div>
+      <TabsContent value="users">
+        <UsersTab />
+      </TabsContent>
+      <TabsContent value="grupper">
+        <GrupperTab />
+      </TabsContent>
+      <TabsContent value="aktiviteter">
+        <AktiviteterTab />
+      </TabsContent>
+      <TabsContent value="betalinger">
+        <BetalingerTab />
+      </TabsContent>
+    </Tabs>
   );
 }
