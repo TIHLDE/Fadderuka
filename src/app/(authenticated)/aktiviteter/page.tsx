@@ -5,6 +5,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "~/components/ui/empty";
+import { osloDateKey } from "~/lib/date";
 import { api } from "~/trpc/server";
 import AktiviteterList from "./aktiviteter-list";
 
@@ -14,7 +15,7 @@ export default async function AktiviteterPage() {
   // Group activities by calendar day
   const grouped = activities.reduce<Record<string, typeof activities>>(
     (acc, activity) => {
-      const key = new Date(activity.date).toDateString();
+      const key = osloDateKey(activity.date);
       acc[key] ??= [];
       acc[key].push(activity);
       return acc;

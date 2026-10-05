@@ -69,6 +69,7 @@ import {
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
+import { TIME_ZONE } from "~/lib/date";
 
 type Gruppe = RouterOutputs["admin"]["getGrupper"][number];
 type Member = Gruppe["members"][number];
@@ -549,6 +550,7 @@ function PublicationBanner() {
 function formatDateTime(value: Date | string | null): string {
   if (!value) return "—";
   return new Date(value).toLocaleString("no-NO", {
+    timeZone: TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

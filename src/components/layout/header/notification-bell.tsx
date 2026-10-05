@@ -13,6 +13,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { TIME_ZONE } from "~/lib/date";
 
 function formatTime(date: Date) {
   const now = new Date();
@@ -21,6 +22,7 @@ function formatTime(date: Date) {
 
   if (days === 0) {
     return new Date(date).toLocaleTimeString("no-NO", {
+      timeZone: TIME_ZONE,
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -28,6 +30,7 @@ function formatTime(date: Date) {
   if (days === 1) return "I gar";
   if (days < 7) return `${days} dager siden`;
   return new Date(date).toLocaleDateString("no-NO", {
+    timeZone: TIME_ZONE,
     day: "numeric",
     month: "short",
   });

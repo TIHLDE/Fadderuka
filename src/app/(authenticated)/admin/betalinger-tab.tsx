@@ -44,6 +44,7 @@ import {
 import { downloadCsv, toCsv, toDateAndTime, type CsvColumn } from "~/lib/csv";
 import { cn } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
+import { TIME_ZONE } from "~/lib/date";
 
 type Registration = RouterOutputs["admin"]["getRegistrations"][number];
 
@@ -87,6 +88,7 @@ function kr(ore: number): string {
 function formatDateTime(value: Date | string | null): string {
   if (!value) return "—";
   return new Date(value).toLocaleString("no-NO", {
+    timeZone: TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

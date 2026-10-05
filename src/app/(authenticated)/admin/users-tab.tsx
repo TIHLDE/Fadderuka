@@ -58,6 +58,7 @@ import {
 } from "~/lib/majors";
 import { cn } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
+import { TIME_ZONE } from "~/lib/date";
 
 type AdminUser = RouterOutputs["admin"]["getUsers"][number];
 
@@ -427,6 +428,7 @@ export function UsersTab() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(user.createdAt).toLocaleDateString("no-NO", {
+                          timeZone: TIME_ZONE,
                           day: "numeric",
                           month: "short",
                           year: "numeric",

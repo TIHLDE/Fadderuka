@@ -1,5 +1,6 @@
 import { ActivityList } from "~/components/activity-list";
 import type { ModalActivity } from "~/components/ui/activity-modal";
+import { TIME_ZONE } from "~/lib/date";
 
 export default function AktiviteterList({
   days,
@@ -10,8 +11,12 @@ export default function AktiviteterList({
     <div className="flex flex-col gap-10">
       {days.map(([dateKey, dayActivities]) => {
         const date = new Date(dateKey);
-        const weekday = date.toLocaleDateString("no-NO", { weekday: "long" });
+        const weekday = date.toLocaleDateString("no-NO", {
+          timeZone: TIME_ZONE,
+          weekday: "long",
+        });
         const dateStr = date.toLocaleDateString("no-NO", {
+          timeZone: TIME_ZONE,
           day: "numeric",
           month: "long",
         });

@@ -39,6 +39,7 @@ import {
 } from "~/components/ui/table";
 import { Textarea } from "~/components/ui/textarea";
 import { api, type RouterOutputs } from "~/trpc/react";
+import { TIME_ZONE } from "~/lib/date";
 
 type Activity = RouterOutputs["activity"]["getAll"][number];
 
@@ -185,6 +186,7 @@ export function AktiviteterTab() {
                       <span className="text-muted-foreground flex items-center gap-2">
                         <CalendarDays className="size-4 shrink-0" />
                         {new Date(activity.date).toLocaleDateString("no-NO", {
+                          timeZone: TIME_ZONE,
                           weekday: "short",
                           day: "numeric",
                           month: "short",
