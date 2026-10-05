@@ -1,17 +1,49 @@
 "use client";
 
 import {
-  AlertTriangle,
   ArrowDown,
   ArrowUp,
+  CheckCircle2,
   Download,
   RefreshCw,
+  Search,
   Undo2,
+  Wallet,
 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
-import { api, type RouterOutputs } from "~/trpc/react";
 import { toast } from "sonner";
+
+import { AdminEmptyState } from "~/components/admin/admin-empty-state";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
+import { Spinner } from "~/components/ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { downloadCsv, toCsv, toDateAndTime, type CsvColumn } from "~/lib/csv";
+import { cn } from "~/lib/utils";
+import { api, type RouterOutputs } from "~/trpc/react";
 
 type Registration = RouterOutputs["admin"]["getRegistrations"][number];
 
@@ -34,10 +66,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLES: Record<string, string> = {
-  CAPTURED: "bg-success/15 text-success",
-  AUTHORIZED: "bg-primary/15 text-primary",
-  CREATED: "bg-warning/15 text-warning",
-  REFUNDED: "bg-warning/15 text-warning",
+  CAPTURED: "bg-success/10 text-success",
+  AUTHORIZED: "bg-primary/10 text-primary",
+  CREATED: "bg-warning/10 text-warning",
+  REFUNDED: "bg-warning/10 text-warning",
 };
 
 const FILTERS: { value: Filter; label: string }[] = [
@@ -84,9 +116,9 @@ function StatusBadge({
 }) {
   if (hasPaid && status !== "CAPTURED") {
     return (
-      <span className="rounded-full bg-success/10 !px-2.5 !py-0.5 text-xs font-semibold text-success/80">
+      <Badge variant="secondary" className="bg-success/10 text-success/80">
         {statusLabel(status, hasPaid)}
-      </span>
+      </Badge>
     );
   }
 
@@ -94,16 +126,16 @@ function StatusBadge({
     return <span className="text-muted-foreground">Ikke startet</span>;
   }
   return (
-    <span
-      className={`rounded-full !px-2.5 !py-0.5 text-xs font-semibold ${
-        STATUS_STYLES[status] ?? "bg-destructive/15 text-destructive"
-      }`}
+    <Badge
+      variant="secondary"
+      className={STATUS_STYLES[status] ?? "bg-destructive/10 text-destructive"}
     >
       {STATUS_LABELS[status] ?? status}
-    </span>
+    </Badge>
   );
 }
 
+/** Nøkkeltall-kort, som Kvark sin AdminStatCard. */
 function StatCard({
   label,
   value,
@@ -114,11 +146,13 @@ function StatCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card !p-4">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="!mt-1 text-2xl font-semibold text-foreground">{value}</p>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
+    <Card size="sm">
+      <CardContent className="flex flex-col gap-1">
+        <span className="text-muted-foreground text-sm">{label}</span>
+        <span className="text-2xl leading-none">{value}</span>
+        {hint && <span className="text-muted-foreground text-xs">{hint}</span>}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -155,58 +189,56 @@ function RefundAction({
     },
   });
 
-  if (!confirming) {
-    return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="inline-flex items-center !gap-2 rounded-xl border border-destructive/40 bg-destructive/10 !px-3 !py-2 text-sm font-semibold text-destructive transition hover:bg-destructive/20"
-      >
-        <Undo2 className="h-4 w-4" />
-        Refunder {kr(refundable)}
-      </button>
-    );
-  }
-
   return (
-    <div className="rounded-xl border border-destructive/40 bg-destructive/10 !p-4 !space-y-3">
-      <div className="flex items-start !gap-2">
-        <AlertTriangle className="!mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-        <div className="!space-y-1">
-          <p className="text-sm font-semibold text-destructive">
-            Dette kan ikke angres
-          </p>
-          <p className="text-sm text-foreground">
-            {kr(refundable)} betales tilbake til{" "}
-            <span className="font-semibold">{name}</span> via Vipps. Pengene
-            trekkes fra TIHLDE sin konto, og {name.split(" ")[0]} blir markert
-            som <span className="font-semibold">ikke betalt</span>. Skal
-            personen delta likevel, må hen betale på nytt.
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-wrap !gap-2">
-        <button
-          type="button"
-          onClick={() => refundMutation.mutate({ orderId })}
-          disabled={refundMutation.isPending}
-          className="bg-destructive text-background hover:bg-destructive/80 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60"
-        >
-          <Undo2 className="h-4 w-4" />
-          {refundMutation.isPending
-            ? "Refunderer..."
-            : `Ja, refunder ${kr(refundable)}`}
-        </button>
-        <button
-          type="button"
-          onClick={() => setConfirming(false)}
-          disabled={refundMutation.isPending}
-          className="rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
-        >
-          Avbryt
-        </button>
-      </div>
-    </div>
+    <>
+      <Button variant="destructive" onClick={() => setConfirming(true)}>
+        <Undo2 />
+        Refunder {kr(refundable)}
+      </Button>
+      <AlertDialog
+        open={confirming}
+        onOpenChange={(open) => {
+          if (!refundMutation.isPending) setConfirming(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Refundere {kr(refundable)} til {name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Dette kan ikke angres. {kr(refundable)} betales tilbake via Vipps
+              og trekkes fra TIHLDE sin konto, og {name.split(" ")[0]} blir
+              markert som ikke betalt. Skal personen delta likevel, må hen
+              betale på nytt.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              variant="outline"
+              size="default"
+              disabled={refundMutation.isPending}
+            >
+              Avbryt
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={refundMutation.isPending}
+              onClick={(event) => {
+                // Lukk først når Vipps har svart — onSuccess gjør det.
+                event.preventDefault();
+                refundMutation.mutate({ orderId });
+              }}
+            >
+              <Undo2 />
+              {refundMutation.isPending
+                ? "Refunderer..."
+                : `Ja, refunder ${kr(refundable)}`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -219,59 +251,62 @@ function PaymentDetails({ orderId, name }: { orderId: string; name: string }) {
 
   if (isLoading) {
     return (
-      <p className="text-sm text-muted-foreground">Henter fra Vipps...</p>
+      <p className="text-muted-foreground flex items-center gap-2 text-sm">
+        <Spinner />
+        Henter fra Vipps...
+      </p>
     );
   }
 
   if (error) {
-    return <p className="text-sm text-destructive">{error.message}</p>;
+    return <p className="text-destructive text-sm">{error.message}</p>;
   }
 
   if (!data) return null;
 
   return (
-    <div className="!space-y-3">
-      <div className="flex flex-wrap !gap-x-6 !gap-y-1 text-sm">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
         <span className="text-muted-foreground">
           Status i Vipps:{" "}
-          <span className="font-medium text-foreground">
+          <span className="text-foreground font-medium">
             {data.snapshot.state}
           </span>
         </span>
         <span className="text-muted-foreground">
           Reservert:{" "}
-          <span className="font-medium text-foreground">
+          <span className="text-foreground font-medium">
             {kr(data.snapshot.authorized)}
           </span>
         </span>
         <span className="text-muted-foreground">
           Trukket:{" "}
-          <span className="font-medium text-foreground">
+          <span className="text-foreground font-medium">
             {kr(data.snapshot.captured)}
           </span>
         </span>
         {data.snapshot.refunded > 0 && (
           <span className="text-muted-foreground">
             Refundert:{" "}
-            <span className="font-medium text-foreground">
+            <span className="text-foreground font-medium">
               {kr(data.snapshot.refunded)}
             </span>
           </span>
         )}
       </div>
 
-      <div className="!space-y-1">
-        <p className="text-xs font-semibold text-muted-foreground">
+      <div className="flex flex-col gap-1">
+        <p className="text-muted-foreground text-xs font-medium">
           Hendelseslogg
         </p>
         {data.events.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Ingen hendelser</p>
+          <p className="text-muted-foreground text-sm">Ingen hendelser</p>
         ) : (
-          <ul className="!space-y-1">
+          <ul className="flex flex-col gap-1">
             {data.events.map((event, i) => (
               <li
                 key={`${event.action}-${event.timestamp ?? i}`}
-                className="flex flex-wrap items-center !gap-2 text-sm"
+                className="flex flex-wrap items-center gap-2 text-sm"
               >
                 <span
                   className={`font-medium ${
@@ -438,8 +473,14 @@ export function BetalingerTab() {
         value: (r) => statusLabel(r.paymentStatus, r.hasPaid),
       },
       { header: "Beløp (kr)", value: (r) => r.amountPaid / 100 },
-      { header: "Påmeldt dato", value: (r) => toDateAndTime(r.registeredAt).date },
-      { header: "Påmeldt tid", value: (r) => toDateAndTime(r.registeredAt).time },
+      {
+        header: "Påmeldt dato",
+        value: (r) => toDateAndTime(r.registeredAt).date,
+      },
+      {
+        header: "Påmeldt tid",
+        value: (r) => toDateAndTime(r.registeredAt).time,
+      },
       { header: "Betalt dato", value: (r) => toDateAndTime(r.paidAt).date },
       { header: "Betalt tid", value: (r) => toDateAndTime(r.paidAt).time },
       { header: "Vipps-referanse", value: (r) => r.orderId },
@@ -454,8 +495,8 @@ export function BetalingerTab() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center !py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-transparent" />
+      <div className="flex justify-center py-12">
+        <Spinner className="size-6" />
       </div>
     );
   }
@@ -465,29 +506,37 @@ export function BetalingerTab() {
   const sortIndicator = (key: SortKey) =>
     sortKey === key ? (
       sortDir === "asc" ? (
-        <ArrowUp className="inline h-3 w-3" />
+        <ArrowUp className="size-3" />
       ) : (
-        <ArrowDown className="inline h-3 w-3" />
+        <ArrowDown className="size-3" />
       )
     ) : null;
 
   const sortableHeader = (key: SortKey, label: string) => (
-    <th className="!px-4 !py-3 font-medium">
+    <TableHead
+      aria-sort={
+        sortKey === key
+          ? sortDir === "asc"
+            ? "ascending"
+            : "descending"
+          : undefined
+      }
+    >
       <button
         type="button"
         onClick={() => toggleSort(key)}
-        className="inline-flex items-center !gap-1 transition hover:text-foreground"
+        className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
       >
         {label}
         {sortIndicator(key)}
       </button>
-    </th>
+    </TableHead>
   );
 
   return (
-    <div className="!space-y-8">
+    <div className="flex flex-col gap-8">
       {/* Key figures — enough to follow sign-ups and the budget at a glance */}
-      <section className="grid grid-cols-2 !gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard
           label="Påmeldte"
           value={String(stats.total)}
@@ -513,197 +562,205 @@ export function BetalingerTab() {
       </section>
 
       {/* Combined, flat overview — one row per paying registration */}
-      <section className="!space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold text-foreground">
-            Samlet oversikt ({filtered.length})
-          </h3>
-          <p className="text-sm text-muted-foreground">
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-2xl">Samlet oversikt ({filtered.length})</h2>
+          <p className="text-muted-foreground">
             Kun fadderbarn. Admin og faddere er utelatt siden de ikke betaler.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center !gap-3">
-          <input
-            type="text"
-            placeholder="Søk navn, e-post eller referanse..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-sm rounded-xl border border-border bg-background !px-4 !py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
-          />
-          <div className="flex flex-wrap !gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <InputGroup className="w-full max-w-sm">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Søk navn, e-post eller referanse"
+              aria-label="Søk i påmeldte"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </InputGroup>
+          <div className="flex flex-wrap gap-1.5">
             {FILTERS.map((f) => (
-              <button
+              <Button
                 key={f.value}
-                type="button"
+                size="sm"
+                variant={filter === f.value ? "default" : "outline"}
+                aria-pressed={filter === f.value}
                 onClick={() => setFilter(f.value)}
-                className={`rounded-full !px-3 !py-1.5 text-xs font-semibold transition ${
-                  filter === f.value
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
               >
                 {f.label}
-              </button>
+              </Button>
             ))}
           </div>
 
           {/* Handlinger på linje med søk og filtre, til høyre over tabellen */}
-          <div className="flex flex-wrap items-center !gap-2 sm:!ml-auto">
-            <button
-              type="button"
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            <Button
+              variant="outline"
               onClick={() => syncMutation.mutate()}
               disabled={syncMutation.isPending}
-              className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-3 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:opacity-60"
             >
               <RefreshCw
-                className={`h-4 w-4 ${syncMutation.isPending ? "animate-spin" : ""}`}
+                className={cn(syncMutation.isPending && "animate-spin")}
               />
               {syncMutation.isPending ? "Synkroniserer..." : "Synk mot Vipps"}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => exportCsv(filtered, "utvalg")}
-              className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-3 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
             >
-              <Download className="h-4 w-4" />
+              <Download />
               CSV ({filtered.length})
-            </button>
+            </Button>
             {filtered.length !== rows.length && (
-              <button
-                type="button"
-                onClick={() => exportCsv(rows, "alle")}
-                className="inline-flex items-center !gap-2 rounded-xl !px-2 !py-2 text-sm text-muted-foreground transition hover:text-foreground"
-              >
+              <Button variant="ghost" onClick={() => exportCsv(rows, "alle")}>
                 Alle ({rows.length})
-              </button>
+              </Button>
             )}
           </div>
         </div>
 
-        {/* 9 kolonner får aldri plass på en telefon. `min-w` hindrer at de
-            klemmes flate, og den negative margen lar scrollområdet gå helt ut
-            til skjermkanten så det er tydelig at raden kan dras sidelengs. */}
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:rounded-xl sm:border sm:border-border sm:bg-card sm:px-0">
-          <table className="w-full min-w-[56rem] text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                {sortableHeader("navn", "Navn")}
-                <th className="!px-4 !py-3 font-medium">E-post</th>
-                <th className="!px-4 !py-3 font-medium">Klasse</th>
-                <th className="!px-4 !py-3 font-medium">Studieretning</th>
-                {sortableHeader("gruppe", "Faddergruppe")}
-                <th className="!px-4 !py-3 font-medium">Rolle</th>
-                {sortableHeader("status", "Betaling")}
-                {sortableHeader("registrert", "Påmeldt")}
-                {sortableHeader("betalt", "Betalt")}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <Fragment key={r.id}>
-                  <tr
-                    onClick={() =>
-                      setExpandedId(expandedId === r.id ? null : r.id)
-                    }
-                    className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
-                  >
-                    <td className="!px-4 !py-3 font-medium text-foreground">
-                      {r.name}
-                    </td>
-                    <td className="!px-4 !py-3 text-muted-foreground">
-                      {r.email ?? "—"}
-                    </td>
-                    <td className="!px-4 !py-3 text-muted-foreground">
-                      {r.klasse ?? "—"}
-                    </td>
-                    <td className="!px-4 !py-3 text-muted-foreground">
-                      {r.studieretning ?? "—"}
-                    </td>
-                    <td className="!px-4 !py-3 text-muted-foreground">
-                      {r.gruppe ?? "—"}
-                    </td>
-                    <td className="!px-4 !py-3 text-muted-foreground">
-                      {r.rolle === "FADDER"
-                        ? "Fadder"
-                        : r.rolle === "FADDERBARN"
-                          ? "Fadderbarn"
-                          : "—"}
-                    </td>
-                    <td className="!px-4 !py-3">
-                      <StatusBadge status={r.paymentStatus} hasPaid={r.hasPaid} />
-                    </td>
-                    <td className="!px-4 !py-3 whitespace-nowrap text-muted-foreground">
-                      {formatDateTime(r.registeredAt)}
-                    </td>
-                    <td className="!px-4 !py-3 whitespace-nowrap text-muted-foreground">
-                      {formatDateTime(r.paidAt)}
-                    </td>
-                  </tr>
-                  {expandedId === r.id && (
-                    <tr className="border-b border-border">
-                      <td colSpan={9} className="bg-muted/30 !px-4 !py-4">
-                        {r.orderId ? (
-                          <div className="!space-y-2">
-                            <p className="font-mono text-xs text-muted-foreground">
-                              {r.orderId}
-                              {r.attemptCount > 1 &&
-                                ` · ${r.attemptCount} betalingsforsøk`}
-                            </p>
-                            <PaymentDetails orderId={r.orderId} name={r.name} />
+        <Card>
+          <CardContent className={filtered.length > 0 ? "p-0" : undefined}>
+            {filtered.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {sortableHeader("navn", "Navn")}
+                    <TableHead>Klasse</TableHead>
+                    <TableHead>Studieretning</TableHead>
+                    {sortableHeader("gruppe", "Faddergruppe")}
+                    <TableHead>Rolle</TableHead>
+                    {sortableHeader("status", "Betaling")}
+                    {sortableHeader("registrert", "Påmeldt")}
+                    {sortableHeader("betalt", "Betalt")}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => (
+                    <Fragment key={r.id}>
+                      <TableRow
+                        onClick={() =>
+                          setExpandedId(expandedId === r.id ? null : r.id)
+                        }
+                        aria-expanded={expandedId === r.id}
+                        className="cursor-pointer"
+                      >
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{r.name}</span>
+                            <span className="text-muted-foreground">
+                              {r.email ?? "—"}
+                            </span>
                           </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">
-                            Brukeren har aldri startet en betaling i Vipps.
-                          </p>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="!px-4 !py-8 text-center text-muted-foreground"
-                  >
-                    Ingen påmeldte funnet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {r.klasse ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {r.studieretning ?? "—"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {r.gruppe ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          {r.rolle === "FADDER" ? (
+                            <Badge>Fadder</Badge>
+                          ) : r.rolle === "FADDERBARN" ? (
+                            <Badge variant="secondary">Fadderbarn</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            status={r.paymentStatus}
+                            hasPaid={r.hasPaid}
+                          />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                          {formatDateTime(r.registeredAt)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                          {formatDateTime(r.paidAt)}
+                        </TableCell>
+                      </TableRow>
+                      {expandedId === r.id && (
+                        <TableRow className="hover:bg-transparent">
+                          <TableCell colSpan={8} className="bg-muted/30 p-4">
+                            {r.orderId ? (
+                              <div className="flex flex-col gap-2">
+                                <p className="text-muted-foreground font-mono text-xs">
+                                  {r.orderId}
+                                  {r.attemptCount > 1 &&
+                                    ` · ${r.attemptCount} betalingsforsøk`}
+                                </p>
+                                <PaymentDetails
+                                  orderId={r.orderId}
+                                  name={r.name}
+                                />
+                              </div>
+                            ) : (
+                              <p className="text-muted-foreground text-sm">
+                                Brukeren har aldri startet en betaling i Vipps.
+                              </p>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <AdminEmptyState
+                icon={Search}
+                title="Ingen påmeldte funnet"
+                description="Ingen påmeldte matcher søket eller filteret."
+              />
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       {/* Chase list — derived from the same dataset, no extra query */}
-      <section className="!space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">
-          Har ikke betalt ({unpaidRows.length})
-        </h3>
+      <section className="flex flex-col gap-4">
+        <h2 className="text-2xl">Har ikke betalt ({unpaidRows.length})</h2>
 
         {unpaidRows.length === 0 ? (
-          <p className="rounded-xl border border-border bg-card !px-4 !py-6 text-center text-sm text-muted-foreground">
-            Alle påmeldte har betalt
-          </p>
+          <Card>
+            <CardContent>
+              <AdminEmptyState
+                icon={CheckCircle2}
+                title="Alle påmeldte har betalt"
+              />
+            </CardContent>
+          </Card>
         ) : (
-          <div className="grid grid-cols-1 !gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {unpaidRows.map((r) => (
-              <div
-                key={r.id}
-                className="rounded-xl border border-warning/30 bg-warning/5 !p-4"
-              >
-                <p className="font-medium text-foreground">{r.name}</p>
-                <p className="text-sm text-muted-foreground">{r.email ?? "—"}</p>
-                <p className="!mt-1 text-xs text-muted-foreground">
-                  {r.klasse ?? "Ingen klasse"} · påmeldt{" "}
-                  {formatDateTime(r.registeredAt)}
-                </p>
-                <div className="!mt-2">
-                  <StatusBadge status={r.paymentStatus} hasPaid={r.hasPaid} />
-                </div>
-              </div>
+              <Card key={r.id} size="sm">
+                <CardContent className="flex flex-col gap-1">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Wallet className="text-warning size-4 shrink-0" />
+                    {r.name}
+                  </span>
+                  <span className="text-muted-foreground text-sm">
+                    {r.email ?? "—"}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    {r.klasse ?? "Ingen klasse"} · påmeldt{" "}
+                    {formatDateTime(r.registeredAt)}
+                  </span>
+                  <div className="mt-1">
+                    <StatusBadge status={r.paymentStatus} hasPaid={r.hasPaid} />
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

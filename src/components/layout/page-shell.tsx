@@ -1,5 +1,6 @@
 import type React from "react";
 
+import { Reveal } from "~/components/ui/motion";
 import { cn } from "~/lib/utils";
 
 /**
@@ -29,42 +30,25 @@ export function PageShell({
 
 type PageHeaderProps = {
   title: string;
-  description?: string;
-  /** Sentrert variant, brukt på oversiktssidene. */
-  centered?: boolean;
-  children?: React.ReactNode;
-  className?: string;
+  description?: React.ReactNode;
+  action?: React.ReactNode;
 };
 
-export function PageHeader({
-  title,
-  description,
-  centered = false,
-  children,
-  className,
-}: PageHeaderProps) {
+/**
+ * Tittel, valgfri beskrivelse og en valgfri handling (vanligvis en knapp)
+ * justert mot slutten. Kopiert fra Photon: apps/kvark/src/components/page-header.tsx.
+ */
+export function PageHeader({ title, description, action }: PageHeaderProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-2",
-        centered && "items-center text-center",
-        className,
-      )}
-    >
-      {children}
-      <h1 className="font-heading text-foreground text-3xl font-semibold tracking-tight sm:text-4xl">
-        {title}
-      </h1>
-      {description ? (
-        <p
-          className={cn(
-            "text-muted-foreground text-base text-pretty",
-            centered && "mx-auto max-w-2xl",
-          )}
-        >
-          {description}
-        </p>
-      ) : null}
-    </div>
+    // `className` rett på Reveal, ikke via `render` som i Photon: et element
+    // sendt fra en serverkomponent mister klassene sine ved SSR, og Next
+    // melder hydrerings-mismatch.
+    <Reveal className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl">{title}</h1>
+        {description && <p className="text-muted-foreground">{description}</p>}
+      </div>
+      {action && <div className="flex shrink-0 gap-2">{action}</div>}
+    </Reveal>
   );
 }

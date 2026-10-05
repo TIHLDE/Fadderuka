@@ -1,5 +1,6 @@
 "use client";
 
+// Kopiert fra Photon: packages/ui/src/components/ui/motion.tsx
 import { useRender } from "@base-ui/react/use-render";
 import * as React from "react";
 
@@ -21,7 +22,7 @@ import { cn } from "~/lib/utils";
  */
 
 type MotionProps = React.ComponentProps<"div"> & {
-    render?: useRender.RenderProp;
+  render?: useRender.RenderProp;
 };
 
 /**
@@ -34,14 +35,14 @@ type MotionProps = React.ComponentProps<"div"> & {
  * Tune per instance with `--reveal-duration` / `--reveal-distance`.
  */
 function Reveal({ className, render, ...props }: MotionProps) {
-    return useRender({
-        render: render ?? <div />,
-        props: {
-            "data-slot": "reveal",
-            className: cn(className),
-            ...props,
-        },
-    });
+  return useRender({
+    render: render ?? <div />,
+    props: {
+      "data-slot": "reveal",
+      className: cn(className),
+      ...props,
+    },
+  });
 }
 
 /**
@@ -58,14 +59,14 @@ function Reveal({ className, render, ...props }: MotionProps) {
  * The step is 40ms, capped at 8 children; `--reveal-step` overrides it.
  */
 function Stagger({ className, render, ...props }: MotionProps) {
-    return useRender({
-        render: render ?? <div />,
-        props: {
-            "data-slot": "stagger",
-            className: cn(className),
-            ...props,
-        },
-    });
+  return useRender({
+    render: render ?? <div />,
+    props: {
+      "data-slot": "stagger",
+      className: cn(className),
+      ...props,
+    },
+  });
 }
 
 export { Reveal, Stagger };

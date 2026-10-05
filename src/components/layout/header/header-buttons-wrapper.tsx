@@ -31,8 +31,8 @@ const HeaderButtonsWrapper = async () => {
         <TihldeLogo variant="full" className="h-5 w-auto" />
       </Link>
 
-      {/* Under md ligger de samme lenkene i bunnlinjas meny i stedet. */}
-      <NavigationMenu className="hidden md:flex">
+      {/* Under lg ligger de samme lenkene i bunnlinjas meny i stedet. */}
+      <NavigationMenu className="hidden lg:flex">
         <NavigationMenuList>
           {links.map(({ href, label }) => (
             <NavigationMenuItem key={href}>

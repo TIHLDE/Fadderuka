@@ -1,7 +1,22 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { PageHeader, PageShell } from "~/components/layout/page-shell";
-import { Card } from "~/components/ui/card";
+import { Clock, Users } from "lucide-react";
+import { Badge } from "~/components/ui/badge";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "~/components/ui/empty";
 import { auth } from "~/server/auth/config";
 import { db } from "~/server/db";
 import { areGrupperPublished, canSeeGruppe } from "~/server/gruppe-visibility";
@@ -35,13 +50,19 @@ export default async function FaddergroupPage() {
 
   if (!membership) {
     return (
-      <PageShell className="flex-1 items-center justify-center">
-        <PageHeader
-          centered
-          className="max-w-md"
-          title="Ingen faddergruppe"
-          description="Du er ikke tildelt en faddergruppe enda. Kontakt en administrator for å bli lagt til i en gruppe."
-        />
+      <PageShell className="flex-1 justify-center">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Users />
+            </EmptyMedia>
+            <EmptyTitle>Ingen faddergruppe</EmptyTitle>
+            <EmptyDescription>
+              Du er ikke tildelt en faddergruppe enda. Kontakt en administrator
+              for å bli lagt til i en gruppe.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </PageShell>
     );
   }
@@ -57,13 +78,19 @@ export default async function FaddergroupPage() {
     })
   ) {
     return (
-      <PageShell className="flex-1 items-center justify-center">
-        <PageHeader
-          centered
-          className="max-w-md"
-          title="Faddergruppene slippes snart"
-          description="Vi holder fortsatt gruppene hemmelige. Så snart de er klare finner du gruppa di, fadderne dine og resten av gjengen her."
-        />
+      <PageShell className="flex-1 justify-center">
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Clock />
+            </EmptyMedia>
+            <EmptyTitle>Faddergruppene slippes snart</EmptyTitle>
+            <EmptyDescription>
+              Vi holder fortsatt gruppene hemmelige. Så snart de er klare finner
+              du gruppa di, fadderne dine og resten av gjengen her.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </PageShell>
     );
   }
@@ -81,31 +108,19 @@ export default async function FaddergroupPage() {
       />
 
       <section className="flex flex-col gap-4">
-        <h2 className="font-heading text-foreground text-2xl font-semibold tracking-tight">
-          Medlemmer
-        </h2>
-        <Card className="grid gap-6 p-4 md:grid-cols-2 md:gap-8">
-          <div className="flex flex-col gap-3">
-            <h3 className="text-foreground text-sm font-semibold">
-              Fadderbarn
-            </h3>
-            <ul className="text-muted-foreground flex flex-col gap-2 text-sm">
-              {fadderbarn.map((member) => (
-                <li key={member.id}>{member.user.name}</li>
-              ))}
-              {fadderbarn.length === 0 && <li>Ingen fadderbarn enda</li>}
-            </ul>
-          </div>
-          <div className="flex flex-col gap-3">
-            <h3 className="text-foreground text-sm font-semibold">Faddere</h3>
-            <ul className="text-muted-foreground flex flex-col gap-2 text-sm">
-              {faddere.map((member) => (
-                <li key={member.id}>{member.user.name}</li>
-              ))}
-              {faddere.length === 0 && <li>Ingen faddere enda</li>}
-            </ul>
-          </div>
-        </Card>
+        <h2 className="text-2xl">Medlemmer</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <MemberCard
+            title="Faddere"
+            names={faddere.map((m) => ({ id: m.id, name: m.user.name }))}
+            emptyText="Ingen faddere enda"
+          />
+          <MemberCard
+            title="Fadderbarn"
+            names={fadderbarn.map((m) => ({ id: m.id, name: m.user.name }))}
+            emptyText="Ingen fadderbarn enda"
+          />
+        </div>
       </section>
 
       <GroupView
@@ -136,5 +151,37 @@ export default async function FaddergroupPage() {
         emptyMessage="Ingen spørsmål enda. Vær den første til å spørre!"
       />
     </PageShell>
+  );
+}
+
+function MemberCard({
+  title,
+  names,
+  emptyText,
+}: {
+  title: string;
+  names: { id: string; name: string }[];
+  emptyText: string;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardAction>
+          <Badge variant="secondary">{names.length}</Badge>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        {names.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {names.map((member) => (
+              <li key={member.id}>{member.name}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground">{emptyText}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

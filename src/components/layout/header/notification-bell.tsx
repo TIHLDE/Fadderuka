@@ -103,7 +103,7 @@ export function NotificationBell() {
               key={notification.id}
               onSelect={() => handleSelect(notification.id)}
               className={cn(
-                "flex cursor-pointer flex-col items-start gap-1 whitespace-normal py-2",
+                "flex cursor-pointer flex-col items-start gap-1 py-2 whitespace-normal",
                 !notification.read && "bg-accent/50",
               )}
             >

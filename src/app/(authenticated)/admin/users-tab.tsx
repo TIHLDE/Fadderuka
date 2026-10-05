@@ -1,16 +1,54 @@
 "use client";
 
-import {
-  ChevronDown,
-  Shield,
-  ShieldOff,
-  Trash2,
-  UserCheck,
-} from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { Search, Trash2, UserCheck, Users } from "lucide-react";
 import { useState } from "react";
-import { api } from "~/trpc/react";
 import { toast } from "sonner";
+
+import { AdminEmptyState } from "~/components/admin/admin-empty-state";
+import {
+  ConfirmDeleteDialog,
+  usePendingConfirm,
+} from "~/components/admin/confirm-delete-dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "~/components/ui/accordion";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Spinner } from "~/components/ui/spinner";
+import { Switch } from "~/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import {
   MAJORS,
   type Major,
@@ -18,6 +56,10 @@ import {
   compareMajorLabels,
   findMajor,
 } from "~/lib/majors";
+import { cn } from "~/lib/utils";
+import { api, type RouterOutputs } from "~/trpc/react";
+
+type AdminUser = RouterOutputs["admin"]["getUsers"][number];
 
 /**
  * Hva betalingskolonnen viser for én bruker.
@@ -63,6 +105,9 @@ function betalingsvisning(user: { isFadder: boolean; hasPaid: boolean }) {
   };
 }
 
+/** Select-verdien for «følg TIHLDE» — Base UI sin Select trenger en streng. */
+const FOLG_TIHLDE = "__folg-tihlde__";
+
 /**
  * Correct the programme TIHLDE reports for a user.
  *
@@ -81,47 +126,63 @@ function StudieVelger({
   disabled: boolean;
   onChange: (studieretning: Major | null) => void;
 }) {
+  const folgLabel = `Følg TIHLDE${studieretning ? ` (${studieretning})` : ""}`;
+
   return (
-    <select
-      value={studieretningOverride ?? ""}
+    <Select
+      value={studieretningOverride ?? FOLG_TIHLDE}
       disabled={disabled}
-      onChange={(e) =>
-        onChange(e.target.value === "" ? null : (e.target.value as Major))
+      onValueChange={(value) =>
+        onChange(value === FOLG_TIHLDE ? null : (value as Major))
       }
-      title="Overstyr studieretningen TIHLDE oppgir, f.eks. for en som begynner på Digital transformasjon"
-      className="border-border bg-background text-foreground focus:ring-ring max-w-[13rem] rounded-lg border !px-2 !py-1 text-xs transition focus:ring-2 focus:outline-none disabled:opacity-60"
     >
-      <option value="">
-        Følg TIHLDE{studieretning ? ` (${studieretning})` : ""}
-      </option>
-      {MAJORS.map((major) => (
-        <option key={major} value={major}>
-          {major}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger
+        size="sm"
+        className="max-w-56"
+        title="Overstyr studieretningen TIHLDE oppgir, f.eks. for en som begynner på Digital transformasjon"
+      >
+        <SelectValue>
+          {(value) => (value === FOLG_TIHLDE ? folgLabel : (value as string))}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={FOLG_TIHLDE}>{folgLabel}</SelectItem>
+        {MAJORS.map((major) => (
+          <SelectItem key={major} value={major}>
+            {major}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/** En liten statusbryter med badge-utseende — klikk bytter tilstanden. */
+function BadgeToggle({ className, ...props }: React.ComponentProps<"button">) {
+  return (
+    <Badge
+      variant="secondary"
+      render={<button type="button" {...props} />}
+      className={cn("cursor-pointer disabled:opacity-60", className)}
+    />
   );
 }
 
 export function UsersTab() {
   const [search, setSearch] = useState("");
-  const [verifyingUserId, setVerifyingUserId] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState<AdminUser | null>(null);
   // Tom streng = «Uten gruppe», og det er med vilje utgangspunktet: å verifisere
   // er det viktige, plasseringen kan komme senere fra Faddergrupper-fanen.
   const [valgtGruppeId, setValgtGruppeId] = useState("");
-  /** Åpner (eller lukker) verifiseringspanelet, alltid med gruppevalget nullstilt. */
-  const settVerifisering = (userId: string | null) => {
-    setVerifyingUserId(userId);
+  /** Åpner (eller lukker) verifiseringsdialogen, alltid med gruppevalget nullstilt. */
+  const settVerifisering = (user: AdminUser | null) => {
+    setVerifying(user);
     setValgtGruppeId("");
   };
-  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
-  const [expandedMajor, setExpandedMajor] = useState<string | null>(null);
-  // While searching, every group with a hit opens by itself — collapsing one
-  // again is per-group, and the overrides are dropped as soon as the query
-  // changes so a new search always starts fully open.
-  const [collapsedWhileSearching, setCollapsedWhileSearching] = useState<
-    Set<string>
-  >(new Set());
+  const confirmDelete = usePendingConfirm<AdminUser>();
+  // Studieretningene som er slått opp. Et søk åpner alle med treff; å lukke en
+  // igjen gjelder til søket endres.
+  const [openMajors, setOpenMajors] = useState<string[]>([]);
   const utils = api.useUtils();
 
   const { data: users, isLoading } = api.admin.getUsers.useQuery();
@@ -158,7 +219,7 @@ export function UsersTab() {
   const deleteMutation = api.admin.deleteUser.useMutation({
     onSuccess: () => {
       void utils.admin.getUsers.invalidate();
-      setDeletingUserId(null);
+      confirmDelete.clear();
       toast("Bruker slettet");
     },
     onError: (error) => {
@@ -245,20 +306,25 @@ export function UsersTab() {
   const unverifiedUsers = users?.filter((u) => !u.isVerified) ?? [];
   const verifiedUsers = users?.filter((u) => u.isVerified) ?? [];
 
-  const filteredVerified = verifiedUsers.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      (u.email?.toLowerCase().includes(search.toLowerCase()) ?? false),
-  );
+  const matchesSearch = (u: AdminUser, query: string) =>
+    u.name.toLowerCase().includes(query.toLowerCase()) ||
+    (u.email?.toLowerCase().includes(query.toLowerCase()) ?? false);
 
-  const verifiedByStudieretning = new Map<string, typeof filteredVerified>();
-  for (const major of MAJORS) verifiedByStudieretning.set(major, []);
-  for (const user of filteredVerified) {
-    const key = findMajor(user.studieretning) ?? UKJENT_STUDIERETNING;
-    const group = verifiedByStudieretning.get(key) ?? [];
-    group.push(user);
-    verifiedByStudieretning.set(key, group);
-  }
+  const groupByMajor = (list: AdminUser[]) => {
+    const grouped = new Map<string, AdminUser[]>();
+    for (const major of MAJORS) grouped.set(major, []);
+    for (const user of list) {
+      const key = findMajor(user.studieretning) ?? UKJENT_STUDIERETNING;
+      const group = grouped.get(key) ?? [];
+      group.push(user);
+      grouped.set(key, group);
+    }
+    return grouped;
+  };
+
+  const verifiedByStudieretning = groupByMajor(
+    verifiedUsers.filter((u) => matchesSearch(u, search)),
+  );
   const isSearching = search.trim().length > 0;
   const studieretninger = [...verifiedByStudieretning.keys()]
     .filter(
@@ -267,476 +333,474 @@ export function UsersTab() {
     )
     .sort(compareMajorLabels);
 
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    // Et nytt søk starter alltid helt åpent: alle studieretninger med treff
+    // slås opp. Tomt søk lukker alt igjen, som før.
+    if (value.trim().length === 0) {
+      setOpenMajors([]);
+      return;
+    }
+    const hits = groupByMajor(
+      verifiedUsers.filter((u) => matchesSearch(u, value)),
+    );
+    setOpenMajors(
+      [...hits.entries()]
+        .filter(([, list]) => list.length > 0)
+        .map(([major]) => major),
+    );
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center !py-12">
-        <div className="border-border h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
+      <div className="flex justify-center py-12">
+        <Spinner className="size-6" />
       </div>
     );
   }
 
   return (
-    <div className="!space-y-8">
-      {/* Unverified users — nedtonet, men fortsatt lett å komme til */}
-      <section className="!space-y-3">
-        <div className="flex items-center !gap-2">
-          <h3 className="text-muted-foreground text-sm font-medium">
-            Nye uverifiserte brukere
-          </h3>
+    <div className="flex flex-col gap-8">
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl">Nye uverifiserte brukere</h2>
           {unverifiedUsers.length > 0 && (
-            <span className="bg-muted text-muted-foreground rounded-full !px-2 !py-0.5 text-xs font-medium">
-              {unverifiedUsers.length}
-            </span>
+            <Badge variant="secondary">{unverifiedUsers.length}</Badge>
           )}
         </div>
 
-        {unverifiedUsers.length > 0 ? (
-          <div className="!space-y-2">
-            {unverifiedUsers.map((user) => (
-              <div
-                key={user.id}
-                className="border-border bg-card flex flex-col !gap-3 rounded-xl border !p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0">
-                  <p className="text-foreground font-medium break-words">
-                    {user.name}
-                  </p>
-                  <p className="text-muted-foreground text-sm break-all">
-                    {user.email}
-                  </p>
-                  <div className="mt-1 flex flex-wrap !gap-1.5">
-                    {user.klasse && (
-                      <span className="bg-primary/10 text-primary rounded-full !px-2 !py-0.5 text-xs font-medium">
-                        {user.klasse}
-                      </span>
-                    )}
-                    {user.studieretning && (
-                      <span className="bg-primary/10 text-primary rounded-full !px-2 !py-0.5 text-xs font-medium">
-                        {user.studieretning}
-                      </span>
-                    )}
-                    {!user.klasse && !user.studieretning && (
-                      <span className="text-muted-foreground text-xs">
-                        Ingen klasse/retning oppgitt
-                      </span>
-                    )}
-                  </div>
-                  <div className="!mt-2">
-                    <StudieVelger
-                      studieretning={user.studieretning}
-                      studieretningOverride={user.studieretningOverride}
-                      disabled={studieMutation.isPending}
-                      onChange={(studieretning) =>
-                        studieMutation.mutate({
-                          userId: user.id,
-                          studieretning,
-                        })
-                      }
-                    />
-                  </div>
-                  <p className="text-muted-foreground !mt-2 text-xs">
-                    Registrert{" "}
-                    {new Date(user.createdAt).toLocaleDateString("no-NO", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
+        <Card>
+          <CardContent
+            className={unverifiedUsers.length > 0 ? "p-0" : undefined}
+          >
+            {unverifiedUsers.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Navn</TableHead>
+                    <TableHead>Klasse og retning</TableHead>
+                    <TableHead>Studie</TableHead>
+                    <TableHead>Registrert</TableHead>
+                    <TableHead className="text-right">Handlinger</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {unverifiedUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.name}</span>
+                          <span className="text-muted-foreground">
+                            {user.email}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1.5">
+                          {user.klasse && (
+                            <Badge variant="secondary">{user.klasse}</Badge>
+                          )}
+                          {user.studieretning && (
+                            <Badge variant="secondary">
+                              {user.studieretning}
+                            </Badge>
+                          )}
+                          {!user.klasse && !user.studieretning && (
+                            <span className="text-muted-foreground">
+                              Ingen klasse/retning oppgitt
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <StudieVelger
+                          studieretning={user.studieretning}
+                          studieretningOverride={user.studieretningOverride}
+                          disabled={studieMutation.isPending}
+                          onChange={(studieretning) =>
+                            studieMutation.mutate({
+                              userId: user.id,
+                              studieretning,
+                            })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(user.createdAt).toLocaleDateString("no-NO", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => settVerifisering(user)}
+                          >
+                            <UserCheck />
+                            Verifiser
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon-sm"
+                            aria-label={`Slett ${user.name}`}
+                            onClick={() => confirmDelete.request(user)}
+                          >
+                            <Trash2 className="text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <AdminEmptyState
+                icon={UserCheck}
+                title="Ingen uverifiserte brukere"
+                description="Nye brukere som ikke har betalt eller blitt verifisert dukker opp her."
+              />
+            )}
+          </CardContent>
+        </Card>
+      </section>
 
-                {verifyingUserId === user.id ? (
-                  <div className="flex flex-col !gap-2 sm:items-end">
-                    <p className="text-muted-foreground text-xs font-medium">
-                      Velg faddergruppe:
-                    </p>
-                    <div className="flex flex-wrap items-center !gap-2">
-                      <select
-                        value={valgtGruppeId}
-                        onChange={(e) => setValgtGruppeId(e.target.value)}
-                        disabled={verifiseringPagar}
-                        className="border-border bg-background text-foreground focus:ring-ring max-w-[13rem] rounded-lg border !px-2 !py-1.5 text-xs transition focus:ring-2 focus:outline-none disabled:opacity-60"
-                      >
-                        <option value="">Uten gruppe</option>
-                        {grupper?.map((gruppe) => (
-                          <option key={gruppe.id} value={gruppe.id}>
-                            {gruppe.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          valgtGruppeId
-                            ? verifyAndAssignMutation.mutate({
-                                userId: user.id,
-                                gruppeId: valgtGruppeId,
-                              })
-                            : verifyOnlyMutation.mutate({
-                                userId: user.id,
-                                isVerified: true,
-                              })
-                        }
-                        disabled={verifiseringPagar}
-                        className="border-border bg-secondary text-foreground hover:bg-secondary/80 rounded-lg border !px-3 !py-1.5 text-xs font-semibold transition disabled:opacity-60"
-                      >
-                        {verifiseringPagar ? "Verifiserer..." : "Verifiser"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => settVerifisering(null)}
-                        className="text-muted-foreground hover:text-foreground rounded-lg !px-3 !py-1.5 text-xs transition"
-                      >
-                        Avbryt
-                      </button>
-                    </div>
-                    <p className="text-muted-foreground text-xs sm:text-right">
-                      {valgtGruppeId
-                        ? "Brukeren blir lagt til som fadderbarn i gruppa."
-                        : "Brukeren slipper inn nå, og kan plasseres i en gruppe senere."}
-                    </p>
-                  </div>
-                ) : deletingUserId === user.id ? (
-                  <div className="flex flex-col !gap-2 sm:items-end">
-                    <p className="text-destructive text-xs font-medium">
-                      Sikker på at du vil slette denne brukeren?
-                    </p>
-                    <div className="flex flex-wrap !gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          deleteMutation.mutate({ userId: user.id })
-                        }
-                        disabled={deleteMutation.isPending}
-                        className="border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-lg border !px-3 !py-1.5 text-xs font-semibold transition disabled:opacity-60"
-                      >
-                        {deleteMutation.isPending
-                          ? "Sletter..."
-                          : "Bekreft sletting"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeletingUserId(null)}
-                        className="text-muted-foreground hover:text-foreground rounded-lg !px-3 !py-1.5 text-xs transition"
-                      >
-                        Avbryt
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* Tre knapper får ikke plass på en mobilbredde, så de brekker
-                     til neste linje framfor å stikke ut av kortet. */
-                  <div className="flex flex-wrap !gap-2 sm:shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => settVerifisering(user.id)}
-                      className="border-success/40 bg-success/10 text-success hover:bg-success/20 inline-flex items-center !gap-2 rounded-xl border !px-4 !py-2 text-sm font-semibold transition"
-                    >
-                      <UserCheck className="h-4 w-4" />
-                      Verifiser
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeletingUserId(user.id)}
-                      className="border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 inline-flex items-center !gap-2 rounded-xl border !px-4 !py-2 text-sm font-semibold transition"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Slett
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h2 className="text-2xl">
+            Verifiserte brukere ({verifiedUsers.length})
+          </h2>
+          <InputGroup className="w-full max-w-sm">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
+              type="search"
+              placeholder="Søk etter navn eller e-post"
+              aria-label="Søk etter bruker"
+              value={search}
+              onChange={(e) => handleSearch(e.target.value)}
+            />
+          </InputGroup>
+        </div>
+
+        {isSearching && studieretninger.length === 0 ? (
+          <Card>
+            <CardContent>
+              <AdminEmptyState
+                icon={Search}
+                title="Ingen brukere funnet"
+                description={`Ingen verifiserte brukere matcher «${search}».`}
+              />
+            </CardContent>
+          </Card>
         ) : (
-          <p className="text-muted-foreground text-sm">
-            Ingen uverifiserte brukere
-          </p>
+          <Accordion
+            multiple
+            value={openMajors}
+            onValueChange={(value) => setOpenMajors(value as string[])}
+            className="gap-4"
+          >
+            {studieretninger.map((studieretning) => {
+              const usersInGroup =
+                verifiedByStudieretning.get(studieretning) ?? [];
+              return (
+                <Card key={studieretning} className="py-0">
+                  <AccordionItem value={studieretning} className="border-0">
+                    <AccordionTrigger className="items-center px-4 py-4 hover:no-underline">
+                      <span className="flex flex-1 items-center justify-between gap-3">
+                        <span className="flex flex-col">
+                          <span className="text-base">{studieretning}</span>
+                          <span className="text-muted-foreground text-xs font-normal">
+                            {usersInGroup.length}{" "}
+                            {usersInGroup.length === 1 ? "bruker" : "brukere"}
+                          </span>
+                        </span>
+                        <Badge variant="secondary">{usersInGroup.length}</Badge>
+                      </span>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-0">
+                      <div className="border-t">
+                        <UserTable
+                          users={usersInGroup}
+                          studieMutation={studieMutation}
+                          updateRoleMutation={updateRoleMutation}
+                          fadderMutation={fadderMutation}
+                          aktiverMutation={aktiverMutation}
+                          adminMutation={adminMutation}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Card>
+              );
+            })}
+          </Accordion>
         )}
       </section>
 
-      {/* Verified users grouped by studieretning */}
-      <section className="!space-y-4">
-        <h3 className="text-foreground text-lg font-semibold">
-          Verifiserte brukere ({verifiedUsers.length})
-        </h3>
+      <Dialog
+        open={verifying !== null}
+        onOpenChange={(open) => {
+          if (!open) settVerifisering(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verifiser {verifying?.name}</DialogTitle>
+            <DialogDescription>
+              Brukeren slipper inn i appen så snart du verifiserer.
+            </DialogDescription>
+          </DialogHeader>
+          <Field>
+            <FieldLabel htmlFor="verifiser-gruppe">Faddergruppe</FieldLabel>
+            <Select
+              value={valgtGruppeId}
+              onValueChange={(value) => setValgtGruppeId(value ?? "")}
+              disabled={verifiseringPagar}
+            >
+              <SelectTrigger id="verifiser-gruppe" className="w-full">
+                <SelectValue>
+                  {(value) =>
+                    value
+                      ? (grupper?.find((g) => g.id === value)?.name ?? "")
+                      : "Uten gruppe"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Uten gruppe</SelectItem>
+                {grupper?.map((gruppe) => (
+                  <SelectItem key={gruppe.id} value={gruppe.id}>
+                    {gruppe.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldDescription>
+              {valgtGruppeId
+                ? "Brukeren blir lagt til som fadderbarn i gruppa."
+                : "Brukeren slipper inn nå, og kan plasseres i en gruppe senere."}
+            </FieldDescription>
+          </Field>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => settVerifisering(null)}
+            >
+              Avbryt
+            </Button>
+            <Button
+              disabled={verifiseringPagar || !verifying}
+              onClick={() => {
+                if (!verifying) return;
+                if (valgtGruppeId) {
+                  verifyAndAssignMutation.mutate({
+                    userId: verifying.id,
+                    gruppeId: valgtGruppeId,
+                  });
+                } else {
+                  verifyOnlyMutation.mutate({
+                    userId: verifying.id,
+                    isVerified: true,
+                  });
+                }
+              }}
+            >
+              {verifiseringPagar ? "Verifiserer..." : "Verifiser"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        <input
-          type="text"
-          placeholder="Sok etter bruker..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setCollapsedWhileSearching(new Set());
-          }}
-          className="border-border bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring w-full max-w-sm rounded-xl border !px-4 !py-2.5 text-sm focus:ring-2 focus:outline-none"
-        />
-
-        <div className="!space-y-4">
-          {studieretninger.map((studieretning) => {
-            const usersInGroup =
-              verifiedByStudieretning.get(studieretning) ?? [];
-            const isExpanded = isSearching
-              ? !collapsedWhileSearching.has(studieretning)
-              : expandedMajor === studieretning;
-            return (
-              <div
-                key={studieretning}
-                className="border-border bg-card overflow-hidden rounded-xl border"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isSearching) {
-                      setCollapsedWhileSearching((prev) => {
-                        const next = new Set(prev);
-                        if (isExpanded) next.add(studieretning);
-                        else next.delete(studieretning);
-                        return next;
-                      });
-                      return;
-                    }
-                    setExpandedMajor(isExpanded ? null : studieretning);
-                  }}
-                  className="flex w-full items-center justify-between !gap-3 !p-4 text-left"
-                >
-                  <div>
-                    <p className="text-foreground font-semibold">
-                      {studieretning}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {usersInGroup.length}{" "}
-                      {usersInGroup.length === 1 ? "bruker" : "brukere"}
-                    </p>
-                  </div>
-                  <span className="flex items-center !gap-2">
-                    <span className="bg-primary/10 text-primary rounded-full !px-2.5 !py-0.5 text-sm font-semibold">
-                      {usersInGroup.length}
-                    </span>
-                    <motion.span
-                      animate={{ rotate: isExpanded ? 180 : 0 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="text-muted-foreground"
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </motion.span>
-                  </span>
-                </button>
-
-                <AnimatePresence initial={false}>
-                  {isExpanded && (
-                    <motion.div
-                      key="content"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{
-                        height: { duration: 0.25, ease: [0.4, 0, 0.2, 1] },
-                        opacity: { duration: 0.15 },
-                      }}
-                      className="border-border overflow-hidden border-t"
-                    >
-                      {/* Se kommentaren i betalinger-tab: min-bredde framfor
-                        sammenklemte kolonner, med scroll ut til skjermkanten. */}
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[64rem] text-left text-sm">
-                          <thead>
-                            <tr className="border-border text-muted-foreground border-b">
-                              <th className="!px-4 !py-3 font-medium">Navn</th>
-                              <th className="!px-4 !py-3 font-medium">
-                                E-post
-                              </th>
-                              <th className="!px-4 !py-3 font-medium">
-                                Klasse
-                              </th>
-                              <th className="!px-4 !py-3 font-medium">
-                                Studie
-                              </th>
-                              <th className="!px-4 !py-3 font-medium">
-                                Gruppe
-                              </th>
-                              <th className="!px-4 !py-3 font-medium">Rolle</th>
-                              {/* Se `betalingsvisning`: viser faktisk status
-                              (betalt / ikke betalt), med fritak for faddere. */}
-                              <th className="!px-4 !py-3 font-medium">
-                                Betaling
-                              </th>
-                              <th className="!px-4 !py-3 text-center font-medium">
-                                Admin
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {usersInGroup.map((user) => {
-                              const membership = user.memberships[0];
-                              return (
-                                <tr
-                                  key={user.id}
-                                  className="border-border hover:bg-muted/50 border-b last:border-0"
-                                >
-                                  <td className="text-foreground !px-4 !py-3 font-medium">
-                                    {user.name}
-                                  </td>
-                                  <td className="text-muted-foreground !px-4 !py-3">
-                                    {user.email}
-                                  </td>
-                                  <td className="!px-4 !py-3">
-                                    {user.klasse ? (
-                                      <span className="bg-primary/10 text-primary rounded-full !px-2 !py-0.5 text-xs font-medium">
-                                        {user.klasse}
-                                      </span>
-                                    ) : (
-                                      <span className="text-muted-foreground">
-                                        —
-                                      </span>
-                                    )}
-                                  </td>
-                                  {/* TIHLDE eier studieretningen, men henger etter
-                                  for den som begynner på et påbygg som Digital
-                                  transformasjon. Da er dette veien inn. */}
-                                  <td className="!px-4 !py-3">
-                                    <StudieVelger
-                                      studieretning={user.studieretning}
-                                      studieretningOverride={
-                                        user.studieretningOverride
-                                      }
-                                      disabled={studieMutation.isPending}
-                                      onChange={(studieretning) =>
-                                        studieMutation.mutate({
-                                          userId: user.id,
-                                          studieretning,
-                                        })
-                                      }
-                                    />
-                                  </td>
-                                  <td className="text-muted-foreground !px-4 !py-3">
-                                    {membership ? membership.gruppe.name : "—"}
-                                  </td>
-                                  <td className="!px-4 !py-3">
-                                    {membership ? (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          updateRoleMutation.mutate({
-                                            membershipId: membership.id,
-                                            role:
-                                              membership.role === "FADDER"
-                                                ? "FADDERBARN"
-                                                : "FADDER",
-                                          })
-                                        }
-                                        disabled={updateRoleMutation.isPending}
-                                        className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${
-                                          membership.role === "FADDER"
-                                            ? "bg-primary/10 text-primary hover:bg-primary/20"
-                                            : "bg-primary/10 text-primary hover:bg-primary/20"
-                                        }`}
-                                        title={
-                                          membership.role === "FADDER"
-                                            ? "Klikk for a endre til fadderbarn"
-                                            : "Klikk for a endre til fadder"
-                                        }
-                                      >
-                                        {membership.role === "FADDER"
-                                          ? "Fadder"
-                                          : "Fadderbarn"}
-                                      </button>
-                                    ) : (
-                                      <span className="text-muted-foreground">
-                                        —
-                                      </span>
-                                    )}
-                                  </td>
-                                  {/* Faddere betaler ikke. Utledes fra kullet, så
-                                  denne bryteren er unntaket for tilfellene
-                                  regelen ikke ser — og den låser valget. */}
-                                  <td className="!px-4 !py-3">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        fadderMutation.mutate({
-                                          userId: user.id,
-                                          isFadder: !user.isFadder,
-                                        })
-                                      }
-                                      disabled={fadderMutation.isPending}
-                                      className={`rounded-full !px-3 !py-1 text-xs font-semibold transition ${betalingsvisning(user).className}`}
-                                      title={betalingsvisning(user).hint}
-                                    >
-                                      {betalingsvisning(user).label}
-                                    </button>
-                                    {/* Bare for de som ennå ikke er TIHLDE-
-                                    medlemmer. Forsvinner av seg selv når de har
-                                    logget inn med TIHLDE, siden det nullstiller
-                                    det lokale passordet. */}
-                                    {user.harLokalKonto && (
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          aktiverMutation.mutate({
-                                            userId: user.id,
-                                          })
-                                        }
-                                        disabled={aktiverMutation.isPending}
-                                        className="bg-primary/10 text-primary hover:bg-primary/20 !ml-2 rounded-full !px-3 !py-1 text-xs font-semibold transition"
-                                        title="Oppretter TIHLDE-bruker på tihlde.org. Studenten setter selv passord med «glemt passord» der."
-                                      >
-                                        Aktiver
-                                      </button>
-                                    )}
-                                  </td>
-                                  <td className="!px-4 !py-3 text-center">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        adminMutation.mutate({
-                                          userId: user.id,
-                                          isAdmin: !user.isAdmin,
-                                        })
-                                      }
-                                      disabled={adminMutation.isPending}
-                                      className="hover:bg-foreground/10 inline-flex items-center justify-center rounded-lg !p-1.5 transition"
-                                      title={
-                                        user.isAdmin
-                                          ? "Fjern admintilgang"
-                                          : "Gi admintilgang"
-                                      }
-                                    >
-                                      {user.isAdmin ? (
-                                        <Shield className="text-warning h-4 w-4" />
-                                      ) : (
-                                        <ShieldOff className="text-muted-foreground h-4 w-4" />
-                                      )}
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                            {usersInGroup.length === 0 && (
-                              <tr>
-                                <td
-                                  colSpan={8}
-                                  className="text-muted-foreground !px-4 !py-6 text-center"
-                                >
-                                  Ingen brukere funnet
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
-          {isSearching && studieretninger.length === 0 && (
-            <p className="border-border bg-card text-muted-foreground rounded-xl border !p-4 text-sm">
-              Ingen brukere funnet
-            </p>
-          )}
-        </div>
-      </section>
+      <ConfirmDeleteDialog
+        open={confirmDelete.open}
+        onOpenChange={(open) => {
+          if (!open) confirmDelete.clear();
+        }}
+        title={`Slette ${confirmDelete.shown?.name ?? ""}?`}
+        description="Brukeren og alt som hører til den forsvinner fra fadderuka-siden. Dette kan ikke angres."
+        confirmLabel="Slett bruker"
+        isPending={deleteMutation.isPending}
+        onConfirm={() => {
+          if (confirmDelete.pending) {
+            deleteMutation.mutate({ userId: confirmDelete.pending.id });
+          }
+        }}
+      />
     </div>
+  );
+}
+
+type MutationLike<TVars> = {
+  mutate: (vars: TVars) => void;
+  isPending: boolean;
+};
+
+function UserTable({
+  users,
+  studieMutation,
+  updateRoleMutation,
+  fadderMutation,
+  aktiverMutation,
+  adminMutation,
+}: {
+  users: AdminUser[];
+  studieMutation: MutationLike<{ userId: string; studieretning: Major | null }>;
+  updateRoleMutation: MutationLike<{
+    membershipId: string;
+    role: "FADDER" | "FADDERBARN";
+  }>;
+  fadderMutation: MutationLike<{ userId: string; isFadder: boolean }>;
+  aktiverMutation: MutationLike<{ userId: string }>;
+  adminMutation: MutationLike<{ userId: string; isAdmin: boolean }>;
+}) {
+  if (users.length === 0) {
+    return (
+      <AdminEmptyState
+        icon={Users}
+        title="Ingen brukere"
+        description="Ingen verifiserte brukere på denne studieretningen ennå."
+      />
+    );
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Navn</TableHead>
+          <TableHead>Klasse</TableHead>
+          <TableHead>Studie</TableHead>
+          <TableHead>Gruppe</TableHead>
+          <TableHead>Rolle</TableHead>
+          {/* Se `betalingsvisning`: viser faktisk status (betalt / ikke
+              betalt), med fritak for faddere. */}
+          <TableHead>Betaling</TableHead>
+          <TableHead className="text-center">Admin</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {users.map((user) => {
+          const membership = user.memberships[0];
+          const betaling = betalingsvisning(user);
+          return (
+            <TableRow key={user.id}>
+              <TableCell>
+                <div className="flex flex-col">
+                  <span className="font-medium">{user.name}</span>
+                  <span className="text-muted-foreground">{user.email}</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                {user.klasse ? (
+                  <Badge variant="secondary">{user.klasse}</Badge>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
+              {/* TIHLDE eier studieretningen, men henger etter for den som
+                  begynner på et påbygg som Digital transformasjon. Da er dette
+                  veien inn. */}
+              <TableCell>
+                <StudieVelger
+                  studieretning={user.studieretning}
+                  studieretningOverride={user.studieretningOverride}
+                  disabled={studieMutation.isPending}
+                  onChange={(studieretning) =>
+                    studieMutation.mutate({ userId: user.id, studieretning })
+                  }
+                />
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {membership ? membership.gruppe.name : "—"}
+              </TableCell>
+              <TableCell>
+                {membership ? (
+                  <BadgeToggle
+                    onClick={() =>
+                      updateRoleMutation.mutate({
+                        membershipId: membership.id,
+                        role:
+                          membership.role === "FADDER"
+                            ? "FADDERBARN"
+                            : "FADDER",
+                      })
+                    }
+                    disabled={updateRoleMutation.isPending}
+                    className={
+                      membership.role === "FADDER"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/80"
+                        : undefined
+                    }
+                    title={
+                      membership.role === "FADDER"
+                        ? "Klikk for å endre til fadderbarn"
+                        : "Klikk for å endre til fadder"
+                    }
+                  >
+                    {membership.role === "FADDER" ? "Fadder" : "Fadderbarn"}
+                  </BadgeToggle>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </TableCell>
+              {/* Faddere betaler ikke. Utledes fra kullet, så denne bryteren er
+                  unntaket for tilfellene regelen ikke ser — og den låser
+                  valget. */}
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <BadgeToggle
+                    onClick={() =>
+                      fadderMutation.mutate({
+                        userId: user.id,
+                        isFadder: !user.isFadder,
+                      })
+                    }
+                    disabled={fadderMutation.isPending}
+                    className={betaling.className}
+                    title={betaling.hint}
+                  >
+                    {betaling.label}
+                  </BadgeToggle>
+                  {/* Bare for de som ennå ikke er TIHLDE-medlemmer. Forsvinner
+                      av seg selv når de har logget inn med TIHLDE, siden det
+                      nullstiller det lokale passordet. */}
+                  {user.harLokalKonto && (
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={() =>
+                        aktiverMutation.mutate({ userId: user.id })
+                      }
+                      disabled={aktiverMutation.isPending}
+                      title="Oppretter TIHLDE-bruker på tihlde.org. Studenten setter selv passord med «glemt passord» der."
+                    >
+                      Aktiver
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="text-center">
+                <Switch
+                  checked={user.isAdmin}
+                  onCheckedChange={(checked) =>
+                    adminMutation.mutate({ userId: user.id, isAdmin: checked })
+                  }
+                  disabled={adminMutation.isPending}
+                  aria-label={
+                    user.isAdmin
+                      ? `Fjern admintilgang for ${user.name}`
+                      : `Gi admintilgang til ${user.name}`
+                  }
+                />
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 }

@@ -1,13 +1,24 @@
 "use client";
 
-import { Loader2, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import { Spinner } from "~/components/ui/spinner";
+import { authClient } from "~/lib/auth-client";
+import { VippsButton } from "~/components/ui/vipps-button";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
 export default function VippsPaymentOverlay() {
-
   const paymentStatus = api.payment.getStatus.useQuery();
 
   const initiatePayment = api.payment.initiatePayment.useMutation({
@@ -54,10 +65,7 @@ export default function VippsPaymentOverlay() {
         title="Betalingen er registrert"
         body="Vi fant betalingen din, men siden ble lastet før tilgangen var på plass. Last inn siden på nytt for å komme videre."
         action={
-          <Button
-            onClick={() => window.location.reload()}
-            className="h-11 w-full text-base"
-          >
+          <Button onClick={() => window.location.reload()} className="w-full">
             Last inn på nytt
           </Button>
         }
@@ -72,9 +80,7 @@ export default function VippsPaymentOverlay() {
       <Notice
         title="Laster..."
         body="Sjekker betalingsstatusen din."
-        action={
-          <Loader2 className="text-muted-foreground mx-auto size-6 animate-spin" />
-        }
+        action={<Spinner className="text-muted-foreground mx-auto size-6" />}
       />
     );
   }
@@ -89,7 +95,7 @@ export default function VippsPaymentOverlay() {
         action={
           <Button
             onClick={() => void paymentStatus.refetch()}
-            className="h-11 w-full text-base"
+            className="w-full"
           >
             Prøv igjen
           </Button>
@@ -104,26 +110,17 @@ export default function VippsPaymentOverlay() {
       body="Du må betale for fadderuka før du kan se innholdet. Betal enkelt med Vipps for å bli registrert som fadderbarn."
       action={
         <>
-          <Button
+          <VippsButton
             onClick={() => initiatePayment.mutate()}
-            disabled={initiatePayment.isPending}
-            className="h-11 w-full text-base"
-          >
-            {initiatePayment.isPending ? (
-              <>
-                <Loader2 className="size-5 animate-spin" />
-                Laster...
-              </>
-            ) : (
-              "Betal med Vipps"
-            )}
-          </Button>
+            loading={initiatePayment.isPending}
+            className="w-full"
+          />
 
           <Button
             variant="ghost"
             onClick={() => checkPayment.mutate()}
             disabled={checkPayment.isPending}
-            className="h-11 w-full"
+            className="w-full"
           >
             {checkPayment.isPending
               ? "Sjekker betaling..."
@@ -136,9 +133,14 @@ export default function VippsPaymentOverlay() {
 }
 
 /**
- * Panelet denne skjermen alltid består av. Overlayet er hele appen for en
- * bruker uten tilgang, så hver tilstand — også «laster» og «noe gikk galt» —
- * må ha noe å vise. Ellers er resultatet en blank side.
+ * Popupen denne skjermen alltid består av (#139). Layouten viser den i stedet
+ * for appen for en bruker uten tilgang, så hver tilstand — også «laster» og
+ * «noe gikk galt» — må ha noe å vise. Ellers er resultatet en blank side.
+ *
+ * Den kan ikke lukkes: `open` står fast, klikk utenfor er slått av, og Escape
+ * ber bare om å lukke — en forespørsel vi ignorerer. Siden en modal også
+ * sperrer headeren, ligger «Logg ut» i selve popupen, så ingen blir sittende
+ * fast på feil konto.
  */
 function Notice({
   title,
@@ -149,26 +151,37 @@ function Notice({
   body: string;
   action: ReactNode;
 }) {
-  return (
-    // `overflow-y-auto` på wrapperen og `my-auto` på panelet: dette er den
-    // eneste skjermen en ubetalt bruker ser, og med tastaturet oppe på en liten
-    // telefon ble innholdet før klippet uten noen vei til å scrolle.
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/60 p-4 supports-[backdrop-filter]:backdrop-blur-xs">
-      <div className="bg-popover text-popover-foreground ring-foreground/10 my-auto flex w-full max-w-md flex-col gap-6 rounded-xl p-6 ring-1 sm:p-8">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <div className="bg-primary/10 grid size-14 place-items-center rounded-full">
-            <Wallet className="text-primary size-7" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <h2 className="font-heading text-xl font-semibold tracking-tight">
-              {title}
-            </h2>
-            <p className="text-muted-foreground text-sm text-pretty">{body}</p>
-          </div>
-        </div>
+  const router = useRouter();
+  const [loggerUt, setLoggerUt] = useState(false);
 
+  const loggUt = async () => {
+    setLoggerUt(true);
+    await authClient.signOut();
+    router.push("/registrering");
+    router.refresh();
+  };
+
+  return (
+    <Dialog open disablePointerDismissal>
+      <DialogContent showCloseButton={false} className="sm:max-w-md">
+        <DialogHeader className="items-center text-center">
+          <div className="bg-muted mb-2 flex size-10 items-center justify-center rounded-lg">
+            <Wallet className="size-5" />
+          </div>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{body}</DialogDescription>
+        </DialogHeader>
         <div className="flex flex-col gap-2">{action}</div>
-      </div>
-    </div>
+        <Button
+          variant="link"
+          size="sm"
+          className="text-muted-foreground mx-auto"
+          disabled={loggerUt}
+          onClick={() => void loggUt()}
+        >
+          {loggerUt ? "Logger ut..." : "Logg ut"}
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }

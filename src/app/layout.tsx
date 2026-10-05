@@ -1,20 +1,17 @@
-import BottomBarNav from "~/components/layout/bottom-bar";
-import Footer from "~/components/layout/footer/footer";
-import Header from "~/components/layout/header/header";
 import { ThemeProvider } from "~/components/ui/theme-provider";
 import { Toaster } from "~/components/ui/sonner";
 
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import React, { Suspense } from "react";
+import type React from "react";
 import { cn } from "~/lib/utils";
 import { TRPCReactProvider } from "~/trpc/react";
 import "./globals.css";
 
-// `variable` eksponerer snittet som --font-sans, som er tokenet
-// tailwind.config leser for både `font-sans` og `font-heading`. Uten det ville
+// `variable` eksponerer snittet som --font-inter, som `@theme inline` i
+// globals.css bygger både `font-sans` og `font-heading` på. Uten det ville
 // familienavnet next/font genererer ikke nå CSS-en.
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Fadderuke",
@@ -38,9 +35,7 @@ export default async function RootLayout({
       <body
         className={cn(
           inter.variable,
-          "bg-background text-foreground font-sans flex min-h-screen flex-col",
-          // Holder footeren klar av den faste bunnlinja, som bare finnes under md.
-          "pb-16 md:pb-0",
+          "bg-background text-foreground font-sans",
         )}
         suppressHydrationWarning
       >
@@ -52,12 +47,7 @@ export default async function RootLayout({
             storageKey="tihlde-theme"
             disableTransitionOnChange
           >
-            <Header />
-            <main className="flex flex-1 flex-col">{children}</main>
-            <Footer />
-            <Suspense fallback={null}>
-              <BottomBarNav />
-            </Suspense>
+            {children}
             <Toaster />
           </ThemeProvider>
         </TRPCReactProvider>
