@@ -1,5 +1,11 @@
 # Fra passord-proxy til «Logg inn med TIHLDE»
 
+> **Status: gjennomført.** Dette er utredningen som lå til grunn, bevart som
+> begrunnelse for valgene. Den beskriver en «dagens løsning» som ikke finnes
+> lenger: Lepton er ute av repoet i sin helhet, og appen snakker kun med Photon
+> — innlogging, registrering, aktivitetslista og e-post. Les den som historikk,
+> ikke som en beskrivelse av koden slik den står i dag.
+
 Utredning av å bytte Fadderukas innlogging fra dagens Lepton-proxy til OAuth2/OIDC
 mot Photon. Ingen kode er skrevet — dette er grunnlaget for å bestemme om og når.
 

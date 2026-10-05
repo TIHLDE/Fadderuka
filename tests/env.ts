@@ -64,9 +64,8 @@ process.env.DATABASE_URL = databaseUrl;
 // during module init, before any config-level env would apply.
 (process.env as Record<string, string>).NODE_ENV = "test";
 
-// Fake external services. No test may reach the real TIHLDE or Vipps APIs —
+// Fake external services. No test may reach the real Photon or Vipps APIs —
 // `fetch` is stubbed, and these hosts exist only so URL building is realistic.
-process.env.TIHLDE_API_URL = "https://tihlde.test";
 process.env.VIPPS_API_URL = "https://vipps.test";
 process.env.VIPPS_CALLBACK_URL = "https://fadderuka.test";
 process.env.VIPPS_CLIENT_ID = "test-client-id";
@@ -84,8 +83,9 @@ process.env.FADDERUKE_COHORT_YEAR = "2026";
 // session tests would be checking a code path no deployment runs.
 process.env.SESSION_ENCRYPTION_KEY = "0".repeat(64);
 
-// Photon's email API, which "glemt passord" sends through. The host is fake and
-// `fetch` is stubbed — the key only has to be set for the feature to be on.
+// Photon, TIHLDE's backend: auth, registration, the event list and the email
+// API "glemt passord" sends through. The host is fake and `fetch` is stubbed —
+// the keys only have to be set for the features to be on.
 process.env.PHOTON_API_URL = "https://photon.test";
 process.env.PHOTON_EMAIL_API_KEY = "test-email-api-key";
 process.env.PHOTON_REGISTER_API_KEY = "test-register-api-key";

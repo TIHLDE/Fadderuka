@@ -1,6 +1,6 @@
 "use client";
 
-import { LogIn, Menu } from "lucide-react";
+import { LogIn, Menu, SquareArrowOutUpRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -18,7 +18,12 @@ import {
   DrawerTrigger,
 } from "~/components/ui/drawer";
 import { TihldeLogo } from "~/components/ui/icons/tihlde";
-import { NAV_LINKS, getGroupLinks, type NavLink } from "../header/nav-links";
+import {
+  EXTERNAL_NAV_LINKS,
+  NAV_LINKS,
+  getGroupLinks,
+  type NavLink,
+} from "../header/nav-links";
 
 type SiteBottomBarProps = {
   isAdmin: boolean;
@@ -43,7 +48,11 @@ export function SiteBottomBar({
 
   // Menyen samler alt som ikke fikk plass i raden, så ingen side er
   // utilgjengelig fra telefon slik de var da headeren var lg-only.
-  const menuLinks: NavLink[] = [...NAV_LINKS, ...groupLinks];
+  const menuLinks: NavLink[] = [
+    ...NAV_LINKS,
+    ...groupLinks,
+    ...EXTERNAL_NAV_LINKS,
+  ];
 
   return (
     <BottomBar className="lg:hidden">
@@ -155,6 +164,21 @@ function MenuLink({
   pathname: string | null;
   onNavigate: () => void;
 }) {
+  if (link.external) {
+    return (
+      <a
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onNavigate}
+        className="flex items-center gap-1 py-2"
+      >
+        {link.label}
+        <SquareArrowOutUpRight className="size-3.5" aria-hidden />
+      </a>
+    );
+  }
+
   return (
     <Link
       href={link.href}
