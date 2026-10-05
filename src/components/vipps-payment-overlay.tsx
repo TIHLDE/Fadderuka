@@ -1,18 +1,19 @@
 "use client";
 
 import { Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
 import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "~/components/ui/empty";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import { Spinner } from "~/components/ui/spinner";
+import { authClient } from "~/lib/auth-client";
 import { VippsButton } from "~/components/ui/vipps-button";
 import { toast } from "sonner";
 import { api } from "~/trpc/react";
@@ -132,9 +133,14 @@ export default function VippsPaymentOverlay() {
 }
 
 /**
- * Kortet denne skjermen alltid består av. Layouten viser det i stedet for
- * appen for en bruker uten tilgang, så hver tilstand — også «laster» og «noe
- * gikk galt» — må ha noe å vise. Ellers er resultatet en blank side.
+ * Popupen denne skjermen alltid består av (#139). Layouten viser den i stedet
+ * for appen for en bruker uten tilgang, så hver tilstand — også «laster» og
+ * «noe gikk galt» — må ha noe å vise. Ellers er resultatet en blank side.
+ *
+ * Den kan ikke lukkes: `open` står fast, klikk utenfor er slått av, og Escape
+ * ber bare om å lukke — en forespørsel vi ignorerer. Siden en modal også
+ * sperrer headeren, ligger «Logg ut» i selve popupen, så ingen blir sittende
+ * fast på feil konto.
  */
 function Notice({
   title,
@@ -145,22 +151,37 @@ function Notice({
   body: string;
   action: ReactNode;
 }) {
+  const router = useRouter();
+  const [loggerUt, setLoggerUt] = useState(false);
+
+  const loggUt = async () => {
+    setLoggerUt(true);
+    await authClient.signOut();
+    router.push("/registrering");
+    router.refresh();
+  };
+
   return (
-    <div className="flex flex-1 items-center justify-center px-4 py-12">
-      <Card className="w-full max-w-md">
-        <CardContent>
-          <Empty className="p-6">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Wallet />
-              </EmptyMedia>
-              <EmptyTitle>{title}</EmptyTitle>
-              <EmptyDescription>{body}</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent className="w-full max-w-none">{action}</EmptyContent>
-          </Empty>
-        </CardContent>
-      </Card>
-    </div>
+    <Dialog open disablePointerDismissal>
+      <DialogContent showCloseButton={false} className="sm:max-w-md">
+        <DialogHeader className="items-center text-center">
+          <div className="bg-muted mb-2 flex size-10 items-center justify-center rounded-lg">
+            <Wallet className="size-5" />
+          </div>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{body}</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-2">{action}</div>
+        <Button
+          variant="link"
+          size="sm"
+          className="text-muted-foreground mx-auto"
+          disabled={loggerUt}
+          onClick={() => void loggUt()}
+        >
+          {loggerUt ? "Logger ut..." : "Logg ut"}
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }
