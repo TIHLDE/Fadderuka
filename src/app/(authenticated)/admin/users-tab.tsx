@@ -557,7 +557,7 @@ export function UsersTab() {
             <FieldLabel htmlFor="verifiser-gruppe">Faddergruppe</FieldLabel>
             <Select
               value={valgtGruppeId}
-              onValueChange={(value) => setValgtGruppeId(value as string)}
+              onValueChange={(value) => setValgtGruppeId(value ?? "")}
               disabled={verifiseringPagar}
             >
               <SelectTrigger id="verifiser-gruppe" className="w-full">
