@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import Markdown from "~/components/ui/markdown";
+import { TIME_ZONE } from "~/lib/date";
 
 export interface ModalActivity {
   id: string;
@@ -63,10 +64,12 @@ export default function ActivityModal({
 function ActivityMeta({ activity }: { activity: ModalActivity }) {
   const date = new Date(activity.date);
   const when = `${date.toLocaleDateString("no-NO", {
+    timeZone: TIME_ZONE,
     weekday: "long",
     day: "numeric",
     month: "long",
   })} kl. ${date.toLocaleTimeString("no-NO", {
+    timeZone: TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   })}`;

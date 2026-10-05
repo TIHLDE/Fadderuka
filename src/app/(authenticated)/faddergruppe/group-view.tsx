@@ -25,6 +25,7 @@ import { Field, FieldLabel } from "~/components/ui/field";
 import { Spinner } from "~/components/ui/spinner";
 import { Textarea } from "~/components/ui/textarea";
 import { api } from "~/trpc/react";
+import { TIME_ZONE } from "~/lib/date";
 
 type GroupViewProps = {
   gruppeId: string;
@@ -92,6 +93,7 @@ export function GroupView({
 
     if (days === 0) {
       return new Date(date).toLocaleTimeString("no-NO", {
+        timeZone: TIME_ZONE,
         hour: "2-digit",
         minute: "2-digit",
       });
@@ -99,6 +101,7 @@ export function GroupView({
     if (days === 1) return "I går";
     if (days < 7) return `${days} dager siden`;
     return new Date(date).toLocaleDateString("no-NO", {
+      timeZone: TIME_ZONE,
       day: "numeric",
       month: "short",
     });

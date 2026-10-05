@@ -8,6 +8,7 @@ import ActivityModal, {
   type ModalActivity,
 } from "~/components/ui/activity-modal";
 import { Stagger } from "~/components/ui/motion";
+import { TIME_ZONE } from "~/lib/date";
 
 /**
  * Aktiviteter som Kvark sine arrangementsrader: to spalter med ListCard, og
@@ -64,12 +65,14 @@ export function ActivityList({
 
 function formatWhen(date: Date, showDay: boolean) {
   const time = date.toLocaleTimeString("no-NO", {
+    timeZone: TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   });
   if (!showDay) return `kl. ${time}`;
 
   const day = date.toLocaleDateString("no-NO", {
+    timeZone: TIME_ZONE,
     weekday: "short",
     day: "numeric",
     month: "short",
