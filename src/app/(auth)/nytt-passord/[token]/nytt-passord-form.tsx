@@ -4,7 +4,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "~/components/ui/field";
+import { Spinner } from "~/components/ui/spinner";
 
 export function NyttPassordForm({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
@@ -53,36 +59,45 @@ export function NyttPassordForm({ token }: { token: string }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password">Nytt passord</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          placeholder="minst 8 tegn"
-          required
-          minLength={8}
-        />
-      </div>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <FieldGroup>
+        <Field>
+          <FieldLabel htmlFor="password">Nytt passord</FieldLabel>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Minst 8 tegn"
+            required
+            minLength={8}
+          />
+        </Field>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="password_repeat">Gjenta passordet</Label>
-        <Input
-          id="password_repeat"
-          name="password_repeat"
-          type="password"
-          autoComplete="new-password"
-          required
-          minLength={8}
-        />
-      </div>
+        <Field data-invalid={error ? true : undefined}>
+          <FieldLabel htmlFor="password_repeat">Gjenta passordet</FieldLabel>
+          <Input
+            id="password_repeat"
+            name="password_repeat"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={8}
+            aria-invalid={error ? true : undefined}
+          />
+          {error && <FieldError>{error}</FieldError>}
+        </Field>
+      </FieldGroup>
 
-      {error && <p className="text-destructive text-sm">{error}</p>}
-
-      <Button type="submit" disabled={loading} className="h-12 w-full">
-        {loading ? "Lagrer..." : "Lagre passord"}
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? (
+          <>
+            <Spinner />
+            Lagrer...
+          </>
+        ) : (
+          "Lagre passord"
+        )}
       </Button>
     </form>
   );

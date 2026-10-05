@@ -1,11 +1,55 @@
 "use client";
 
+import {
+  CalendarDays,
+  MapPin,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
-import { MapPin, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
-import { api } from "~/trpc/react";
 import { toast } from "sonner";
+
+import { AdminEmptyState } from "~/components/admin/admin-empty-state";
+import {
+  ConfirmDeleteDialog,
+  usePendingConfirm,
+} from "~/components/admin/confirm-delete-dialog";
+import { ActivityImage } from "~/components/ui/activity-image";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
 import { DateTimePicker } from "~/components/ui/date-time-picker";
-import { stripMarkdown } from "~/lib/utils";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "~/components/ui/field";
+import { Input } from "~/components/ui/input";
+import { Spinner } from "~/components/ui/spinner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
+import { Textarea } from "~/components/ui/textarea";
+import { cn } from "~/lib/utils";
+import { api, type RouterOutputs } from "~/trpc/react";
+import { TIME_ZONE } from "~/lib/date";
+
+type Activity = RouterOutputs["activity"]["getAll"][number];
 
 type FormState = {
   title: string;
@@ -23,18 +67,24 @@ function makeEmptyForm(): FormState {
 }
 
 export function AktiviteterTab() {
-  const [showForm, setShowForm] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(makeEmptyForm);
+  const confirmDelete = usePendingConfirm<Activity>();
   const utils = api.useUtils();
 
   const { data: activities, isLoading } = api.activity.getAll.useQuery();
 
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingId(null);
+    setForm(makeEmptyForm());
+  };
+
   const createMutation = api.activity.create.useMutation({
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
-      setShowForm(false);
-      setForm(makeEmptyForm());
+      closeDialog();
       toast("Aktivitet opprettet");
     },
   });
@@ -42,8 +92,7 @@ export function AktiviteterTab() {
   const updateMutation = api.activity.update.useMutation({
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
-      setEditingId(null);
-      setForm(makeEmptyForm());
+      closeDialog();
       toast("Aktivitet oppdatert");
     },
   });
@@ -51,6 +100,7 @@ export function AktiviteterTab() {
   const deleteMutation = api.activity.delete.useMutation({
     onSuccess: () => {
       void utils.activity.getAll.invalidate();
+      confirmDelete.clear();
       toast("Aktivitet slettet");
     },
   });
@@ -62,7 +112,7 @@ export function AktiviteterTab() {
       toast(`Hentet ${count} Fadderuka-event fra Photon`);
     },
     onError: () => {
-      toast("Klarte ikke å hente events fra Photon");
+      toast.error("Klarte ikke å hente events fra Photon");
     },
   });
 
@@ -90,7 +140,13 @@ export function AktiviteterTab() {
     }
   };
 
-  const openEdit = (activity: NonNullable<typeof activities>[number]) => {
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(makeEmptyForm());
+    setDialogOpen(true);
+  };
+
+  const openEdit = (activity: Activity) => {
     setEditingId(activity.id);
     setForm({
       title: activity.title,
@@ -99,225 +155,237 @@ export function AktiviteterTab() {
       imageUrl: activity.imageUrl ?? "",
       date: new Date(activity.date),
     });
-    setShowForm(true);
-  };
-
-  const cancelForm = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setForm(makeEmptyForm());
+    setDialogOpen(true);
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center !py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-transparent" />
+      <div className="flex justify-center py-12">
+        <Spinner className="size-6" />
       </div>
     );
   }
 
   return (
-    <div className="!space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">
-          Aktiviteter ({activities?.length ?? 0})
-        </h3>
-        <div className="flex items-center !gap-2">
-          <button
-            type="button"
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 className="text-2xl">Aktiviteter ({activities?.length ?? 0})</h2>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
             onClick={() => refreshPhotonMutation.mutate()}
             disabled={refreshPhotonMutation.isPending}
             title="Hent Fadderuka-events fra Photon på nytt"
-            className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 disabled:opacity-50"
           >
             <RefreshCw
-              className={`h-4 w-4 ${refreshPhotonMutation.isPending ? "animate-spin" : ""}`}
+              className={cn(refreshPhotonMutation.isPending && "animate-spin")}
             />
             Hent fra Photon
-          </button>
-          {!showForm && (
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80"
-            >
-              <Plus className="h-4 w-4" />
-              Ny aktivitet
-            </button>
-          )}
+          </Button>
+          <Button onClick={openCreate}>
+            <Plus />
+            Ny aktivitet
+          </Button>
         </div>
       </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="!space-y-4 rounded-xl border border-border bg-secondary !p-5"
-        >
-          <div className="flex items-center justify-between">
-            <h4 className="font-semibold text-foreground">
-              {editingId ? "Rediger aktivitet" : "Ny aktivitet"}
-            </h4>
-            <button
-              type="button"
-              onClick={cancelForm}
-              className="text-muted-foreground transition hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col !gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Tittel *</label>
-              <input
-                required
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Navn på aktiviteten"
-                className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div className="flex flex-col !gap-1.5">
-              <label
-                htmlFor="activity-date"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                Dato og tid *
-              </label>
-              <DateTimePicker
-                id="activity-date"
-                value={form.date}
-                onChange={(date) => setForm({ ...form, date })}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col !gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Sted / kart-lenke *</label>
-            <input
-              required
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-              placeholder="F.eks. Gløshaugen eller https://maps.google.com/..."
-              className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+      <Card>
+        <CardContent className={activities?.length ? "p-0" : undefined}>
+          {activities && activities.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Aktivitet</TableHead>
+                  <TableHead>Tidspunkt</TableHead>
+                  <TableHead>Sted</TableHead>
+                  <TableHead className="text-right">Handlinger</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activities.map((activity) => (
+                  <TableRow key={activity.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <ActivityImage
+                          src={activity.imageUrl}
+                          alt=""
+                          className="aspect-[21/9] w-20 shrink-0 rounded-md object-cover"
+                        />
+                        <span className="font-medium">{activity.title}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground flex items-center gap-2">
+                        <CalendarDays className="size-4 shrink-0" />
+                        {new Date(activity.date).toLocaleDateString("no-NO", {
+                          timeZone: TIME_ZONE,
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground flex max-w-56 items-center gap-2">
+                        <MapPin className="size-4 shrink-0" />
+                        <span className="truncate">{activity.location}</span>
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEdit(activity)}
+                        >
+                          <Pencil />
+                          Rediger
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
+                          aria-label={`Slett ${activity.title}`}
+                          onClick={() => confirmDelete.request(activity)}
+                        >
+                          <Trash2 className="text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <AdminEmptyState
+              icon={CalendarDays}
+              title="Ingen aktiviteter"
+              description="Ingen aktiviteter er lagt til ennå. Opprett en for å vise den på forsiden og aktivitetssida."
             />
-          </div>
+          )}
+        </CardContent>
+      </Card>
 
-          <div className="flex flex-col !gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Bilde-URL (valgfritt)</label>
-            <input
-              value={form.imageUrl}
-              onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-              placeholder="https://..."
-              className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          <div className="flex flex-col !gap-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Beskrivelse * <span className="font-normal">(støtter Markdown)</span>
-            </label>
-            <textarea
-              required
-              rows={3}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Beskriv aktiviteten..."
-              className="rounded-lg border border-border bg-background !px-3 !py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-
-          <div className="flex justify-end !gap-3">
-            <button
-              type="button"
-              onClick={cancelForm}
-              className="rounded-lg !px-4 !py-2 text-sm text-muted-foreground transition hover:text-foreground"
-            >
-              Avbryt
-            </button>
-            <button
-              type="submit"
-              disabled={
-                !isValid || createMutation.isPending || updateMutation.isPending
-              }
-              className="rounded-xl border border-border bg-primary !px-4 !py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {editingId ? "Lagre endringer" : "Opprett aktivitet"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {activities && activities.length > 0 ? (
-        <div className="!space-y-3">
-          {activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex flex-col !gap-3 rounded-xl border border-border bg-card !p-4 sm:flex-row sm:items-start sm:justify-between"
-            >
-              <div className="flex min-w-0 !gap-4">
-                {activity.imageUrl ? (
-                  <img
-                    src={activity.imageUrl}
-                    alt={activity.title}
-                    className="h-16 w-16 flex-shrink-0 rounded-lg object-cover"
-                  />
-                ) : (
-                  <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <span className="text-xs font-bold text-primary">
-                      {activity.title.slice(0, 2).toUpperCase()}
-                    </span>
-                  </div>
-                )}
-                <div className="min-w-0 !space-y-1">
-                  <p className="font-semibold break-words text-foreground">
-                    {activity.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(activity.date).toLocaleDateString("no-NO", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                  <div className="flex items-center !gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    <span className="max-w-xs truncate">{activity.location}</span>
-                  </div>
-                  <p className="max-w-sm text-xs text-muted-foreground line-clamp-2">{stripMarkdown(activity.description)}</p>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <form
+            onSubmit={handleSubmit}
+            className="flex min-h-0 flex-auto flex-col gap-4"
+          >
+            <DialogHeader>
+              <DialogTitle>
+                {editingId ? "Rediger aktivitet" : "Ny aktivitet"}
+              </DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <FieldGroup>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor="activity-title">Tittel</FieldLabel>
+                    <Input
+                      id="activity-title"
+                      required
+                      value={form.title}
+                      onChange={(e) =>
+                        setForm({ ...form, title: e.target.value })
+                      }
+                      placeholder="Navn på aktiviteten"
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="activity-date">Dato og tid</FieldLabel>
+                    <DateTimePicker
+                      id="activity-date"
+                      value={form.date}
+                      onChange={(date) => setForm({ ...form, date })}
+                    />
+                  </Field>
                 </div>
-              </div>
+                <Field>
+                  <FieldLabel htmlFor="activity-location">
+                    Sted eller kartlenke
+                  </FieldLabel>
+                  <Input
+                    id="activity-location"
+                    required
+                    value={form.location}
+                    onChange={(e) =>
+                      setForm({ ...form, location: e.target.value })
+                    }
+                    placeholder="F.eks. Gløshaugen eller https://maps.google.com/..."
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="activity-image">
+                    Bilde-URL (valgfritt)
+                  </FieldLabel>
+                  <Input
+                    id="activity-image"
+                    value={form.imageUrl}
+                    onChange={(e) =>
+                      setForm({ ...form, imageUrl: e.target.value })
+                    }
+                    placeholder="https://..."
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="activity-description">
+                    Beskrivelse
+                  </FieldLabel>
+                  <Textarea
+                    id="activity-description"
+                    required
+                    rows={4}
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
+                    placeholder="Beskriv aktiviteten..."
+                  />
+                  <FieldDescription>Støtter Markdown.</FieldDescription>
+                </Field>
+              </FieldGroup>
+            </DialogBody>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeDialog}>
+                Avbryt
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  !isValid ||
+                  createMutation.isPending ||
+                  updateMutation.isPending
+                }
+              >
+                {editingId ? "Lagre endringer" : "Opprett aktivitet"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-              <div className="flex flex-wrap items-center !gap-2 sm:flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => openEdit(activity)}
-                  className="inline-flex items-center !gap-1.5 rounded-lg border border-border bg-secondary !px-3 !py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary/80"
-                >
-                  <Pencil className="h-3 w-3" />
-                  Rediger
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteMutation.mutate({ id: activity.id })}
-                  disabled={deleteMutation.isPending}
-                  className="inline-flex items-center !gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 !px-3 !py-1.5 text-xs font-medium text-destructive transition hover:bg-destructive/20 disabled:opacity-60"
-                >
-                  <Trash2 className="h-3 w-3" />
-                  Slett
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="rounded-xl border border-border bg-card !px-4 !py-6 text-center text-sm text-muted-foreground">
-          Ingen aktiviteter lagt til ennå
-        </p>
-      )}
+      <ConfirmDeleteDialog
+        open={confirmDelete.open}
+        onOpenChange={(open) => {
+          if (!open) confirmDelete.clear();
+        }}
+        title={`Slette «${confirmDelete.shown?.title ?? ""}»?`}
+        description="Aktiviteten forsvinner fra forsiden og aktivitetssida. Dette kan ikke angres."
+        confirmLabel="Slett aktivitet"
+        isPending={deleteMutation.isPending}
+        onConfirm={() => {
+          if (confirmDelete.pending) {
+            deleteMutation.mutate({ id: confirmDelete.pending.id });
+          }
+        }}
+      />
     </div>
   );
 }

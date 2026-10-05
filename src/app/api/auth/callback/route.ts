@@ -171,8 +171,8 @@ export async function GET(request: Request) {
         ? studyLabelForSlug(attempt.declaredStudy)
         : null;
 
-    // Photon reports the cohort as a number; `deriveIsFadder` reads the Lepton
-    // STUDYYEAR group name, which was that same year as a string.
+    // Photon reports the cohort as a number; `deriveIsFadder` reads it as the
+    // year written out as a string.
     const klasse =
       profile.studyStartYear === null ? null : String(profile.studyStartYear);
 

@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { MapPin, X } from "lucide-react";
+import { CalendarDays, MapPin } from "lucide-react";
 
-import Markdown from "~/components/ui/markdown";
 import { ActivityImage } from "~/components/ui/activity-image";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import Markdown from "~/components/ui/markdown";
+import { TIME_ZONE } from "~/lib/date";
 
 export interface ModalActivity {
   id: string;
@@ -16,6 +21,12 @@ export interface ModalActivity {
   imageUrl: string | null;
 }
 
+/**
+ * Detaljene for én aktivitet. Bygget på Photons Dialog, så overlay, fokus,
+ * Escape og scroll-lås er de samme som i resten av TIHLDE — og Dialog
+ * portaler selv, så en transformert forelder (Reveal/Stagger) kan ikke
+ * forskyve den.
+ */
 export default function ActivityModal({
   activity,
   onClose,
@@ -23,99 +34,67 @@ export default function ActivityModal({
   activity: ModalActivity | null;
   onClose: () => void;
 }) {
-  // Rendered into `document.body` via a portal: an ancestor with a transform,
-  // filter or `will-change` (e.g. the `Reveal` wrappers the lists sit inside)
-  // becomes the containing block for `position: fixed`, which offsets the modal
-  // and shrinks its backdrop so clicks outside it stop closing.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  return (
+    <Dialog
+      open={activity !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      {activity ? (
+        <DialogContent className="gap-0 p-0 sm:max-w-3xl">
+          <ActivityImage
+            src={activity.imageUrl}
+            alt=""
+            className="aspect-[21/9] w-full shrink-0 object-cover"
+          />
+          <div className="flex flex-col gap-4 p-6">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">{activity.title}</DialogTitle>
+            </DialogHeader>
+            <ActivityMeta activity={activity} />
+            <Markdown className="text-base">{activity.description}</Markdown>
+          </div>
+        </DialogContent>
+      ) : null}
+    </Dialog>
+  );
+}
 
-  useEffect(() => {
-    if (!activity) return;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [activity, onClose]);
-
-  if (!activity || !mounted) return null;
-
+function ActivityMeta({ activity }: { activity: ModalActivity }) {
   const date = new Date(activity.date);
-  const dateStr = date.toLocaleDateString("no-NO", {
+  const when = `${date.toLocaleDateString("no-NO", {
+    timeZone: TIME_ZONE,
     weekday: "long",
     day: "numeric",
     month: "long",
-    year: "numeric",
-  });
-  const timeStr = date.toLocaleTimeString("no-NO", {
+  })} kl. ${date.toLocaleTimeString("no-NO", {
+    timeZone: TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
-  });
+  })}`;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 supports-[backdrop-filter]:backdrop-blur-xs animate-in fade-in-0 duration-100 ease-out"
-      onClick={onClose}
-    >
-      <div
-        className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-y-auto rounded-xl bg-popover text-popover-foreground ring-1 ring-foreground/10 animate-in fade-in-0 zoom-in-95 duration-100"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Lukk"
-          className="absolute right-4 top-4 z-10 grid size-8 place-items-center rounded-lg bg-background/60 text-foreground ring-1 ring-foreground/10 transition-colors hover:bg-accent"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
-        <ActivityImage
-          src={activity.imageUrl}
-          alt={activity.title}
-          className="h-64 w-full shrink-0 object-cover sm:h-80"
-        />
-
-        <div className="flex-1 space-y-6 p-6 sm:p-10">
-          <h2 className="font-heading text-3xl font-semibold tracking-tight capitalize text-foreground sm:text-4xl">
-            {activity.title}
-          </h2>
-
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground sm:text-base">
-            <span className="capitalize">{dateStr}</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-foreground/30" />
-            <span>{timeStr}</span>
-            <span className="h-1.5 w-1.5 rounded-full bg-foreground/30" />
-            <span className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              {activity.location.startsWith("http") ? (
-                <a
-                  href={activity.location}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary transition hover:text-primary/80"
-                >
-                  Vis på kart
-                </a>
-              ) : (
-                activity.location
-              )}
-            </span>
-          </div>
-
-          <Markdown className="text-base text-muted-foreground">
-            {activity.description}
-          </Markdown>
-        </div>
+  return (
+    <div className="text-muted-foreground flex flex-col gap-1 text-sm">
+      <div className="flex items-center gap-2">
+        <CalendarDays className="size-4 shrink-0" />
+        <span className="first-letter:uppercase">{when}</span>
       </div>
-    </div>,
-    document.body,
+      <div className="flex items-center gap-2">
+        <MapPin className="size-4 shrink-0" />
+        {activity.location.startsWith("http") ? (
+          <a
+            href={activity.location}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-link hover:underline"
+          >
+            Vis på kart
+          </a>
+        ) : (
+          <span>{activity.location}</span>
+        )}
+      </div>
+    </div>
   );
 }

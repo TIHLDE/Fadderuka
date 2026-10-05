@@ -62,31 +62,28 @@ export const UserArea = ({
       >
         <PopoverTrigger
           aria-label="Profil"
-          className="hover:bg-muted/50 rounded-full p-0.5 transition"
+          className="relative flex items-center rounded-full"
         >
           {isAuthenticated ? (
             <Avatar className="size-8">
               <AvatarImage src={image} alt={name} className="object-cover" />
-              <AvatarFallback className="bg-muted/40 text-foreground text-xs font-medium">
-                {getInitials(name)}
-              </AvatarFallback>
+              <AvatarFallback>{getInitials(name)}</AvatarFallback>
             </Avatar>
           ) : (
-            <span className="grid size-8 place-items-center">
-              <UserRound className="text-foreground h-4 w-4" />
-            </span>
+            <Avatar className="size-8">
+              <AvatarFallback>
+                <UserRound />
+              </AvatarFallback>
+            </Avatar>
           )}
         </PopoverTrigger>
-        <PopoverContent
-          align="end"
-          className="text-foreground w-72 rounded-xl bg-popover p-5 shadow-md ring-1 ring-foreground/10"
-        >
+        <PopoverContent align="end" className="w-64">
           <div className="flex w-full flex-col gap-4">
             <div className="flex items-center gap-3">
-              <Avatar className="border-border/60 bg-muted/40 h-10 w-10 border">
+              <Avatar className="size-10">
                 <AvatarImage src={image} alt={"profilbilde"} />
-                <AvatarFallback className="bg-muted/40">
-                  <UserRound className="text-foreground h-5 w-5" />
+                <AvatarFallback>
+                  <UserRound />
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -106,7 +103,7 @@ export const UserArea = ({
                 {admin ? (
                   <Button
                     variant="outline"
-                    className="border-border/60 bg-muted/40 text-foreground hover:bg-muted/60 w-full"
+                    className="w-full"
                     onClick={goToAdmin}
                   >
                     Admin
@@ -121,10 +118,7 @@ export const UserArea = ({
                 </Button>
               </div>
             ) : (
-              <Button
-                className="bg-primary/15 text-primary hover:bg-primary/25 w-full"
-                onClick={signInButton}
-              >
+              <Button className="w-full" onClick={signInButton}>
                 Logg inn
               </Button>
             )}

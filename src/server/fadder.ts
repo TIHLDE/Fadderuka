@@ -3,7 +3,7 @@
  *
  * Only fadderbarn pay. Faddere are by definition students in their second year
  * or later, so the study cohort on the TIHLDE profile is what separates the
- * two groups. `User.klasse` holds Lepton's STUDYYEAR group name, which is the
+ * two groups. `User.klasse` holds Photon's `studyStartYear`, i.e. the
  * ADMISSION YEAR as a string ("2026") — not an ordinal like "1. klasse". A
  * user admitted before the current fadderuke cohort is therefore in 2. klasse
  * or higher and can never be a fadderbarn.
@@ -71,9 +71,9 @@ export function cohortYearFromCalendar(now: Date): number {
 /**
  * Read an admission year out of a `klasse` value, or null when it isn't one.
  *
- * Lepton's STUDYYEAR groups are named by the plain year ("2026"), but the field
- * is free-form text on our side, so anything that isn't a plausible four-digit
- * year is treated as unknown rather than coerced.
+ * The login stores Photon's `studyStartYear` as the plain year ("2026"), but
+ * the field is free-form text on our side, so anything that isn't a plausible
+ * four-digit year is treated as unknown rather than coerced.
  */
 export function parseCohortYear(klasse: string | null | undefined): number | null {
   if (typeof klasse !== "string") return null;

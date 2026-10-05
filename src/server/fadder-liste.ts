@@ -14,7 +14,6 @@
  */
 
 import {
-  type FadderListEntryLike,
   type FadderListProfile,
   matchFadderList,
   normaliseFadderName,

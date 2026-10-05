@@ -4,7 +4,28 @@ import { Plus, Trash2 } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Button } from "~/components/ui/button";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "~/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "~/components/ui/dialog";
+import { Empty, EmptyDescription, EmptyHeader } from "~/components/ui/empty";
+import { Field, FieldLabel } from "~/components/ui/field";
+import { Spinner } from "~/components/ui/spinner";
+import { Textarea } from "~/components/ui/textarea";
 import { api } from "~/trpc/react";
+import { TIME_ZONE } from "~/lib/date";
 
 type GroupViewProps = {
   gruppeId: string;
@@ -72,150 +93,124 @@ export function GroupView({
 
     if (days === 0) {
       return new Date(date).toLocaleTimeString("no-NO", {
+        timeZone: TIME_ZONE,
         hour: "2-digit",
         minute: "2-digit",
       });
     }
-    if (days === 1) return "I gar";
+    if (days === 1) return "I går";
     if (days < 7) return `${days} dager siden`;
     return new Date(date).toLocaleDateString("no-NO", {
+      timeZone: TIME_ZONE,
       day: "numeric",
       month: "short",
     });
   };
 
+  const closeComposer = () => {
+    setIsComposerOpen(false);
+    setComposerMessage("");
+  };
+
   return (
-    <section className="!space-y-6">
-      <div className="flex flex-wrap items-end justify-between !gap-4">
-        {/* Seksjonsoverskrift — skal ligge under sidens h1 (text-3xl/4xl). */}
-        <h2 className="font-heading text-foreground text-2xl font-semibold tracking-tight">
-          {title}
-        </h2>
+    <section className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 className="min-w-0 text-2xl">{title}</h2>
         {canPost && (
-          <button
-            className="inline-flex items-center !gap-2 rounded-xl border border-border bg-secondary !px-4 !py-2 text-sm font-semibold text-foreground transition hover:bg-secondary/80 sm:text-base"
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setIsComposerOpen(true)}
           >
-            <Plus className="h-4 w-4" />
+            <Plus />
             {composerTitle}
-          </button>
+          </Button>
         )}
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center !py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-transparent" />
+        <div className="flex justify-center py-8">
+          <Spinner className="size-6" />
         </div>
       ) : messages && messages.length > 0 ? (
-        <div className="!space-y-4">
+        <div className="flex flex-col gap-4">
           {messages.map((message) => (
-            <article
-              key={message.id}
-              className="rounded-xl border border-border bg-card !p-6"
-            >
-              <div className="flex flex-wrap items-start justify-between !gap-3">
-                <h3 className="font-heading text-foreground text-base leading-snug font-medium">
-                  {message.author.name}
-                </h3>
-                <div className="flex items-center !gap-2">
-                  <span className="text-sm font-medium text-muted-foreground sm:text-base">
+            <Card key={message.id} render={<article />}>
+              <CardHeader>
+                <CardTitle>{message.author.name}</CardTitle>
+                <CardAction className="flex items-center gap-1">
+                  <span className="text-muted-foreground text-sm">
                     {formatTime(message.createdAt)}
                   </span>
-                  {(message.author.name === currentUserName) && (
-                    <button
-                      type="button"
+                  {message.author.name === currentUserName && (
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Slett melding"
+                      title="Slett melding"
                       onClick={() =>
                         deleteMutation.mutate({ messageId: message.id })
                       }
-                      className="!p-1 text-destructive/50 hover:text-destructive transition"
-                      title="Slett melding"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                      <Trash2 className="text-destructive" />
+                    </Button>
                   )}
-                </div>
-              </div>
-              <p className="!mt-3 text-base font-medium text-muted-foreground sm:text-lg">
-                {message.content}
-              </p>
-            </article>
+                </CardAction>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-line">{message.content}</p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
-        <p className="text-center text-muted-foreground !py-8">{emptyMessage}</p>
+        <Empty>
+          <EmptyHeader>
+            <EmptyDescription>{emptyMessage}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
 
-      {/* Composer modal */}
-      {isComposerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center !px-4 !py-12">
-          <button
-            aria-label="Lukk"
-            className="absolute inset-0 bg-black/60"
-            type="button"
-            onClick={() => {
-              setIsComposerOpen(false);
-              setComposerMessage("");
-            }}
-          />
-          <div className="relative w-full max-w-lg rounded-2xl border border-border bg-card !p-6 text-foreground sm:!p-8">
-            <div className="flex items-start justify-between !gap-4">
-              <div>
-                <h3 className="font-heading text-base leading-snug font-medium">
-                  {composerTitle}
-                </h3>
-                <p className="!mt-1 text-sm text-muted-foreground">
-                  {composerSubtitle}
-                </p>
-              </div>
-              <button
-                className="rounded-full border border-border !px-3 !py-1 text-sm text-foreground transition hover:bg-foreground/10"
-                type="button"
-                onClick={() => {
-                  setIsComposerOpen(false);
-                  setComposerMessage("");
-                }}
+      <Dialog
+        open={isComposerOpen}
+        onOpenChange={(open) => {
+          if (!open) closeComposer();
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{composerTitle}</DialogTitle>
+            <DialogDescription>{composerSubtitle}</DialogDescription>
+          </DialogHeader>
+
+          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <Field>
+              <FieldLabel htmlFor={`melding-${channel}`}>Melding</FieldLabel>
+              <Textarea
+                id={`melding-${channel}`}
+                className="min-h-36"
+                placeholder={composerPlaceholder}
+                value={composerMessage}
+                onChange={(e) => setComposerMessage(e.target.value)}
+              />
+            </Field>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeComposer}>
+                Avbryt
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  composerMessage.trim().length === 0 || postMutation.isPending
+                }
               >
-                Lukk
-              </button>
-            </div>
-
-            <form className="!mt-6 !space-y-4" onSubmit={handleSubmit}>
-              <label className="block !space-y-2 text-sm font-medium text-foreground">
-                Melding
-                <textarea
-                  className="min-h-[140px] w-full rounded-xl border border-border bg-background !px-4 !py-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder={composerPlaceholder}
-                  value={composerMessage}
-                  onChange={(e) => setComposerMessage(e.target.value)}
-                />
-              </label>
-
-              <div className="flex flex-wrap items-center justify-end !gap-3">
-                <button
-                  className="rounded-xl border border-border !px-4 !py-2 text-sm text-foreground transition hover:bg-foreground/10"
-                  type="button"
-                  onClick={() => {
-                    setIsComposerOpen(false);
-                    setComposerMessage("");
-                  }}
-                >
-                  Avbryt
-                </button>
-                <button
-                  className="rounded-xl bg-primary !px-4 !py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                  type="submit"
-                  disabled={
-                    composerMessage.trim().length === 0 || postMutation.isPending
-                  }
-                >
-                  {postMutation.isPending ? "Sender..." : "Send melding"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                {postMutation.isPending ? "Sender..." : "Send melding"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -1,5 +1,4 @@
 import {
-  Beer,
   CalendarDays,
   Info,
   Megaphone,
@@ -19,6 +18,16 @@ export type NavLink = {
 export const NAV_LINKS: NavLink[] = [
   { href: "/informasjon", label: "Informasjon/FAQ", icon: Info },
   { href: "/aktiviteter", label: "Aktiviteter", icon: CalendarDays },
+];
+
+/** Eksterne lenker som ligger sist i navigasjonen, som i Photon. */
+export const EXTERNAL_NAV_LINKS: NavLink[] = [
+  {
+    href: "https://forms.gle/UE85Da8et8VJc7XWA",
+    label: "Varsling",
+    icon: Megaphone,
+    external: true,
+  },
 ];
 
 /**
@@ -43,21 +52,3 @@ export function getGroupLinks(
   }
   return links;
 }
-
-/** Eksterne lenker som ligger sist i navigasjonen, som i Photon. */
-export const EXTERNAL_NAV_LINKS: NavLink[] = [
-  {
-    href: "https://forms.gle/UE85Da8et8VJc7XWA",
-    label: "Varsling",
-    icon: Megaphone,
-    external: true,
-  },
-];
-
-/**
- * Lenker som bare vises i mobilmenyen. /drikkeleker har aldri hatt en vei inn
- * fra navigasjonen — siden var bare tilgjengelig ved å skrive URL-en.
- */
-export const SECONDARY_NAV_LINKS: NavLink[] = [
-  { href: "/drikkeleker", label: "Drikkeleker", icon: Beer },
-];
