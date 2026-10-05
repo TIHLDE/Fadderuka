@@ -11,7 +11,7 @@ import {
 } from "~/server/fadder";
 
 describe("parseCohortYear", () => {
-  it("leser årstallet Lepton lagrer som studieår", () => {
+  it("leser opptaksåret slik innloggingen lagrer det", () => {
     expect(parseCohortYear("2026")).toBe(2026);
     expect(parseCohortYear("  2024  ")).toBe(2024);
   });
