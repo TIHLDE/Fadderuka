@@ -49,6 +49,7 @@ export default function RegistreringPage() {
 
     const formData = new FormData(e.currentTarget);
     const full_name = (formData.get("full_name") as string)?.trim();
+    const phone = (formData.get("phone") as string)?.trim();
     const email = (formData.get("email") as string)?.trim();
     const user_id = (formData.get("user_id") as string)?.trim();
     const password = formData.get("password") as string;
@@ -68,6 +69,7 @@ export default function RegistreringPage() {
       existingUserId: existing,
     } = await authClient.register({
       full_name,
+      phone,
       email,
       user_id,
       password,
@@ -163,6 +165,19 @@ export default function RegistreringPage() {
                 autoComplete="name"
                 required
                 placeholder="Ola Nordmann"
+              />
+            </Field>
+
+            <Field data-invalid={errorField === "phone" || undefined}>
+              <FieldLabel htmlFor="reg-phone">Telefonnummer</FieldLabel>
+              <Input
+                id="reg-phone"
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                required
+                placeholder="12345678"
+                aria-invalid={errorField === "phone"}
               />
             </Field>
 

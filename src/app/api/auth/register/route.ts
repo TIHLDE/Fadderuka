@@ -50,6 +50,17 @@ import {
 
 const bodySchema = z.object({
   full_name: z.string().trim().min(1, "Fyll inn fullt navn."),
+  // Spaces and dashes are how people type numbers, so they are dropped rather
+  // than refused. A leading + is kept for foreign numbers.
+  phone: z
+    .string()
+    .transform((v) => v.replace(/[\s-]/g, ""))
+    .pipe(
+      z
+        .string()
+        .min(1, "Fyll inn telefonnummer.")
+        .regex(/^\+?\d{8,15}$/, "Ugyldig telefonnummer."),
+    ),
   email: z.string().trim().toLowerCase().email("Ugyldig e-postadresse."),
   user_id: z
     .string()
@@ -83,7 +94,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const { full_name, email, user_id: userId, password, study } = parsed.data;
+  const { full_name, phone, email, user_id: userId, password, study } =
+    parsed.data;
   const studieretning = studyLabelForSlug(study);
 
   // This route creates real TIHLDE accounts, so an unthrottled one is an open
@@ -152,6 +164,7 @@ export async function POST(request: Request) {
       data: {
         tihldeUserId: userId,
         name: full_name,
+        phone,
         email,
         studieretning,
         // The bridge into the app until TIHLDE takes over. Hashed with scrypt;

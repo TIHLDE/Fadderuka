@@ -13,6 +13,7 @@ interface Result {
 /** New-user self-registration payload (mirrors /api/auth/register). */
 export interface RegisterInput {
   full_name: string;
+  phone: string;
   /**
    * Any address. New students often have not been given their @stud.ntnu.no
    * one when they sign up on stand.

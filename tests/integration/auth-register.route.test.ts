@@ -19,6 +19,7 @@ const post = (body: unknown) =>
 
 const FORM = {
   full_name: "Ola Nordmann",
+  phone: "123 45 678",
   email: "Ola@stud.ntnu.no",
   user_id: "ola",
   password: "hemmeligpassord",
@@ -64,6 +65,8 @@ describe("POST /api/auth/register", () => {
       where: { tihldeUserId: "ola" },
     });
     expect(user.studieretning).toBe("Dataingeniør");
+    // Mellomrommene studenten skrev er fjernet.
+    expect(user.phone).toBe("12345678");
     expect(user.hasPaid).toBe(false);
     expect(user.isVerified).toBe(false);
     expect(user.isAdmin).toBe(false);
@@ -117,6 +120,15 @@ describe("POST /api/auth/register", () => {
       await expect(response.json()).resolves.toMatchObject({
         field: "user_id",
       });
+    }
+    expect(fetchMock.callsTo("/api/user/register")).toHaveLength(0);
+  });
+
+  it("avviser manglende og ugyldig telefonnummer", async () => {
+    for (const phone of [undefined, "", "1234", "tolv34567"]) {
+      const response = await post({ ...FORM, phone });
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({ field: "phone" });
     }
     expect(fetchMock.callsTo("/api/user/register")).toHaveLength(0);
   });
