@@ -1,0 +1,15 @@
+.git
+.github
+.vscode
+node_modules
+.next
+.env
+.env.*
+!.env.example
+*.md
+docs
+tests
+coverage
+compose.yml
+start-database.sh
+.DS_Store
