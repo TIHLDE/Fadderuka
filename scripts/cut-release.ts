@@ -65,6 +65,13 @@ if (dryRun) {
 
 assert.ok(await confirm("This deploys to production. Continue?"), "Cancelled");
 
-await $`git tag -a ${tag} -m ${`Release ${tag}`}`;
-await $`git push origin ${tag}`;
+// Tag the commit that was shown above, even if HEAD moved during the prompt.
+await $`git tag -a ${tag} ${commit} -m ${`Release ${tag}`}`;
+try {
+  await $`git push origin ${tag}`;
+} catch (error) {
+  // Don't leave a local tag behind that would block the next attempt.
+  await $`git tag -d ${tag}`.quiet();
+  throw error;
+}
 console.log(`Pushed ${tag}. Follow it with: gh run list --limit 3`);
