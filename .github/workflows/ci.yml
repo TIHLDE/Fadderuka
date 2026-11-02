@@ -1,13 +1,13 @@
 name: CI
 
-# Runs on every PR into main or dev, and on pushes to those branches.
+# Runs on every PR into main, and on pushes to main.
 # Enable it as a required status check in the branch protection rules so a red
 # run blocks the merge.
 on:
   pull_request:
-    branches: [main, dev]
+    branches: [main]
   push:
-    branches: [main, dev]
+    branches: [main]
 
 # A new push supersedes the previous run for the same ref.
 concurrency:
