@@ -1,0 +1,77 @@
+import assert from "node:assert";
+import { $ } from "bun";
+
+const dryRun = Bun.argv.includes("--dry-run");
+
+async function $trim(
+  strings: TemplateStringsArray,
+  ...expressions: Bun.ShellExpression[]
+): Promise<string> {
+  return (await $(strings, ...expressions).text()).trim();
+}
+async function confirm(message: string) {
+  process.stdout.write(`${message} [y/N]: `);
+  for await (const line of console) {
+    return line.toLowerCase().trim() == "y";
+  }
+}
+
+const branch = await $trim`git branch --show-current`;
+assert.equal(branch, "main", "Must be on main; do: `git switch main`");
+
+const isWorkingTreeClean = (await $trim`git status --porcelain`).length === 0;
+assert.ok(isWorkingTreeClean, "You have uncommitted changes");
+
+await $`git fetch origin main --tags --quiet`;
+
+const commit = await $trim`git rev-parse HEAD`;
+const originCommit = await $trim`git rev-parse origin/main`;
+assert.equal(commit, originCommit, "main is not up to date; do: `git pull`");
+
+// Numbering is derived from git tags, not GitHub Releases, so it works
+// regardless of whether a Release object is ever published for the tag.
+const tags: string[] =
+  await $`git tag --list --format=%\(refname:short\) "*.release-*"`
+    .text()
+    .then((t) => t.split("\n").filter(Boolean));
+
+const date = new Date().toISOString().slice(0, 10);
+
+const releasePattern = new RegExp(`^${date}\\.release-(\\d+)$`);
+
+const todayNumbers = tags
+  .map((tagName) => tagName.match(releasePattern)?.[1])
+  .filter((number): number is string => number !== undefined)
+  .map(Number);
+
+const tag = `${date}.release-${Math.max(0, ...todayNumbers) + 1}`;
+
+const previousTag = tags
+  .filter((tagName) => /^\d{4}-\d{2}-\d{2}\.release-\d+$/.test(tagName))
+  .sort()
+  .at(-1);
+
+console.log(`Release: ${tag}`);
+console.log(`Commit:  ${commit.slice(0, 7)}`);
+if (previousTag) {
+  console.log(`Changes since ${previousTag}:`);
+  console.log(await $trim`git log --oneline ${previousTag}..HEAD`);
+}
+
+if (dryRun) {
+  console.log("Dry run: nothing was tagged or pushed.");
+  process.exit(0);
+}
+
+assert.ok(await confirm("This deploys to production. Continue?"), "Cancelled");
+
+// Tag the commit that was shown above, even if HEAD moved during the prompt.
+await $`git tag -a ${tag} ${commit} -m ${`Release ${tag}`}`;
+try {
+  await $`git push origin ${tag}`;
+} catch (error) {
+  // Don't leave a local tag behind that would block the next attempt.
+  await $`git tag -d ${tag}`.quiet();
+  throw error;
+}
+console.log(`Pushed ${tag}. Follow it with: gh run list --limit 3`);

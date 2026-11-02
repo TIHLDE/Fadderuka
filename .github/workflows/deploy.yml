@@ -1,13 +1,17 @@
 name: "build -> push -> deploy"
+# Deploys are triggered by a release tag, not by pushing to a branch.
+# Tag format: <date>.release-<n>, e.g. 2026-11-02.release-1.
+# Create the tag with `bun run cut-release` (scripts/cut-release.ts).
 on:
   push:
-    branches: [main]
+    tags:
+      - "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].release-*"
   workflow_dispatch:
 
-# A new push supersedes the previous run for the same ref.
+# Never cancel a deploy halfway; a second release waits for the first.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
