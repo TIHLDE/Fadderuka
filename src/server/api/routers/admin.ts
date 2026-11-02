@@ -89,6 +89,7 @@ export const adminRouter = createTRPCRouter({
         klasse: true,
         studieretning: true,
         studieretningOverride: true,
+        gender: true,
         isVerified: true,
         isAdmin: true,
         hasPaid: true,
@@ -321,7 +322,13 @@ export const adminRouter = createTRPCRouter({
         members: {
           include: {
             user: {
-              select: { id: true, name: true, email: true, studieretning: true },
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                studieretning: true,
+                gender: true,
+              },
             },
           },
         },

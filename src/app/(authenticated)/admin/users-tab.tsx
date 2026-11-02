@@ -5,6 +5,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { AdminEmptyState } from "~/components/admin/admin-empty-state";
+import { GenderBadge } from "~/components/admin/gender-badge";
+import { GenderFilterSelect } from "~/components/admin/gender-filter-select";
 import {
   ConfirmDeleteDialog,
   usePendingConfirm,
@@ -56,6 +58,7 @@ import {
   compareMajorLabels,
   findMajor,
 } from "~/lib/majors";
+import { type GenderFilter, matchesGenderFilter } from "~/lib/gender";
 import { cn } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 import { TIME_ZONE } from "~/lib/date";
@@ -171,6 +174,7 @@ function BadgeToggle({ className, ...props }: React.ComponentProps<"button">) {
 
 export function UsersTab() {
   const [search, setSearch] = useState("");
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>("ALLE");
   const [verifying, setVerifying] = useState<AdminUser | null>(null);
   // Tom streng = «Uten gruppe», og det er med vilje utgangspunktet: å verifisere
   // er det viktige, plasseringen kan komme senere fra Faddergrupper-fanen.
@@ -307,9 +311,14 @@ export function UsersTab() {
   const unverifiedUsers = users?.filter((u) => !u.isVerified) ?? [];
   const verifiedUsers = users?.filter((u) => u.isVerified) ?? [];
 
-  const matchesSearch = (u: AdminUser, query: string) =>
-    u.name.toLowerCase().includes(query.toLowerCase()) ||
-    (u.email?.toLowerCase().includes(query.toLowerCase()) ?? false);
+  const matchesSearch = (
+    u: AdminUser,
+    query: string,
+    gender: GenderFilter = genderFilter,
+  ) =>
+    matchesGenderFilter(u.gender, gender) &&
+    (u.name.toLowerCase().includes(query.toLowerCase()) ||
+      (u.email?.toLowerCase().includes(query.toLowerCase()) ?? false));
 
   const groupByMajor = (list: AdminUser[]) => {
     const grouped = new Map<string, AdminUser[]>();
@@ -326,7 +335,7 @@ export function UsersTab() {
   const verifiedByStudieretning = groupByMajor(
     verifiedUsers.filter((u) => matchesSearch(u, search)),
   );
-  const isSearching = search.trim().length > 0;
+  const isSearching = search.trim().length > 0 || genderFilter !== "ALLE";
   const studieretninger = [...verifiedByStudieretning.keys()]
     .filter(
       (major) =>
@@ -334,16 +343,17 @@ export function UsersTab() {
     )
     .sort(compareMajorLabels);
 
-  const handleSearch = (value: string) => {
+  const handleSearch = (value: string, gender: GenderFilter = genderFilter) => {
     setSearch(value);
-    // Et nytt søk starter alltid helt åpent: alle studieretninger med treff
-    // slås opp. Tomt søk lukker alt igjen, som før.
-    if (value.trim().length === 0) {
+    setGenderFilter(gender);
+    // Et nytt søk eller filter starter alltid helt åpent: alle studieretninger
+    // med treff slås opp. Tomt søk uten filter lukker alt igjen, som før.
+    if (value.trim().length === 0 && gender === "ALLE") {
       setOpenMajors([]);
       return;
     }
     const hits = groupByMajor(
-      verifiedUsers.filter((u) => matchesSearch(u, value)),
+      verifiedUsers.filter((u) => matchesSearch(u, value, gender)),
     );
     setOpenMajors(
       [...hits.entries()]
@@ -379,6 +389,7 @@ export function UsersTab() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Navn</TableHead>
+                    <TableHead>Kjønn</TableHead>
                     <TableHead>Klasse og retning</TableHead>
                     <TableHead>Studie</TableHead>
                     <TableHead>Registrert</TableHead>
@@ -395,6 +406,9 @@ export function UsersTab() {
                             {user.email}
                           </span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <GenderBadge gender={user.gender} />
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1.5">
@@ -473,18 +487,24 @@ export function UsersTab() {
           <h2 className="text-2xl">
             Verifiserte brukere ({verifiedUsers.length})
           </h2>
-          <InputGroup className="w-full max-w-sm">
-            <InputGroupAddon>
-              <Search />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              placeholder="Søk etter navn eller e-post"
-              aria-label="Søk etter bruker"
-              value={search}
-              onChange={(e) => handleSearch(e.target.value)}
+          <div className="flex w-full max-w-md items-center gap-2">
+            <InputGroup className="flex-1">
+              <InputGroupAddon>
+                <Search />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                placeholder="Søk etter navn eller e-post"
+                aria-label="Søk etter bruker"
+                value={search}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </InputGroup>
+            <GenderFilterSelect
+              value={genderFilter}
+              onValueChange={(gender) => handleSearch(search, gender)}
             />
-          </InputGroup>
+          </div>
         </div>
 
         {isSearching && studieretninger.length === 0 ? (
@@ -493,7 +513,11 @@ export function UsersTab() {
               <AdminEmptyState
                 icon={Search}
                 title="Ingen brukere funnet"
-                description={`Ingen verifiserte brukere matcher «${search}».`}
+                description={
+                  search.trim()
+                    ? `Ingen verifiserte brukere matcher «${search}».`
+                    : "Ingen verifiserte brukere matcher filteret."
+                }
               />
             </CardContent>
           </Card>
@@ -674,6 +698,7 @@ function UserTable({
       <TableHeader>
         <TableRow>
           <TableHead>Navn</TableHead>
+          <TableHead>Kjønn</TableHead>
           <TableHead>Klasse</TableHead>
           <TableHead>Studie</TableHead>
           <TableHead>Gruppe</TableHead>
@@ -695,6 +720,9 @@ function UserTable({
                   <span className="font-medium">{user.name}</span>
                   <span className="text-muted-foreground">{user.email}</span>
                 </div>
+              </TableCell>
+              <TableCell>
+                <GenderBadge gender={user.gender} />
               </TableCell>
               <TableCell>
                 {user.klasse ? (

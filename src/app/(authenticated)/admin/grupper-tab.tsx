@@ -15,6 +15,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { AdminEmptyState } from "~/components/admin/admin-empty-state";
+import { GenderBadge } from "~/components/admin/gender-badge";
+import { GenderFilterSelect } from "~/components/admin/gender-filter-select";
 import {
   ConfirmDeleteDialog,
   usePendingConfirm,
@@ -66,6 +68,12 @@ import {
   findMajor,
   UKJENT_STUDIERETNING,
 } from "~/lib/majors";
+import {
+  type GenderFilter,
+  genderBreakdown,
+  genderLabel,
+  matchesGenderFilter,
+} from "~/lib/gender";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
@@ -221,7 +229,16 @@ export function GrupperTab() {
                     <AccordionItem value={gruppe.id} className="border-0">
                       <AccordionTrigger className="items-center px-4 py-4 hover:no-underline">
                         <span className="flex flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                          <span className="text-base">{gruppe.name}</span>
+                          <span className="flex flex-col">
+                            <span className="text-base">{gruppe.name}</span>
+                            {/* Kjønnsfordelingen (#145), så skjeve grupper
+                                synes uten å åpne dem. */}
+                            <span className="text-muted-foreground text-xs font-normal">
+                              {genderBreakdown(
+                                gruppe.members.map((m) => m.user.gender),
+                              )}
+                            </span>
+                          </span>
                           <span className="text-muted-foreground flex gap-2 text-xs font-normal">
                             <Badge>{faddere.length} faddere</Badge>
                             <Badge variant="secondary">
@@ -417,7 +434,10 @@ function MemberList({
               {/* E-postene er lange nok til å skyve knappene ut av kortet på
                   mobil, så navn og e-post legger seg under hverandre. */}
               <div className="flex min-w-0 flex-col">
-                <span className="text-sm">{member.user.name}</span>
+                <span className="flex items-center gap-1.5 text-sm">
+                  {member.user.name}
+                  <GenderBadge gender={member.user.gender} />
+                </span>
                 <span className="text-muted-foreground text-xs break-all">
                   {member.user.email}
                 </span>
@@ -564,6 +584,7 @@ type AvailableUser = {
   name: string;
   email: string | null;
   studieretning: string | null;
+  gender: string | null;
 };
 
 function AddMemberDialog({
@@ -582,11 +603,13 @@ function AddMemberDialog({
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedMajor, setSelectedMajor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [genderFilter, setGenderFilter] = useState<GenderFilter>("ALLE");
 
   const reset = () => {
     setSelectedUserId("");
     setSelectedMajor(null);
     setSearch("");
+    setGenderFilter("ALLE");
   };
 
   const usersByMajor = new Map<string, AvailableUser[]>();
@@ -605,7 +628,11 @@ function AddMemberDialog({
     const matchesSearch =
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       (u.email?.toLowerCase().includes(search.toLowerCase()) ?? false);
-    return matchesMajor && matchesSearch;
+    return (
+      matchesMajor &&
+      matchesSearch &&
+      matchesGenderFilter(u.gender, genderFilter)
+    );
   });
 
   const roleLabel = state?.role === "FADDER" ? "fadder" : "fadderbarn";
@@ -653,18 +680,27 @@ function AddMemberDialog({
             ))}
           </div>
 
-          <InputGroup>
-            <InputGroupAddon>
-              <Search />
-            </InputGroupAddon>
-            <InputGroupInput
-              type="search"
-              placeholder="Søk etter navn eller e-post"
-              aria-label="Søk etter bruker"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+          <div className="flex items-center gap-2">
+            <InputGroup className="flex-1">
+              <InputGroupAddon>
+                <Search />
+              </InputGroupAddon>
+              <InputGroupInput
+                type="search"
+                placeholder="Søk etter navn eller e-post"
+                aria-label="Søk etter bruker"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </InputGroup>
+            <GenderFilterSelect
+              value={genderFilter}
+              onValueChange={(gender) => {
+                setSelectedUserId("");
+                setGenderFilter(gender);
+              }}
             />
-          </InputGroup>
+          </div>
 
           <div
             role="listbox"
@@ -696,7 +732,7 @@ function AddMemberDialog({
                         : "text-muted-foreground",
                     )}
                   >
-                    {user.email}
+                    {genderLabel(user.gender)} · {user.email}
                   </span>
                 </button>
               );

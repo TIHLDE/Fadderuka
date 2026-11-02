@@ -23,6 +23,7 @@ const FORM = {
   user_id: "ola",
   password: "hemmeligpassord",
   study: "dataingenir",
+  gender: "KVINNE",
 };
 
 /** What Photon answers on a successful `POST /api/user/register`. */
@@ -64,6 +65,7 @@ describe("POST /api/auth/register", () => {
       where: { tihldeUserId: "ola" },
     });
     expect(user.studieretning).toBe("Dataingeniør");
+    expect(user.gender).toBe("KVINNE");
     expect(user.hasPaid).toBe(false);
     expect(user.isVerified).toBe(false);
     expect(user.isAdmin).toBe(false);
@@ -116,6 +118,20 @@ describe("POST /api/auth/register", () => {
       expect(response.status).toBe(400);
       await expect(response.json()).resolves.toMatchObject({
         field: "user_id",
+      });
+    }
+    expect(fetchMock.callsTo("/api/user/register")).toHaveLength(0);
+  });
+
+  // #145: FadderKom trenger svaret når gruppene settes sammen, så skjemaet
+  // slipper ikke gjennom uten — og ingen konto opprettes på Photon før det er på plass.
+  it("avviser manglende eller ukjent kjønn", async () => {
+    for (const gender of [undefined, "", "ukjent"]) {
+      const response = await post({ ...FORM, gender });
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({
+        error: "Velg kjønn.",
+        field: "gender",
       });
     }
     expect(fetchMock.callsTo("/api/user/register")).toHaveLength(0);

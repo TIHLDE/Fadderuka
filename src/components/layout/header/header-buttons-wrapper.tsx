@@ -67,6 +67,7 @@ const HeaderButtonsWrapper = async () => {
           image={session?.user?.image ?? ""}
           admin={!!session?.user?.isAdmin}
           isAuthenticated={!!session?.user}
+          gender={session?.user?.gender ?? null}
         />
       </div>
     </>

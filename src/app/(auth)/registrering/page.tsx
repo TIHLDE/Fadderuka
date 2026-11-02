@@ -24,6 +24,7 @@ import {
 import { Input } from "~/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import { VippsButton } from "~/components/ui/vipps-button";
+import { GENDERS } from "~/lib/gender";
 import { REGISTRATION_STUDIES } from "~/lib/majors";
 import { authClient } from "~/lib/auth-client";
 import { PENDING_ALLERGY_KEY } from "~/lib/pending-allergy";
@@ -35,6 +36,7 @@ export default function RegistreringPage() {
   /** Set when they already have an account, so we can link straight to login. */
   const [existingUserId, setExistingUserId] = useState<string | null>(null);
   const [study, setStudy] = useState<string>("");
+  const [gender, setGender] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const initiatePayment = api.payment.initiatePayment.useMutation();
@@ -60,6 +62,12 @@ export default function RegistreringPage() {
       return;
     }
 
+    if (!gender) {
+      setError("Velg kjønn.");
+      setErrorField("gender");
+      return;
+    }
+
     setLoading(true);
 
     const {
@@ -72,6 +80,7 @@ export default function RegistreringPage() {
       user_id,
       password,
       study,
+      gender,
     });
 
     if (registerError) {
@@ -237,6 +246,38 @@ export default function RegistreringPage() {
                       aria-invalid={errorField === "study"}
                     />
                     <FieldLabel htmlFor={`reg-study-${option.slug}`}>
+                      {option.label}
+                    </FieldLabel>
+                  </Field>
+                ))}
+              </RadioGroup>
+            </FieldSet>
+
+            <FieldSet data-invalid={errorField === "gender" || undefined}>
+              <FieldLegend variant="label">Kjønn</FieldLegend>
+              <FieldDescription>
+                Bare FadderKom ser dette. Vi bruker det når vi setter sammen
+                faddergruppene.
+              </FieldDescription>
+              <RadioGroup
+                aria-label="Kjønn"
+                value={gender}
+                onValueChange={(value) => {
+                  setGender(value as string);
+                  if (errorField === "gender") {
+                    setError(null);
+                    setErrorField(null);
+                  }
+                }}
+              >
+                {GENDERS.map((option) => (
+                  <Field key={option.value} orientation="horizontal">
+                    <RadioGroupItem
+                      id={`reg-gender-${option.value}`}
+                      value={option.value}
+                      aria-invalid={errorField === "gender"}
+                    />
+                    <FieldLabel htmlFor={`reg-gender-${option.value}`}>
                       {option.label}
                     </FieldLabel>
                   </Field>

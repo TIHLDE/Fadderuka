@@ -22,6 +22,8 @@ export interface RegisterInput {
   user_id: string;
   password: string;
   study: string;
+  /** One of `GENDER_VALUES` from `~/lib/gender`. */
+  gender: string;
 }
 
 interface LocalLoginResult extends Result {

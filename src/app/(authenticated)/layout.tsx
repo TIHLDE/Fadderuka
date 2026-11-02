@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { auth } from "~/server/auth/config";
 import { hasAppAccess } from "~/server/fadder";
 import AllergySync from "~/components/allergy-sync";
+import GenderPromptGate from "./components/gender-prompt-gate";
 import BottomBarNav from "~/components/layout/bottom-bar";
 import Footer from "~/components/layout/footer/footer";
 import Header from "~/components/layout/header/header";
@@ -27,9 +28,20 @@ export default async function AuthenticatedLayout({
   // it. Rendering `children` here server-rendered the whole app behind the
   // overlay, so removing one element in devtools was enough to read everything
   // without paying. Faddere and admins owe nothing and never reach this branch.
+  // Same idea for gender (#145): anyone with access who has not answered yet —
+  // a TIHLDE login never sees the registration form — answers before the app
+  // renders. After payment, not before, so nobody gets two popups at once.
+  const content = !hasAppAccess(session.user) ? (
+    <VippsPaymentOverlay />
+  ) : session.user.gender === null ? (
+    <GenderPromptGate />
+  ) : (
+    children
+  );
+
   return (
     <SiteShell>
-      {hasAppAccess(session.user) ? children : <VippsPaymentOverlay />}
+      {content}
       <AllergySync />
     </SiteShell>
   );
