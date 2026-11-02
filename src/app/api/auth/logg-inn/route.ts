@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { REGISTRATION_STUDY_SLUGS } from "~/lib/majors";
 import { PhotonAuthError, startLogin } from "~/server/auth/photon";
 import { safeReturnTo, storeLoginAttempt } from "~/server/auth/oauth-state";
+import { publicOrigin } from "~/server/public-origin";
 
 /**
  * Start "Logg inn med TIHLDE": mint a PKCE pair and send the student to Photon.
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(
         new URL(
           `/logg-inn?error=${encodeURIComponent(err.message)}`,
-          url.origin,
+          publicOrigin(request),
         ),
       );
     }

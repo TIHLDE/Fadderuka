@@ -17,6 +17,7 @@ import {
 import { db } from "~/server/db";
 import { deriveIsFadder } from "~/server/fadder";
 import { isOnFadderList } from "~/server/fadder-liste";
+import { publicOrigin } from "~/server/public-origin";
 
 /**
  * Where "Logg inn med TIHLDE" comes back to.
@@ -41,7 +42,7 @@ function failure(origin: string, message: string) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const origin = url.origin;
+  const origin = publicOrigin(request);
 
   const attempt = await readLoginAttempt();
   // Single use, whatever happens next — a verifier that outlives its attempt is
