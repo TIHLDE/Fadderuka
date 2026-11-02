@@ -17,6 +17,16 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN bun run build
 
+# ---------- migrator: standalone Prisma CLI for `migrate deploy` ----------
+# Copying only node_modules/prisma into the runner is not enough: the CLI needs
+# its dependencies too (effect, c12, …), and without them the container crashes
+# before the server starts. Install it on its own with Bun, at the exact
+# version bun.lock resolved in the deps stage.
+FROM oven/bun:1 AS migrator
+WORKDIR /migrator
+COPY --from=deps /app/node_modules/prisma/package.json /tmp/prisma-package.json
+RUN bun add "prisma@$(bun -e "console.log(require('/tmp/prisma-package.json').version)")"
+
 # ---------- runner: minimal production image ----------
 FROM node:22-slim AS runner
 WORKDIR /app
@@ -37,13 +47,16 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Prisma schema/migrations + CLI so the entrypoint can run `migrate deploy`
+# Prisma schema/migrations, and the Prisma client engine the server needs
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# The Prisma CLI with its whole dependency tree, kept apart from the app's
+# trimmed node_modules (see the migrator stage)
+COPY --from=migrator /migrator/node_modules ./migrator/node_modules
 
 USER nextjs
 EXPOSE 3000
 # Apply pending migrations (a no-op when up to date), then start the server.
 # `exec` makes node PID 1 so it receives SIGTERM from `docker stop`.
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && exec node server.js"]
+CMD ["sh", "-c", "node migrator/node_modules/prisma/build/index.js migrate deploy --schema prisma/schema.prisma && exec node server.js"]
