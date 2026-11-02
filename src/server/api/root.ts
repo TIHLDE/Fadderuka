@@ -4,6 +4,7 @@ import { gruppeRouter } from "~/server/api/routers/gruppe";
 import { notificationRouter } from "~/server/api/routers/notification";
 import { paymentRouter } from "~/server/api/routers/payment";
 import { postRouter } from "~/server/api/routers/post";
+import { profileRouter } from "~/server/api/routers/profile";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -18,6 +19,7 @@ export const appRouter = createTRPCRouter({
   payment: paymentRouter,
   activity: activityRouter,
   notification: notificationRouter,
+  profile: profileRouter,
 });
 
 // export type definition of API

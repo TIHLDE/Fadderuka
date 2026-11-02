@@ -13,12 +13,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { authClient } from "~/lib/auth-client";
 import { cn } from "~/lib/utils";
+import { ProfileGenderField } from "./profile-gender-field";
 
 interface UserAreaProps extends React.HTMLProps<HTMLDivElement> {
   name?: string;
   image?: string;
   admin?: boolean;
   isAuthenticated?: boolean;
+  /** Own gender, editable from the menu (#145). `null` when not answered. */
+  gender?: string | null;
 }
 
 export const UserArea = ({
@@ -26,6 +29,7 @@ export const UserArea = ({
   image = "",
   admin,
   isAuthenticated = false,
+  gender = null,
   className,
   ...props
 }: UserAreaProps) => {
@@ -100,6 +104,7 @@ export const UserArea = ({
 
             {isAuthenticated ? (
               <div className="flex flex-col gap-2">
+                <ProfileGenderField gender={gender} />
                 {admin ? (
                   <Button
                     variant="outline"

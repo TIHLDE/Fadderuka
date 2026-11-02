@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { GENDER_VALUES } from "~/lib/gender";
 import { REGISTRATION_STUDY_SLUGS, studyLabelForSlug } from "~/lib/majors";
 import {
   SESSION_COOKIE,
@@ -67,6 +68,9 @@ const bodySchema = z.object({
   study: z.enum(REGISTRATION_STUDY_SLUGS, {
     errorMap: () => ({ message: "Velg hvilken linje du går på." }),
   }),
+  gender: z.enum(GENDER_VALUES, {
+    errorMap: () => ({ message: "Velg kjønn." }),
+  }),
 });
 
 export async function POST(request: Request) {
@@ -83,7 +87,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const { full_name, email, user_id: userId, password, study } = parsed.data;
+  const {
+    full_name,
+    email,
+    user_id: userId,
+    password,
+    study,
+    gender,
+  } = parsed.data;
   const studieretning = studyLabelForSlug(study);
 
   // This route creates real TIHLDE accounts, so an unthrottled one is an open
@@ -154,6 +165,7 @@ export async function POST(request: Request) {
         name: full_name,
         email,
         studieretning,
+        gender,
         // The bridge into the app until TIHLDE takes over. Hashed with scrypt;
         // the plaintext is never stored or logged.
         passwordHash: await hashPassword(password),
