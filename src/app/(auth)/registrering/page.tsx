@@ -179,6 +179,9 @@ export default function RegistreringPage() {
                 placeholder="12345678"
                 aria-invalid={errorField === "phone"}
               />
+              <FieldDescription>
+                Telefonummer kan kun bli sett av hovedfaddere og fadderne i din faddergruppe
+              </FieldDescription>
             </Field>
 
             <Field data-invalid={errorField === "email" || undefined}>
