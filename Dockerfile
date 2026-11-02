@@ -20,16 +20,12 @@ RUN bun run build
 # ---------- migrator: standalone Prisma CLI for `migrate deploy` ----------
 # Copying only node_modules/prisma into the runner is not enough: the CLI needs
 # its dependencies too (effect, c12, …), and without them the container crashes
-# before the server starts. Install it on its own, at the exact version from
-# bun.lock, on the same base image as the runner so the engines match.
-FROM node:22-slim AS migrator
+# before the server starts. Install it on its own with Bun, at the exact
+# version bun.lock resolved in the deps stage.
+FROM oven/bun:1 AS migrator
 WORKDIR /migrator
-RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends openssl \
-    && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules/prisma/package.json /tmp/prisma-package.json
-RUN npm install --no-save --no-package-lock --no-audit --no-fund \
-    "prisma@$(node -p "require('/tmp/prisma-package.json').version")"
+RUN bun add "prisma@$(bun -e "console.log(require('/tmp/prisma-package.json').version)")"
 
 # ---------- runner: minimal production image ----------
 FROM node:22-slim AS runner
